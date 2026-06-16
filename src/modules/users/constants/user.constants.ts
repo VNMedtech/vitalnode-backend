@@ -1,0 +1,6 @@
+export const USER_AUDIT_ENTITY_TYPE = "USER" as const;
+
+export const USER_ACTIONS = {
+  UPDATE_PROFILE: "USER_UPDATE_PROFILE",
+  CHANGE_PASSWORD: "USER_CHANGE_PASSWORD",
+} as const;

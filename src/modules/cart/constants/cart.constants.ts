@@ -1,0 +1,10 @@
+export const CART_AUDIT_ENTITY_TYPE = "CART" as const;
+
+export const CART_ACTIONS = {
+  ADD_ITEM: "CART_ADD_ITEM",
+  UPDATE_ITEM: "CART_UPDATE_ITEM",
+  REMOVE_ITEM: "CART_REMOVE_ITEM",
+  CLEAR: "CART_CLEAR",
+} as const;
+
+export const CART_MAX_ITEM_QUANTITY = 999_999;

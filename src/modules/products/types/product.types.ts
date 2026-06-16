@@ -1,0 +1,132 @@
+import type { ProductSortField } from "../constants/product.constants.js";
+import type { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
+
+export interface ProductMediaDto {
+  id: string;
+  fileUrl: string;
+  displayOrder: number;
+  createdAt: Date;
+}
+
+export interface ProductDocumentDto {
+  id: string;
+  fileUrl: string;
+  documentType: string;
+  createdAt: Date;
+}
+
+export interface ProductCategorySummaryDto {
+  id: string;
+  name: string;
+}
+
+export interface ProductSellerSummaryDto {
+  id: string;
+  businessName: string;
+}
+
+export interface ProductInventorySummaryDto {
+  availableQuantity: number;
+}
+
+export interface ProductListItemDto {
+  id: string;
+  sellerId: string;
+  categoryId: string;
+  productName: string;
+  brand: string;
+  model: string;
+  productType: string;
+  pricing: string;
+  moq: number;
+  deliveryTime: number | null;
+  status: ProductStatus;
+  category: ProductCategorySummaryDto;
+  seller: ProductSellerSummaryDto;
+  primaryImageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProductDetailDto extends ProductListItemDto {
+  color: string | null;
+  weight: string | null;
+  length: string | null;
+  warrantyPeriod: number | null;
+  returnTime: number | null;
+  description: string;
+  details: string | null;
+  specifications: Record<string, unknown> | null;
+  media: ProductMediaDto[];
+  documents: ProductDocumentDto[];
+  inventory: ProductInventorySummaryDto | null;
+}
+
+export interface ProductMediaInput {
+  fileUrl: string;
+  displayOrder?: number;
+}
+
+export interface ProductDocumentInput {
+  fileUrl: string;
+  documentType: string;
+}
+
+export interface CreateProductInput {
+  categoryId: string;
+  productName: string;
+  brand: string;
+  model: string;
+  productType: string;
+  color?: string;
+  weight?: string;
+  length?: string;
+  warrantyPeriod?: number;
+  returnTime?: number;
+  deliveryTime?: number;
+  pricing: string;
+  moq: number;
+  description: string;
+  details?: string;
+  specifications?: Record<string, unknown>;
+  media?: ProductMediaInput[];
+  documents?: ProductDocumentInput[];
+}
+
+export interface UpdateProductInput {
+  categoryId?: string;
+  productName?: string;
+  brand?: string;
+  model?: string;
+  productType?: string;
+  color?: string | null;
+  weight?: string | null;
+  length?: string | null;
+  warrantyPeriod?: number | null;
+  returnTime?: number | null;
+  deliveryTime?: number | null;
+  pricing?: string;
+  moq?: number;
+  description?: string;
+  details?: string | null;
+  specifications?: Record<string, unknown> | null;
+  media?: ProductMediaInput[];
+  documents?: ProductDocumentInput[];
+}
+
+export interface ListProductsQuery {
+  page: number;
+  limit: number;
+  sortBy: ProductSortField;
+  sortOrder: "asc" | "desc";
+  search?: string;
+  categoryId?: string;
+  brand?: string;
+  status?: ProductStatus;
+  minPrice?: string;
+  maxPrice?: string;
+}
+
+export interface RejectProductInput {
+  reason?: string;
+}
