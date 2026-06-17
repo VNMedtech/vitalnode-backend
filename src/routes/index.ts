@@ -17,7 +17,7 @@ import { paymentRouter } from "../modules/payments/routes/payment.routes.js";
 import { uploadRouter } from "../modules/uploads/routes/upload.routes.js";
 import { notificationRouter } from "../modules/notifications/routes/notification.routes.js";
 import { analyticsRouter } from "../modules/analytics/routes/analytics.routes.js";
-import { auditLogRouter } from "../modules/auditLogs/routes/auditLog.routes.js";
+import { auditRouter } from "../modules/audit/routes/audit.routes.js";
 import { adminRouter } from "../modules/admin/routes/admin.routes.js";
 
 export const apiRouter = Router();
@@ -37,5 +37,5 @@ apiRouter.use("/payments", paymentRouter);
 apiRouter.use("/uploads", uploadRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/analytics", analyticsRouter);
-apiRouter.use("/audit-logs", auditLogRouter);
+apiRouter.use("/audit-logs", auditRouter);
 apiRouter.use("/admin", adminRouter);
