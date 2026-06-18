@@ -34,6 +34,7 @@ describe("Uploads — File Management", () => {
   });
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
     await resetDatabase();
     mockS3Layer();
   });
@@ -148,6 +149,34 @@ describe("Uploads — File Management", () => {
       app,
       seller.login.auth.accessToken,
     ).uploadImage("PRODUCT_IMAGE", Buffer.alloc(0), "empty.png");
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe("Validation failed");
+  });
+
+  it("8. rejects invalid mime type upload", async () => {
+    const prisma = getTestPrisma();
+    const seller = await createApprovedSeller(app, prisma);
+    const fakeImage = Buffer.from("not-a-real-image");
+
+    const res = await uploadRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).uploadImage("PRODUCT_IMAGE", fakeImage, "fake-image.jpg");
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe("Validation failed");
+  });
+
+  it("9. rejects oversized file upload", async () => {
+    const prisma = getTestPrisma();
+    const seller = await createApprovedSeller(app, prisma);
+    const oversized = Buffer.alloc(11 * 1024 * 1024, 0);
+
+    const res = await uploadRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).uploadImage("PRODUCT_IMAGE", oversized, "large.png");
 
     expect(res.status).toBe(400);
     expect(res.body.message).toBe("Validation failed");

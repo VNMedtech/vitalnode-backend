@@ -1,5 +1,6 @@
 import type { Express } from "express";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import * as s3Module from "../../../src/infrastructure/s3/index.js";
 import { productCreationPayload } from "../../fixtures/product.payloads.js";
 import {
   createCategoryViaApi,
@@ -18,6 +19,19 @@ import {
 } from "../../utils/db.js";
 import { productRequest } from "../../utils/request.helpers.js";
 import { getTestApp } from "../../utils/testApp.js";
+import { TEST_PDF_BUFFER, TEST_PNG_BUFFER } from "../../utils/upload.helpers.js";
+
+function mockS3Layer(): void {
+  vi.spyOn(s3Module, "uploadObjectToS3").mockResolvedValue({
+    key: "uploads/products/mock-file.png",
+    bucket: "medical-test-bucket",
+    etag: "mock-etag",
+  });
+  vi.spyOn(s3Module, "deleteObjectFromS3").mockResolvedValue(undefined);
+  vi.spyOn(s3Module, "generateSignedDownloadUrl").mockResolvedValue(
+    "https://signed.example.com/mock-file",
+  );
+}
 
 describe("Products — Catalog & Approval Workflow", () => {
   let app: Express;
@@ -27,7 +41,9 @@ describe("Products — Catalog & Approval Workflow", () => {
   });
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
     await resetDatabase();
+    mockS3Layer();
   });
 
   afterAll(async () => {
@@ -234,5 +250,76 @@ describe("Products — Catalog & Approval Workflow", () => {
     );
 
     expect(res.status).toBe(403);
+  });
+
+  it("13. creates a product with multipart image and document uploads", async () => {
+    const prisma = getTestPrisma();
+    const { login: adminLogin } = await createAdminViaApi(app, prisma);
+    const { category } = await createCategoryViaApi(
+      app,
+      adminLogin.auth.accessToken,
+    );
+    const seller = await createApprovedSeller(app, prisma);
+    const payload = productCreationPayload(category.id);
+
+    const res = await productRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).createMultipart(
+      {
+        categoryId: payload.categoryId,
+        productName: payload.productName,
+        brand: payload.brand,
+        model: payload.model,
+        productType: payload.productType,
+        pricing: payload.pricing,
+        moq: String(payload.moq),
+        description: payload.description,
+        documentTypes: JSON.stringify(["manual"]),
+      },
+      {
+        images: [{ buffer: TEST_PNG_BUFFER, filename: "product.png" }],
+        documents: [{ buffer: TEST_PDF_BUFFER, filename: "manual.pdf" }],
+      },
+    );
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.media).toHaveLength(1);
+    expect(res.body.data.media[0].fileUploadId).toBeTruthy();
+    expect(res.body.data.documents).toHaveLength(1);
+    expect(res.body.data.documents[0].fileUploadId).toBeTruthy();
+  });
+
+  it("14. rejects product document upload without documentTypes", async () => {
+    const prisma = getTestPrisma();
+    const { login: adminLogin } = await createAdminViaApi(app, prisma);
+    const { category } = await createCategoryViaApi(
+      app,
+      adminLogin.auth.accessToken,
+    );
+    const seller = await createApprovedSeller(app, prisma);
+    const payload = productCreationPayload(category.id);
+
+    const res = await productRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).createMultipart(
+      {
+        categoryId: payload.categoryId,
+        productName: payload.productName,
+        brand: payload.brand,
+        model: payload.model,
+        productType: payload.productType,
+        pricing: payload.pricing,
+        moq: String(payload.moq),
+        description: payload.description,
+      },
+      {
+        documents: [{ buffer: TEST_PDF_BUFFER, filename: "manual.pdf" }],
+      },
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe("Validation failed");
   });
 });

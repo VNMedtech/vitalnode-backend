@@ -34,6 +34,10 @@ export const PRODUCT_DETAILS_MAX_LENGTH = 10000;
 export const PRODUCT_MAX_MEDIA = 20;
 export const PRODUCT_MAX_DOCUMENTS = 10;
 
+export const PRODUCT_IMAGE_FIELD_NAME = "images";
+export const PRODUCT_DOCUMENT_FIELD_NAME = "documents";
+export const PRODUCT_DOCUMENT_TYPES_FIELD_NAME = "documentTypes";
+
 export const PRODUCT_APPROVAL_TRANSITIONS = PRODUCT_STATUS_TRANSITION_MAP;
 
 export const PRODUCT_NOTIFICATION_TYPES = {

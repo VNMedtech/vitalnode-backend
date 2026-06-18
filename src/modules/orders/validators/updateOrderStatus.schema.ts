@@ -1,26 +1,5 @@
 import { z } from "zod";
-import {
-  ORDER_DELIVERY_FAIL_REASON_MAX_LENGTH,
-  ORDER_PROOF_URL_MAX_LENGTH,
-} from "../constants/order.constants.js";
-
-const proofFileUrlSchema = z
-  .string()
-  .trim()
-  .url("Proof file URL must be valid")
-  .max(ORDER_PROOF_URL_MAX_LENGTH);
-
-export const orderProofBodySchema = z
-  .object({
-    fileUrl: proofFileUrlSchema,
-  })
-  .strict();
-
-export const optionalOrderProofBodySchema = z
-  .object({
-    fileUrl: proofFileUrlSchema.optional(),
-  })
-  .strict();
+import { ORDER_DELIVERY_FAIL_REASON_MAX_LENGTH } from "../constants/order.constants.js";
 
 export const emptyOrderStatusBodySchema = z.object({}).strict();
 
@@ -35,6 +14,4 @@ export const deliveryFailedBodySchema = z
   })
   .strict();
 
-export type OrderProofBody = z.infer<typeof orderProofBodySchema>;
-export type OptionalOrderProofBody = z.infer<typeof optionalOrderProofBodySchema>;
 export type DeliveryFailedBody = z.infer<typeof deliveryFailedBodySchema>;

@@ -4,8 +4,6 @@ import {
   PRODUCT_COLOR_MAX_LENGTH,
   PRODUCT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_DETAILS_MAX_LENGTH,
-  PRODUCT_MAX_DOCUMENTS,
-  PRODUCT_MAX_MEDIA,
   PRODUCT_MODEL_MAX_LENGTH,
   PRODUCT_NAME_MAX_LENGTH,
   PRODUCT_TYPE_MAX_LENGTH,
@@ -25,20 +23,6 @@ const positiveDecimalInputSchema = decimalInputSchema.refine(
   (value) => Number(value) > 0,
   "Must be greater than zero",
 );
-
-const productMediaSchema = z
-  .object({
-    fileUrl: z.string().trim().url("Invalid media file URL"),
-    displayOrder: z.number().int().min(0).optional(),
-  })
-  .strict();
-
-const productDocumentSchema = z
-  .object({
-    fileUrl: z.string().trim().url("Invalid document file URL"),
-    documentType: z.string().trim().min(1).max(120),
-  })
-  .strict();
 
 export const updateProductBodySchema = z
   .object({
@@ -73,11 +57,6 @@ export const updateProductBodySchema = z
       .optional(),
     details: z.string().trim().max(PRODUCT_DETAILS_MAX_LENGTH).nullable().optional(),
     specifications: z.record(z.string(), z.unknown()).nullable().optional(),
-    media: z.array(productMediaSchema).max(PRODUCT_MAX_MEDIA).optional(),
-    documents: z
-      .array(productDocumentSchema)
-      .max(PRODUCT_MAX_DOCUMENTS)
-      .optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {

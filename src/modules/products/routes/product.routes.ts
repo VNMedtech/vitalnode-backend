@@ -12,7 +12,11 @@ import {
 } from "../../../middlewares/index.js";
 import { permissions } from "../../../shared/permissions/rbac.permissions.js";
 import * as productController from "../controllers/product.controller.js";
-import { createProductBodySchema } from "../validators/createProduct.schema.js";
+import { productFileUpload } from "../middleware/productUpload.middleware.js";
+import {
+  createProductMultipartBodySchema,
+  updateProductMultipartBodySchema,
+} from "../validators/productMultipart.schema.js";
 import { productIdParamSchema } from "../validators/productParams.schema.js";
 import {
   listMarketplaceProductsQuerySchema,
@@ -20,7 +24,6 @@ import {
   listPendingProductsQuerySchema,
 } from "../validators/query.schema.js";
 import { rejectProductBodySchema } from "../validators/rejectProduct.schema.js";
-import { updateProductBodySchema } from "../validators/updateProduct.schema.js";
 
 export const productRouter = Router();
 
@@ -201,7 +204,8 @@ productRouter.post(
   "/",
   authenticate,
   authorizePermission(permissions.products.create),
-  validate({ body: createProductBodySchema }),
+  productFileUpload,
+  validate({ body: createProductMultipartBodySchema }),
   productController.createProduct,
 );
 
@@ -347,9 +351,10 @@ productRouter.patch(
   "/:id",
   authenticate,
   authorizePermission(permissions.products.update),
+  productFileUpload,
   validate({
     params: productIdParamSchema,
-    body: updateProductBodySchema,
+    body: updateProductMultipartBodySchema,
   }),
   productController.updateProduct,
 );

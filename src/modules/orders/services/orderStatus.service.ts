@@ -22,6 +22,8 @@ import {
 import { runInTransaction } from "../../../shared/transactions/runInTransaction.js";
 import { recordCommerceAudit } from "../../auditLogs/services/commerceAudit.service.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
+import { UPLOAD_TYPES } from "../../uploads/constants/upload.constants.js";
+import { UploadAssociationService } from "../../uploads/services/uploadAssociation.service.js";
 import {
   ORDER_ACTIONS,
   ORDER_AUDIT_ENTITY_TYPE,
@@ -48,6 +50,41 @@ function assertTransition(from: OrderStatus, to: OrderStatus): void {
 export class OrderStatusService {
   private readonly orderRepo = new OrderRepository(prisma);
   private readonly sellerRepo = new SellerRepository(prisma);
+  private readonly uploadAssociation = new UploadAssociationService();
+
+  private async storeHandoverProofFile(
+    actorUserId: string,
+    file: Express.Multer.File,
+  ): Promise<OrderProofInput> {
+    const upload = await this.uploadAssociation.storeFileForAssociation(
+      actorUserId,
+      UserRole.SELLER,
+      UPLOAD_TYPES.HANDOVER_PROOF,
+      file,
+    );
+
+    return {
+      fileUploadId: upload.id,
+      fileUrl: upload.fileUrl,
+    };
+  }
+
+  private async storeDeliveryProofFile(
+    actorUserId: string,
+    file: Express.Multer.File,
+  ): Promise<OrderProofInput> {
+    const upload = await this.uploadAssociation.storeFileForAssociation(
+      actorUserId,
+      UserRole.DELIVERY_PARTNER,
+      UPLOAD_TYPES.DELIVERY_PROOF,
+      file,
+    );
+
+    return {
+      fileUploadId: upload.id,
+      fileUrl: upload.fileUrl,
+    };
+  }
 
   private async resolveSellerId(actorUserId: string): Promise<string> {
     const seller = await this.sellerRepo.findIdByUserId(actorUserId);
@@ -115,8 +152,14 @@ export class OrderStatusService {
   async uploadHandoverProof(
     actorUserId: string,
     orderId: string,
-    input: OrderProofInput,
+    file: Express.Multer.File | undefined,
   ): Promise<OrderDetailDto> {
+    if (!file) {
+      throw new ValidationError("Validation failed", [
+        { field: "file", message: "Proof image file is required" },
+      ]);
+    }
+
     const sellerId = await this.resolveSellerId(actorUserId);
     const order = await this.getSellerOrderOrThrow(orderId, sellerId);
 
@@ -132,6 +175,8 @@ export class OrderStatusService {
     if (existing) {
       throw new ConflictError("Handover proof already uploaded for this order");
     }
+
+    const input = await this.storeHandoverProofFile(actorUserId, file);
 
     return runInTransaction(async (tx) => {
       const orderRepo = new OrderRepository(tx);
@@ -157,6 +202,7 @@ export class OrderStatusService {
       await proofRepo.create({
         orderId,
         proofType: ProofType.HANDOVER,
+        fileUploadId: input.fileUploadId,
         fileUrl: input.fileUrl,
         uploadedBy: actorUserId,
       });
@@ -168,6 +214,7 @@ export class OrderStatusService {
         entityId: orderId,
         metadata: {
           proofType: ProofType.HANDOVER,
+          fileUploadId: input.fileUploadId,
           fileUrl: input.fileUrl,
         },
       });
@@ -184,7 +231,7 @@ export class OrderStatusService {
   async markOutForDelivery(
     actorUserId: string,
     orderId: string,
-    input?: Partial<OrderProofInput>,
+    file?: Express.Multer.File,
   ): Promise<OrderDetailDto> {
     const sellerId = await this.resolveSellerId(actorUserId);
     const order = await this.getSellerOrderOrThrow(orderId, sellerId);
@@ -200,11 +247,15 @@ export class OrderStatusService {
     const hasHandoverProof = order.proofs.some(
       (proof) => proof.proofType === ProofType.HANDOVER,
     );
-    if (!hasHandoverProof && !input?.fileUrl) {
+    if (!hasHandoverProof && !file) {
       throw new ValidationError(
         "Handover proof must be uploaded before marking out for delivery",
       );
     }
+
+    const proofInput = file
+      ? await this.storeHandoverProofFile(actorUserId, file)
+      : undefined;
 
     return runInTransaction(async (tx) => {
       const orderRepo = new OrderRepository(tx);
@@ -221,7 +272,7 @@ export class OrderStatusService {
 
       assertOrderStatusTransition(from, to);
 
-      if (input?.fileUrl) {
+      if (proofInput) {
         const duplicate = await proofRepo.existsByOrderIdAndType(
           orderId,
           ProofType.HANDOVER,
@@ -230,7 +281,8 @@ export class OrderStatusService {
           await proofRepo.create({
             orderId,
             proofType: ProofType.HANDOVER,
-            fileUrl: input.fileUrl,
+            fileUploadId: proofInput.fileUploadId,
+            fileUrl: proofInput.fileUrl,
             uploadedBy: actorUserId,
           });
         }
@@ -281,8 +333,14 @@ export class OrderStatusService {
   async uploadDeliveryProof(
     actorUserId: string,
     orderId: string,
-    input: OrderProofInput,
+    file: Express.Multer.File | undefined,
   ): Promise<OrderDetailDto> {
+    if (!file) {
+      throw new ValidationError("Validation failed", [
+        { field: "file", message: "Proof image file is required" },
+      ]);
+    }
+
     const deliveryPartnerId = await this.resolveDeliveryPartnerId(actorUserId);
     const order = await this.getDeliveryPartnerOrderOrThrow(
       orderId,
@@ -301,6 +359,8 @@ export class OrderStatusService {
     if (existing) {
       throw new ConflictError("Delivery proof already uploaded for this order");
     }
+
+    const input = await this.storeDeliveryProofFile(actorUserId, file);
 
     return runInTransaction(async (tx) => {
       const orderRepo = new OrderRepository(tx);
@@ -326,6 +386,7 @@ export class OrderStatusService {
       await proofRepo.create({
         orderId,
         proofType: ProofType.DELIVERY,
+        fileUploadId: input.fileUploadId,
         fileUrl: input.fileUrl,
         uploadedBy: actorUserId,
       });
@@ -337,6 +398,7 @@ export class OrderStatusService {
         entityId: orderId,
         metadata: {
           proofType: ProofType.DELIVERY,
+          fileUploadId: input.fileUploadId,
           fileUrl: input.fileUrl,
         },
       });
@@ -356,7 +418,7 @@ export class OrderStatusService {
   async markDelivered(
     actorUserId: string,
     orderId: string,
-    input?: Partial<OrderProofInput>,
+    file?: Express.Multer.File,
   ): Promise<OrderDetailDto> {
     const deliveryPartnerId = await this.resolveDeliveryPartnerId(actorUserId);
     const order = await this.getDeliveryPartnerOrderOrThrow(
@@ -371,11 +433,15 @@ export class OrderStatusService {
     const hasDeliveryProof = order.proofs.some(
       (proof) => proof.proofType === ProofType.DELIVERY,
     );
-    if (!hasDeliveryProof && !input?.fileUrl) {
+    if (!hasDeliveryProof && !file) {
       throw new ValidationError(
         "Delivery proof must be uploaded before marking delivered",
       );
     }
+
+    const proofInput = file
+      ? await this.storeDeliveryProofFile(actorUserId, file)
+      : undefined;
 
     return runInTransaction(async (tx) => {
       const orderRepo = new OrderRepository(tx);
@@ -392,7 +458,7 @@ export class OrderStatusService {
 
       assertOrderStatusTransition(from, to);
 
-      if (input?.fileUrl) {
+      if (proofInput) {
         const duplicate = await proofRepo.existsByOrderIdAndType(
           orderId,
           ProofType.DELIVERY,
@@ -401,7 +467,8 @@ export class OrderStatusService {
           await proofRepo.create({
             orderId,
             proofType: ProofType.DELIVERY,
-            fileUrl: input.fileUrl,
+            fileUploadId: proofInput.fileUploadId,
+            fileUrl: proofInput.fileUrl,
             uploadedBy: actorUserId,
           });
         }

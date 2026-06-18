@@ -57,6 +57,7 @@ const orderDetailSelect = {
     select: {
       id: true,
       proofType: true,
+      fileUploadId: true,
       fileUrl: true,
       uploadedBy: true,
       createdAt: true,

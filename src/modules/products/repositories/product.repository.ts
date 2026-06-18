@@ -19,6 +19,7 @@ const sellerSummarySelect = {
 
 const mediaSelect = {
   id: true,
+  fileUploadId: true,
   fileUrl: true,
   displayOrder: true,
   createdAt: true,
@@ -26,6 +27,7 @@ const mediaSelect = {
 
 const documentSelect = {
   id: true,
+  fileUploadId: true,
   fileUrl: true,
   documentType: true,
   createdAt: true,
@@ -247,8 +249,12 @@ export class ProductRepository {
 
   createWithInventory(
     data: CreateProductData,
-    media: { fileUrl: string; displayOrder: number }[],
-    documents: { fileUrl: string; documentType: string }[],
+    media: { fileUploadId: string; fileUrl: string; displayOrder: number }[],
+    documents: {
+      fileUploadId: string;
+      fileUrl: string;
+      documentType: string;
+    }[],
   ) {
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.create({

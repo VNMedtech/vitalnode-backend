@@ -89,6 +89,7 @@ function toProofDto(proof: OrderDetailRecord["proofs"][number]): OrderProofDto {
   return {
     id: proof.id,
     proofType: proof.proofType,
+    fileUploadId: proof.fileUploadId,
     fileUrl: proof.fileUrl,
     uploadedBy: proof.uploadedBy,
     createdAt: proof.createdAt,

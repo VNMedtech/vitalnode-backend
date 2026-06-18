@@ -19,6 +19,7 @@ export interface AssignDeliveryPartnerInput {
 }
 
 export interface OrderProofInput {
+  fileUploadId: string;
   fileUrl: string;
 }
 
@@ -72,6 +73,7 @@ export interface OrderPaymentSummary {
 export interface OrderProofDto {
   id: string;
   proofType: ProofType;
+  fileUploadId: string | null;
   fileUrl: string;
   uploadedBy: string;
   createdAt: Date;

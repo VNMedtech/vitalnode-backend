@@ -7,10 +7,13 @@ import {
 } from "../../../shared/errors/app.errors.js";
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
+import { UserRole } from "../../../shared/enums/userRole.enum.js";
 import { buildPaginationMeta } from "../../../shared/responses/api.response.js";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
 import { CategoryRepository } from "../../categories/repositories/category.repository.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
+import { UPLOAD_TYPES } from "../../uploads/constants/upload.constants.js";
+import { UploadAssociationService } from "../../uploads/services/uploadAssociation.service.js";
 import {
   PRODUCT_ACTIONS,
   PRODUCT_APPROVAL_TRANSITIONS,
@@ -28,9 +31,16 @@ import type {
   CreateProductInput,
   ListProductsQuery,
   ProductDetailDto,
+  ProductDocumentInput,
   ProductListItemDto,
+  ProductMediaInput,
   UpdateProductInput,
 } from "../types/product.types.js";
+import type { ProductUploadFiles } from "../utils/productUpload.util.js";
+import {
+  validateProductDocumentTypes,
+  validateProductImageCount,
+} from "../utils/productUpload.util.js";
 
 function toDecimal(value: string): Prisma.Decimal {
   return new Prisma.Decimal(value);
@@ -73,14 +83,9 @@ function buildUpdateMetadata(
   };
 }
 
-function normalizeMediaInput(
-  media: CreateProductInput["media"] | UpdateProductInput["media"],
-) {
-  if (!media) {
-    return undefined;
-  }
-
+function normalizeMediaInput(media: ProductMediaInput[]) {
   return media.map((item, index) => ({
+    fileUploadId: item.fileUploadId,
     fileUrl: item.fileUrl,
     displayOrder: item.displayOrder ?? index,
   }));
@@ -92,6 +97,7 @@ export class ProductService {
   private readonly sellerRepo = new SellerRepository(prisma);
   private readonly mediaRepo = new ProductMediaRepository(prisma);
   private readonly documentRepo = new ProductDocumentRepository(prisma);
+  private readonly uploadAssociation = new UploadAssociationService();
 
   private async requireApprovedSeller(userId: string): Promise<string> {
     const seller = await this.sellerRepo.findIdByUserId(userId);
@@ -126,15 +132,73 @@ export class ProductService {
     return product;
   }
 
+  private async processUploadedMedia(
+    actorUserId: string,
+    files: ProductUploadFiles,
+    documentTypes?: string[],
+  ): Promise<{
+    media: ProductMediaInput[];
+    documents: ProductDocumentInput[];
+  }> {
+    validateProductImageCount(files.images);
+    const resolvedDocumentTypes = validateProductDocumentTypes(
+      files.documents,
+      documentTypes,
+    );
+
+    const media: ProductMediaInput[] = [];
+    for (const [index, image] of files.images.entries()) {
+      const upload = await this.uploadAssociation.storeFileForAssociation(
+        actorUserId,
+        UserRole.SELLER,
+        UPLOAD_TYPES.PRODUCT_IMAGE,
+        image,
+      );
+      media.push({
+        fileUploadId: upload.id,
+        fileUrl: upload.fileUrl,
+        displayOrder: index,
+      });
+    }
+
+    const documents: ProductDocumentInput[] = [];
+    for (const [index, document] of files.documents.entries()) {
+      const upload = await this.uploadAssociation.storeFileForAssociation(
+        actorUserId,
+        UserRole.SELLER,
+        UPLOAD_TYPES.PRODUCT_DOCUMENT,
+        document,
+      );
+      documents.push({
+        fileUploadId: upload.id,
+        fileUrl: upload.fileUrl,
+        documentType: resolvedDocumentTypes[index]!,
+      });
+    }
+
+    return { media, documents };
+  }
+
   async createProduct(
     actorUserId: string,
     input: CreateProductInput,
+    files?: ProductUploadFiles,
   ): Promise<ProductDetailDto> {
     const sellerId = await this.requireApprovedSeller(actorUserId);
     await this.assertCategoryExists(input.categoryId);
 
-    const media = normalizeMediaInput(input.media) ?? [];
-    const documents = input.documents ?? [];
+    let media = input.media ?? [];
+    let documents = input.documents ?? [];
+
+    if (files) {
+      const uploaded = await this.processUploadedMedia(
+        actorUserId,
+        files,
+        input.documentTypes,
+      );
+      media = uploaded.media;
+      documents = uploaded.documents;
+    }
 
     const created = await this.repo.createWithInventory(
       {
@@ -157,7 +221,11 @@ export class ProductService {
         specifications: input.specifications as Prisma.InputJsonValue | undefined,
         status: ProductStatus.PENDING_APPROVAL,
       },
-      media,
+      media.map((item, index) => ({
+        fileUploadId: item.fileUploadId,
+        fileUrl: item.fileUrl,
+        displayOrder: item.displayOrder ?? index,
+      })),
       documents,
     );
 
@@ -181,6 +249,7 @@ export class ProductService {
     actorUserId: string,
     productId: string,
     input: UpdateProductInput,
+    files?: ProductUploadFiles,
   ): Promise<ProductDetailDto> {
     const sellerId = await this.requireApprovedSeller(actorUserId);
     const existing = await this.getOwnedProductOrThrow(productId, sellerId);
@@ -240,6 +309,30 @@ export class ProductService {
         : {}),
     };
 
+    let mediaToReplace: ProductMediaInput[] | undefined;
+    let documentsToReplace: ProductDocumentInput[] | undefined;
+
+    if (files && (files.images.length > 0 || input.replaceMedia)) {
+      const uploaded = await this.processUploadedMedia(
+        actorUserId,
+        { images: files.images, documents: [] },
+      );
+      mediaToReplace = uploaded.media;
+    } else if (input.media !== undefined) {
+      mediaToReplace = input.media;
+    }
+
+    if (files && (files.documents.length > 0 || input.replaceDocuments)) {
+      const uploaded = await this.processUploadedMedia(
+        actorUserId,
+        { images: [], documents: files.documents },
+        input.documentTypes,
+      );
+      documentsToReplace = uploaded.documents;
+    } else if (input.documents !== undefined) {
+      documentsToReplace = input.documents;
+    }
+
     await prisma.$transaction(async (tx) => {
       const productRepo = new ProductRepository(tx);
       const mediaRepo = new ProductMediaRepository(tx);
@@ -247,15 +340,15 @@ export class ProductService {
 
       await productRepo.update(productId, updateData);
 
-      if (input.media !== undefined) {
+      if (mediaToReplace !== undefined) {
         await mediaRepo.replaceForProduct(
           productId,
-          normalizeMediaInput(input.media) ?? [],
+          normalizeMediaInput(mediaToReplace),
         );
       }
 
-      if (input.documents !== undefined) {
-        await documentRepo.replaceForProduct(productId, input.documents);
+      if (documentsToReplace !== undefined) {
+        await documentRepo.replaceForProduct(productId, documentsToReplace);
       }
     });
 

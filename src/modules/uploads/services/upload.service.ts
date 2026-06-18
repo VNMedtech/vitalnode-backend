@@ -9,6 +9,7 @@ import {
 } from "../../../infrastructure/s3/index.js";
 import { prisma } from "../../../infrastructure/prisma/client.js";
 import {
+  ConflictError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
@@ -25,6 +26,7 @@ import {
   toUploadDto,
 } from "../dto/upload.dto.js";
 import { UploadRepository } from "../repositories/upload.repository.js";
+import type { UploadRecord } from "../repositories/upload.repository.js";
 import type {
   DeleteUploadResult,
   FileMetadataDto,
@@ -64,7 +66,13 @@ export class UploadService {
   ): Promise<UploadDto> {
     assertUploadTypeAllowedForRole(uploadType, actorRole);
     const category = resolveUploadCategory(uploadType);
-    return this.createUpload(actorUserId, uploadType, category, file);
+    const record = await this.createUploadRecord(
+      actorUserId,
+      uploadType,
+      category,
+      file,
+    );
+    return toUploadDto(record, env.aws.signedUrlExpiresInSeconds);
   }
 
   async uploadDocument(
@@ -75,7 +83,24 @@ export class UploadService {
   ): Promise<UploadDto> {
     assertUploadTypeAllowedForRole(uploadType, actorRole);
     const category = resolveUploadCategory(uploadType);
-    return this.createUpload(actorUserId, uploadType, category, file);
+    const record = await this.createUploadRecord(
+      actorUserId,
+      uploadType,
+      category,
+      file,
+    );
+    return toUploadDto(record, env.aws.signedUrlExpiresInSeconds);
+  }
+
+  async storeUploadedFile(
+    actorUserId: string,
+    actorRole: UserRole,
+    uploadType: UploadTypeValue,
+    file: Express.Multer.File,
+  ): Promise<UploadRecord> {
+    assertUploadTypeAllowedForRole(uploadType, actorRole);
+    const category = resolveUploadCategory(uploadType);
+    return this.createUploadRecord(actorUserId, uploadType, category, file);
   }
 
   async getFileMetadata(
@@ -184,6 +209,7 @@ export class UploadService {
     }
 
     assertCanAccessUpload(actorUserId, actorRole, existing.userId);
+    await this.assertUploadNotLinked(uploadId);
 
     await deleteObjectFromS3(existing.s3Key);
     await this.repo.delete(uploadId);
@@ -234,12 +260,35 @@ export class UploadService {
     return toSignedUrlDto(existing, resolvedExpiresIn);
   }
 
-  private async createUpload(
+  private async assertUploadNotLinked(fileUploadId: string): Promise<void> {
+    const [media, document, proof] = await Promise.all([
+      prisma.productMedia.findUnique({
+        where: { fileUploadId },
+        select: { id: true },
+      }),
+      prisma.productDocument.findUnique({
+        where: { fileUploadId },
+        select: { id: true },
+      }),
+      prisma.orderProof.findUnique({
+        where: { fileUploadId },
+        select: { id: true },
+      }),
+    ]);
+
+    if (media || document || proof) {
+      throw new ConflictError(
+        "Cannot delete upload that is linked to a product or order proof",
+      );
+    }
+  }
+
+  private async createUploadRecord(
     actorUserId: string,
     uploadType: UploadTypeValue,
     category: ReturnType<typeof resolveUploadCategory>,
     file: Express.Multer.File | undefined,
-  ): Promise<UploadDto> {
+  ): Promise<UploadRecord> {
     const validatedFile = validateUploadFile(file, category);
     const s3Key = buildSecureS3Key(uploadType, validatedFile.extension);
 
@@ -281,7 +330,7 @@ export class UploadService {
         },
       });
 
-      return toUploadDto(completed, env.aws.signedUrlExpiresInSeconds);
+      return completed;
     } catch (error) {
       await this.repo.update(created.id, { status: "FAILED" });
 

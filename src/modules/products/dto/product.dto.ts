@@ -25,6 +25,7 @@ function toProductMediaDto(
 ): ProductMediaDto {
   return {
     id: media.id,
+    fileUploadId: media.fileUploadId,
     fileUrl: media.fileUrl,
     displayOrder: media.displayOrder,
     createdAt: media.createdAt,
@@ -36,6 +37,7 @@ function toProductDocumentDto(
 ): ProductDocumentDto {
   return {
     id: document.id,
+    fileUploadId: document.fileUploadId,
     fileUrl: document.fileUrl,
     documentType: document.documentType,
     createdAt: document.createdAt,

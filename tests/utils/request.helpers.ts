@@ -199,8 +199,49 @@ export function productRequest(app: Express, accessToken = "") {
     create: (body: Record<string, unknown>) =>
       auth(request(app).post(PRODUCTS_BASE)).send(body),
 
+    createMultipart: (
+      fields: Record<string, string>,
+      files?: {
+        images?: Array<{ buffer: Buffer; filename: string }>;
+        documents?: Array<{ buffer: Buffer; filename: string }>;
+      },
+    ) => {
+      let req = auth(request(app).post(PRODUCTS_BASE));
+      for (const [key, value] of Object.entries(fields)) {
+        req = req.field(key, value);
+      }
+      for (const image of files?.images ?? []) {
+        req = req.attach("images", image.buffer, image.filename);
+      }
+      for (const document of files?.documents ?? []) {
+        req = req.attach("documents", document.buffer, document.filename);
+      }
+      return req;
+    },
+
     update: (id: string, body: Record<string, unknown>) =>
       auth(request(app).patch(`${PRODUCTS_BASE}/${id}`)).send(body),
+
+    updateMultipart: (
+      id: string,
+      fields: Record<string, string>,
+      files?: {
+        images?: Array<{ buffer: Buffer; filename: string }>;
+        documents?: Array<{ buffer: Buffer; filename: string }>;
+      },
+    ) => {
+      let req = auth(request(app).patch(`${PRODUCTS_BASE}/${id}`));
+      for (const [key, value] of Object.entries(fields)) {
+        req = req.field(key, value);
+      }
+      for (const image of files?.images ?? []) {
+        req = req.attach("images", image.buffer, image.filename);
+      }
+      for (const document of files?.documents ?? []) {
+        req = req.attach("documents", document.buffer, document.filename);
+      }
+      return req;
+    },
 
     disable: (id: string) =>
       auth(request(app).delete(`${PRODUCTS_BASE}/${id}`)),

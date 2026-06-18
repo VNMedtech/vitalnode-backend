@@ -20,6 +20,7 @@ export class OrderProofRepository {
   async create(input: {
     orderId: string;
     proofType: ProofType;
+    fileUploadId: string;
     fileUrl: string;
     uploadedBy: string;
   }) {
@@ -28,12 +29,14 @@ export class OrderProofRepository {
         data: {
           orderId: input.orderId,
           proofType: input.proofType,
+          fileUploadId: input.fileUploadId,
           fileUrl: input.fileUrl,
           uploadedBy: input.uploadedBy,
         },
         select: {
           id: true,
           proofType: true,
+          fileUploadId: true,
           fileUrl: true,
           uploadedBy: true,
           createdAt: true,

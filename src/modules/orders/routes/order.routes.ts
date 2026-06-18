@@ -13,6 +13,10 @@ import {
 } from "../../../middlewares/index.js";
 import { requireIdempotencyKey } from "../../../middlewares/idempotency.middleware.js";
 import { permissions } from "../../../shared/permissions/rbac.permissions.js";
+import {
+  optionalSingleFileUpload,
+  singleFileUpload,
+} from "../../uploads/middleware/upload.middleware.js";
 import * as orderController from "../controllers/order.controller.js";
 import { assignDeliveryPartnerBodySchema } from "../validators/assignDeliveryPartner.schema.js";
 import {
@@ -22,11 +26,7 @@ import {
 import { createOrderBodySchema } from "../validators/createOrder.schema.js";
 import { orderIdParamSchema } from "../validators/orderParams.schema.js";
 import { listOrdersQuerySchema } from "../validators/query.schema.js";
-import {
-  deliveryFailedBodySchema,
-  optionalOrderProofBodySchema,
-  orderProofBodySchema,
-} from "../validators/updateOrderStatus.schema.js";
+import { deliveryFailedBodySchema } from "../validators/updateOrderStatus.schema.js";
 
 export const orderRouter = Router();
 
@@ -86,7 +86,8 @@ orderRouter.post(
   authenticate,
   requireApprovedSeller,
   authorizePermission(permissions.orders.updateStatus),
-  validate({ params: orderIdParamSchema, body: orderProofBodySchema }),
+  singleFileUpload,
+  validate({ params: orderIdParamSchema }),
   orderController.uploadHandoverProof,
 );
 
@@ -95,10 +96,8 @@ orderRouter.post(
   authenticate,
   requireApprovedSeller,
   authorizePermission(permissions.orders.updateStatus),
-  validate({
-    params: orderIdParamSchema,
-    body: optionalOrderProofBodySchema,
-  }),
+  optionalSingleFileUpload,
+  validate({ params: orderIdParamSchema }),
   orderController.markOutForDelivery,
 );
 
@@ -106,7 +105,8 @@ orderRouter.post(
   "/:id/delivery-proof",
   authenticate,
   authorizePermission(permissions.orders.updateStatus),
-  validate({ params: orderIdParamSchema, body: orderProofBodySchema }),
+  singleFileUpload,
+  validate({ params: orderIdParamSchema }),
   orderController.uploadDeliveryProof,
 );
 
@@ -114,10 +114,8 @@ orderRouter.post(
   "/:id/delivered",
   authenticate,
   authorizePermission(permissions.orders.updateStatus),
-  validate({
-    params: orderIdParamSchema,
-    body: optionalOrderProofBodySchema,
-  }),
+  optionalSingleFileUpload,
+  validate({ params: orderIdParamSchema }),
   orderController.markDelivered,
 );
 

@@ -6,7 +6,8 @@ import {
 } from "../../../shared/responses/api.response.js";
 import { ProductApprovalService } from "../services/productApproval.service.js";
 import { ProductService } from "../services/product.service.js";
-import type { CreateProductBody } from "../validators/createProduct.schema.js";
+import { extractProductUploadFiles } from "../utils/productUpload.util.js";
+import type { CreateProductMultipartBody } from "../validators/productMultipart.schema.js";
 import type { ProductIdParam } from "../validators/productParams.schema.js";
 import type {
   ListMarketplaceProductsQueryInput,
@@ -14,7 +15,7 @@ import type {
   ListPendingProductsQueryInput,
 } from "../validators/query.schema.js";
 import type { RejectProductBody } from "../validators/rejectProduct.schema.js";
-import type { UpdateProductBody } from "../validators/updateProduct.schema.js";
+import type { UpdateProductMultipartBody } from "../validators/productMultipart.schema.js";
 
 const productService = new ProductService();
 const productApprovalService = new ProductApprovalService();
@@ -93,8 +94,9 @@ export const getOwnProductById: RequestHandler = async (req, res, next) => {
 export const createProduct: RequestHandler = async (req, res, next) => {
   try {
     const actorUserId = requireAuthenticatedUserId(req);
-    const body = req.body as CreateProductBody;
-    const product = await productService.createProduct(actorUserId, body);
+    const body = req.body as CreateProductMultipartBody;
+    const files = extractProductUploadFiles(req);
+    const product = await productService.createProduct(actorUserId, body, files);
     res
       .status(201)
       .json(successResponse(product, "Product created successfully"));
@@ -107,8 +109,14 @@ export const updateProduct: RequestHandler = async (req, res, next) => {
   try {
     const actorUserId = requireAuthenticatedUserId(req);
     const { id } = req.params as ProductIdParam;
-    const body = req.body as UpdateProductBody;
-    const product = await productService.updateProduct(actorUserId, id, body);
+    const body = req.body as UpdateProductMultipartBody;
+    const files = extractProductUploadFiles(req);
+    const product = await productService.updateProduct(
+      actorUserId,
+      id,
+      body,
+      files,
+    );
     res
       .status(200)
       .json(successResponse(product, "Product updated successfully"));

@@ -9,3 +9,4 @@ export * from "./routes/upload.routes.js";
 export * from "./types/upload.types.js";
 export * from "./constants/upload.constants.js";
 export * from "./middleware/upload.middleware.js";
+export * from "./services/uploadAssociation.service.js";

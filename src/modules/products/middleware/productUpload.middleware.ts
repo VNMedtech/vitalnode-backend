@@ -1,20 +1,23 @@
 /**
- * uploads — upload.middleware
- * Multer configuration for in-memory multipart file uploads.
+ * products — productUpload.middleware
+ * Multer configuration for product image and document uploads.
  */
 import type { RequestHandler } from "express";
 import multer from "multer";
 import { ValidationError } from "../../../shared/errors/app.errors.js";
 import {
-  UPLOAD_FIELD_NAME,
-  UPLOAD_MAX_FILE_SIZE_BYTES,
-} from "../constants/upload.constants.js";
+  PRODUCT_DOCUMENT_FIELD_NAME,
+  PRODUCT_IMAGE_FIELD_NAME,
+  PRODUCT_MAX_DOCUMENTS,
+  PRODUCT_MAX_MEDIA,
+} from "../constants/product.constants.js";
+import { UPLOAD_MAX_FILE_SIZE_BYTES } from "../../uploads/constants/upload.constants.js";
 
-const upload = multer({
+const productUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: UPLOAD_MAX_FILE_SIZE_BYTES,
-    files: 1,
+    files: PRODUCT_MAX_MEDIA + PRODUCT_MAX_DOCUMENTS,
   },
 });
 
@@ -48,19 +51,11 @@ function handleMulterError(
   next(err);
 }
 
-export const singleFileUpload: RequestHandler = (req, res, next) => {
-  upload.single(UPLOAD_FIELD_NAME)(req, res, (err) => {
-    if (err) {
-      handleMulterError(err, req, res, next);
-      return;
-    }
-
-    next();
-  });
-};
-
-export const optionalSingleFileUpload: RequestHandler = (req, res, next) => {
-  upload.single(UPLOAD_FIELD_NAME)(req, res, (err) => {
+export const productFileUpload: RequestHandler = (req, res, next) => {
+  productUpload.fields([
+    { name: PRODUCT_IMAGE_FIELD_NAME, maxCount: PRODUCT_MAX_MEDIA },
+    { name: PRODUCT_DOCUMENT_FIELD_NAME, maxCount: PRODUCT_MAX_DOCUMENTS },
+  ])(req, res, (err) => {
     if (err) {
       handleMulterError(err, req, res, next);
       return;

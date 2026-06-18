@@ -3,6 +3,7 @@ import type { ProductStatus } from "../../../shared/enums/productStatus.enum.js"
 
 export interface ProductMediaDto {
   id: string;
+  fileUploadId: string | null;
   fileUrl: string;
   displayOrder: number;
   createdAt: Date;
@@ -10,6 +11,7 @@ export interface ProductMediaDto {
 
 export interface ProductDocumentDto {
   id: string;
+  fileUploadId: string | null;
   fileUrl: string;
   documentType: string;
   createdAt: Date;
@@ -63,11 +65,13 @@ export interface ProductDetailDto extends ProductListItemDto {
 }
 
 export interface ProductMediaInput {
+  fileUploadId: string;
   fileUrl: string;
   displayOrder?: number;
 }
 
 export interface ProductDocumentInput {
+  fileUploadId: string;
   fileUrl: string;
   documentType: string;
 }
@@ -89,6 +93,7 @@ export interface CreateProductInput {
   description: string;
   details?: string;
   specifications?: Record<string, unknown>;
+  documentTypes?: string[];
   media?: ProductMediaInput[];
   documents?: ProductDocumentInput[];
 }
@@ -110,8 +115,11 @@ export interface UpdateProductInput {
   description?: string;
   details?: string | null;
   specifications?: Record<string, unknown> | null;
+  documentTypes?: string[];
   media?: ProductMediaInput[];
   documents?: ProductDocumentInput[];
+  replaceMedia?: boolean;
+  replaceDocuments?: boolean;
 }
 
 export interface ListProductsQuery {

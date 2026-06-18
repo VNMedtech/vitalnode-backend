@@ -14,11 +14,7 @@ import type {
 import type { CreateOrderBody } from "../validators/createOrder.schema.js";
 import type { OrderIdParam } from "../validators/orderParams.schema.js";
 import type { ListOrdersQueryInput } from "../validators/query.schema.js";
-import type {
-  DeliveryFailedBody,
-  OptionalOrderProofBody,
-  OrderProofBody,
-} from "../validators/updateOrderStatus.schema.js";
+import type { DeliveryFailedBody } from "../validators/updateOrderStatus.schema.js";
 import { CheckoutService } from "../services/checkout.service.js";
 import { DeliveryAssignmentService } from "../services/deliveryAssignment.service.js";
 import { OrderCancellationService } from "../services/orderCancellation.service.js";
@@ -163,11 +159,10 @@ export const uploadHandoverProof: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
-    const body = req.body as OrderProofBody;
     const order = await orderStatusService.uploadHandoverProof(
       actor.id,
       id,
-      body,
+      req.file,
     );
     res
       .status(200)
@@ -181,8 +176,11 @@ export const markOutForDelivery: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
-    const body = req.body as OptionalOrderProofBody;
-    const order = await orderStatusService.markOutForDelivery(actor.id, id, body);
+    const order = await orderStatusService.markOutForDelivery(
+      actor.id,
+      id,
+      req.file,
+    );
     res
       .status(200)
       .json(successResponse(order, "Order marked out for delivery successfully"));
@@ -195,8 +193,11 @@ export const uploadDeliveryProof: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
-    const body = req.body as OrderProofBody;
-    const order = await orderStatusService.uploadDeliveryProof(actor.id, id, body);
+    const order = await orderStatusService.uploadDeliveryProof(
+      actor.id,
+      id,
+      req.file,
+    );
     res
       .status(200)
       .json(successResponse(order, "Delivery proof uploaded successfully"));
@@ -209,8 +210,7 @@ export const markDelivered: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
-    const body = req.body as OptionalOrderProofBody;
-    const order = await orderStatusService.markDelivered(actor.id, id, body);
+    const order = await orderStatusService.markDelivered(actor.id, id, req.file);
     res
       .status(200)
       .json(successResponse(order, "Order marked delivered successfully"));
