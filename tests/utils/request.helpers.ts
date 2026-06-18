@@ -370,9 +370,9 @@ export function uploadRequest(app: Express, accessToken: string) {
   };
 }
 
-export function orderRequest(app: Express, accessToken: string) {
+export function orderRequest(app: Express, accessToken = "") {
   const auth = (req: Test) =>
-    req.set("Authorization", `Bearer ${accessToken}`);
+    accessToken ? req.set("Authorization", `Bearer ${accessToken}`) : req;
 
   return {
     checkout: (
@@ -383,6 +383,15 @@ export function orderRequest(app: Express, accessToken: string) {
         .set(IDEMPOTENCY_HEADER, idempotencyKey)
         .send(body),
 
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(ORDERS_BASE)).query(query),
+
+    listAssigned: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${ORDERS_BASE}/assigned`)).query(query),
+
+    getById: (id: string) =>
+      auth(request(app).get(`${ORDERS_BASE}/${id}`)),
+
     cancel: (
       body: { orderId: string; reason?: string },
       idempotencyKey: string,
@@ -390,6 +399,79 @@ export function orderRequest(app: Express, accessToken: string) {
       auth(request(app).post(`${ORDERS_BASE}/cancel`))
         .set(IDEMPOTENCY_HEADER, idempotencyKey)
         .send(body),
+
+    cancelById: (
+      id: string,
+      body: { reason?: string } = {},
+      idempotencyKey: string,
+    ) =>
+      auth(request(app).post(`${ORDERS_BASE}/${id}/cancel`))
+        .set(IDEMPOTENCY_HEADER, idempotencyKey)
+        .send(body),
+
+    process: (id: string) =>
+      auth(request(app).post(`${ORDERS_BASE}/${id}/process`)),
+
+    uploadHandoverProof: (
+      id: string,
+      file: { buffer: Buffer; filename: string },
+    ) =>
+      auth(request(app).post(`${ORDERS_BASE}/${id}/handover-proof`)).attach(
+        "file",
+        file.buffer,
+        file.filename,
+      ),
+
+    markOutForDelivery: (
+      id: string,
+      file?: { buffer: Buffer; filename: string },
+    ) => {
+      let req = auth(request(app).post(`${ORDERS_BASE}/${id}/out-for-delivery`));
+      if (file) {
+        req = req.attach("file", file.buffer, file.filename);
+      }
+      return req;
+    },
+
+    uploadDeliveryProof: (
+      id: string,
+      file: { buffer: Buffer; filename: string },
+    ) =>
+      auth(request(app).post(`${ORDERS_BASE}/${id}/delivery-proof`)).attach(
+        "file",
+        file.buffer,
+        file.filename,
+      ),
+
+    markDelivered: (
+      id: string,
+      file?: { buffer: Buffer; filename: string },
+    ) => {
+      let req = auth(request(app).post(`${ORDERS_BASE}/${id}/delivered`));
+      if (file) {
+        req = req.attach("file", file.buffer, file.filename);
+      }
+      return req;
+    },
+
+    markDeliveryFailed: (id: string, body: { reason?: string } = {}) =>
+      auth(request(app).post(`${ORDERS_BASE}/${id}/delivery-failed`)).send(body),
+
+    assignDeliveryPartner: (
+      id: string,
+      body: { deliveryPartnerId: string },
+    ) =>
+      auth(request(app).post(`${ORDERS_BASE}/${id}/assign-delivery-partner`)).send(
+        body,
+      ),
+
+    reassignDeliveryPartner: (
+      id: string,
+      body: { deliveryPartnerId: string },
+    ) =>
+      auth(
+        request(app).post(`${ORDERS_BASE}/${id}/reassign-delivery-partner`),
+      ).send(body),
   };
 }
 
