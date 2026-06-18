@@ -61,13 +61,15 @@ export class InventoryRepository {
     productId: string,
     quantity: number,
   ): Promise<number | null> {
-    const affected = await this.db.$executeRaw`
-      UPDATE "Inventory"
-      SET "availableQuantity" = "availableQuantity" - ${quantity},
-          "updatedAt" = NOW()
-      WHERE "productId" = ${productId}::uuid
-        AND "availableQuantity" >= ${quantity}
-    `;
+    const affected = await this.db.$executeRawUnsafe(
+      `UPDATE "Inventory"
+       SET "availableQuantity" = "availableQuantity" - $2,
+           "updatedAt" = NOW()
+       WHERE "productId" = $1
+         AND "availableQuantity" >= $2`,
+      productId,
+      quantity,
+    );
 
     if (affected === 0) {
       return null;

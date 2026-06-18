@@ -289,9 +289,10 @@ export class OrderRepository {
   }
 
   async lockById(orderId: string): Promise<OrderWithPaymentAndItems | null> {
-    await this.db.$queryRaw`
-      SELECT id FROM "Order" WHERE id = ${orderId}::uuid FOR UPDATE
-    `;
+    await this.db.$queryRawUnsafe(
+      `SELECT id FROM "Order" WHERE id = $1 FOR UPDATE`,
+      orderId,
+    );
 
     return this.findByIdWithPaymentAndItems(orderId);
   }

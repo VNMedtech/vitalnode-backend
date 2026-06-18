@@ -64,14 +64,12 @@ export class PaymentWebhookService {
       input.eventId ??
       `${eventType}:${JSON.stringify(input.payload.payload).slice(0, 128)}`;
 
-    const acquireResult = await runInTransaction(async (tx) => {
-      const webhookRepo = new WebhookEventRepository(tx);
-      return webhookRepo.acquireForProcessing({
-        provider: WEBHOOK_PROVIDER,
-        eventId,
-        eventType,
-        payload: input.payload as never,
-      });
+    const webhookRepo = new WebhookEventRepository(prisma);
+    const acquireResult = await webhookRepo.acquireForProcessing({
+      provider: WEBHOOK_PROVIDER,
+      eventId,
+      eventType,
+      payload: input.payload as never,
     });
 
     if (acquireResult.action === "skip") {

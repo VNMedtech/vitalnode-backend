@@ -10,6 +10,8 @@ const PRODUCTS_BASE = "/api/v1/products";
 const INVENTORY_BASE = "/api/v1/inventory";
 const ADDRESSES_BASE = "/api/v1/addresses";
 const CART_BASE = "/api/v1/cart";
+const ORDERS_BASE = "/api/v1/orders";
+const PAYMENTS_BASE = "/api/v1/payments";
 const UPLOADS_BASE = "/api/v1/uploads";
 const IDEMPOTENCY_HEADER = "idempotency-key";
 
@@ -365,6 +367,67 @@ export function uploadRequest(app: Express, accessToken: string) {
 
     delete: (id: string) =>
       auth(request(app).delete(`${UPLOADS_BASE}/${id}`)),
+  };
+}
+
+export function orderRequest(app: Express, accessToken: string) {
+  const auth = (req: Test) =>
+    req.set("Authorization", `Bearer ${accessToken}`);
+
+  return {
+    checkout: (
+      body: { shippingAddressId: string },
+      idempotencyKey: string,
+    ) =>
+      auth(request(app).post(`${ORDERS_BASE}/checkout`))
+        .set(IDEMPOTENCY_HEADER, idempotencyKey)
+        .send(body),
+
+    cancel: (
+      body: { orderId: string; reason?: string },
+      idempotencyKey: string,
+    ) =>
+      auth(request(app).post(`${ORDERS_BASE}/cancel`))
+        .set(IDEMPOTENCY_HEADER, idempotencyKey)
+        .send(body),
+  };
+}
+
+export function paymentRequest(app: Express, accessToken = "") {
+  const auth = (req: Test) =>
+    accessToken ? req.set("Authorization", `Bearer ${accessToken}`) : req;
+
+  return {
+    getDetails: (orderId: string) =>
+      auth(request(app).get(`${PAYMENTS_BASE}/${orderId}`)),
+
+    createOrder: (
+      body: { orderId: string },
+      idempotencyKey: string,
+    ) =>
+      auth(request(app).post(`${PAYMENTS_BASE}/create-order`))
+        .set(IDEMPOTENCY_HEADER, idempotencyKey)
+        .send(body),
+
+    createOrderWithoutIdempotency: (body: { orderId: string }) =>
+      auth(request(app).post(`${PAYMENTS_BASE}/create-order`)).send(body),
+
+    verify: (
+      body: {
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+      },
+      idempotencyKey: string,
+    ) =>
+      auth(request(app).post(`${PAYMENTS_BASE}/verify`))
+        .set(IDEMPOTENCY_HEADER, idempotencyKey)
+        .send(body),
+
+    refund: (body: { orderId: string }, idempotencyKey: string) =>
+      auth(request(app).post(`${PAYMENTS_BASE}/refund`))
+        .set(IDEMPOTENCY_HEADER, idempotencyKey)
+        .send(body),
   };
 }
 

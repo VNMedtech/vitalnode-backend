@@ -57,9 +57,10 @@ export class PaymentRepository {
   }
 
   async lockById(paymentId: string): Promise<PaymentDetailRecord | null> {
-    await this.db.$queryRaw`
-      SELECT id FROM "Payment" WHERE id = ${paymentId}::uuid FOR UPDATE
-    `;
+    await this.db.$queryRawUnsafe(
+      `SELECT id FROM "Payment" WHERE id = $1 FOR UPDATE`,
+      paymentId,
+    );
 
     return this.db.payment.findUnique({
       where: { id: paymentId },
