@@ -19,6 +19,7 @@ import { notificationRouter } from "../modules/notifications/routes/notification
 import { analyticsRouter } from "../modules/analytics/routes/analytics.routes.js";
 import { auditRouter } from "../modules/audit/routes/audit.routes.js";
 import { adminRouter } from "../modules/admin/routes/admin.routes.js";
+import { reviewRouter } from "../modules/reviews/routes/review.routes.js";
 
 export const apiRouter = Router();
 
@@ -38,4 +39,5 @@ apiRouter.use("/uploads", uploadRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/analytics", analyticsRouter);
 apiRouter.use("/audit-logs", auditRouter);
+apiRouter.use("/reviews", reviewRouter);
 apiRouter.use("/admin", adminRouter);

@@ -4,6 +4,7 @@ import type {
   ProductDetailRecord,
   ProductListRecord,
 } from "../repositories/product.repository.js";
+import type { ProductReviewStats } from "../../reviews/types/review.types.js";
 import type {
   ProductDetailDto,
   ProductDocumentDto,
@@ -47,7 +48,10 @@ function toProductDocumentDto(
   };
 }
 
-function toProductListItemDto(record: ProductListRecord): ProductListItemDto {
+function toProductListItemDto(
+  record: ProductListRecord,
+  reviewStats?: ProductReviewStats,
+): ProductListItemDto {
   const sortedMedia = [...record.media].sort(
     (a, b) => a.displayOrder - b.displayOrder,
   );
@@ -73,6 +77,8 @@ function toProductListItemDto(record: ProductListRecord): ProductListItemDto {
       businessName: record.seller.businessName,
     },
     primaryImageUrl: sortedMedia[0]?.fileUrl ?? null,
+    averageRating: reviewStats?.averageRating ?? null,
+    reviewCount: reviewStats?.reviewCount ?? 0,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -80,11 +86,15 @@ function toProductListItemDto(record: ProductListRecord): ProductListItemDto {
 
 export function toProductListItemDtoFromRecord(
   record: ProductListRecord,
+  reviewStats?: ProductReviewStats,
 ): ProductListItemDto {
-  return toProductListItemDto(record);
+  return toProductListItemDto(record, reviewStats);
 }
 
-export function toProductDetailDto(record: ProductDetailRecord): ProductDetailDto {
+export function toProductDetailDto(
+  record: ProductDetailRecord,
+  reviewStats?: ProductReviewStats,
+): ProductDetailDto {
   const specifications =
     record.specifications &&
     typeof record.specifications === "object" &&
@@ -93,7 +103,7 @@ export function toProductDetailDto(record: ProductDetailRecord): ProductDetailDt
       : null;
 
   return {
-    ...toProductListItemDto(record),
+    ...toProductListItemDto(record, reviewStats),
     color: record.color,
     weight: decimalToString(record.weight),
     length: decimalToString(record.length),

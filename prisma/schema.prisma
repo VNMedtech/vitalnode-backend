@@ -113,6 +113,11 @@ enum UploadType {
   PROFILE_IMAGE
 }
 
+enum ReviewStatus {
+  ACTIVE
+  DISABLED
+}
+
 // =============================================================================
 // USER DOMAIN
 // =============================================================================
@@ -163,6 +168,7 @@ model BuyerProfile {
   addresses Address[]
   cart      Cart?
   orders    Order[]
+  reviews   ProductReview[]
 }
 
 model SellerProfile {
@@ -292,6 +298,7 @@ model Product {
   inventoryMoves InventoryMovement[]
   cartItems      CartItem[]
   orderItems     OrderItem[]
+  reviews        ProductReview[]
 
   @@index([sellerId])
   @@index([categoryId])
@@ -347,9 +354,9 @@ model InventoryMovement {
   id              String                @id @default(uuid())
   productId       String
   actorUserId     String?
-  quantityBefore  Int
-  quantityAfter   Int
-  quantityChanged Int
+  quantityBefore  Int                   @default(0)
+  quantityAfter   Int                   @default(0)
+  quantityChanged Int                   @default(0)
   quantity        Int
   movementType    InventoryMovementType
   referenceId     String?
@@ -365,6 +372,30 @@ model InventoryMovement {
   @@index([movementType])
   @@index([referenceId])
   @@index([actorUserId])
+}
+
+// =============================================================================
+// REVIEW DOMAIN
+// =============================================================================
+
+model ProductReview {
+  id        String       @id @default(uuid())
+  productId String
+  buyerId   String
+  rating    Int
+  title     String
+  comment   String
+  status    ReviewStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  product Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  buyer   BuyerProfile @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, buyerId])
+  @@index([productId])
+  @@index([buyerId])
+  @@index([status])
 }
 
 // =============================================================================
@@ -604,7 +635,7 @@ model PasswordResetToken {
 model FileUpload {
   id           String         @id @default(uuid())
   userId       String
-  uploadType   UploadType
+  uploadType   UploadType     @default(PRODUCT_IMAGE)
   category     UploadCategory
   status       UploadStatus   @default(UPLOADING)
   s3Key        String         @unique

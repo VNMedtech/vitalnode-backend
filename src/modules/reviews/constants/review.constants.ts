@@ -1,0 +1,13 @@
+export const REVIEW_AUDIT_ENTITY_TYPE = "PRODUCT_REVIEW" as const;
+
+export const REVIEW_ACTIONS = {
+  CREATE: "REVIEW_CREATE",
+  UPDATE: "REVIEW_UPDATE",
+  DELETE: "REVIEW_DELETE",
+  DISABLE: "REVIEW_DISABLE",
+} as const;
+
+export const REVIEW_MIN_RATING = 1;
+export const REVIEW_MAX_RATING = 5;
+export const REVIEW_TITLE_MAX_LENGTH = 120;
+export const REVIEW_COMMENT_MAX_LENGTH = 2000;

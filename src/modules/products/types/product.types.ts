@@ -46,6 +46,8 @@ export interface ProductListItemDto {
   category: ProductCategorySummaryDto;
   seller: ProductSellerSummaryDto;
   primaryImageUrl: string | null;
+  averageRating: string | null;
+  reviewCount: number;
   createdAt: Date;
   updatedAt: Date;
 }

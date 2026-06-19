@@ -25,6 +25,11 @@ import {
 } from "../validators/query.schema.js";
 import { rejectProductBodySchema } from "../validators/rejectProduct.schema.js";
 import { compareProductsQuerySchema } from "../validators/compareProducts.schema.js";
+import * as reviewController from "../../reviews/controllers/review.controller.js";
+import {
+  listProductReviewsQuerySchema,
+} from "../../reviews/validators/query.schema.js";
+import { productReviewsParamSchema } from "../../reviews/validators/reviewParams.schema.js";
 
 export const productRouter = Router();
 
@@ -536,6 +541,40 @@ productRouter.post(
 
 /**
  * @openapi
+ * /api/v1/products/{productId}/reviews:
+ *   get:
+ *     tags: [Products, Reviews]
+ *     summary: List product reviews
+ *     description: |
+ *       Public endpoint. Returns paginated active reviews for an approved marketplace product.
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+ *     responses:
+ *       200:
+ *         description: Product reviews fetched successfully
+ *       404:
+ *         description: Product not found
+ */
+productRouter.get(
+  "/:productId/reviews",
+  validate({
+    params: productReviewsParamSchema,
+    query: listProductReviewsQuerySchema,
+  }),
+  reviewController.listProductReviews,
+);
+
+/**
+ * @openapi
  * /api/v1/products/{id}:
  *   get:
  *     tags: [Products]
@@ -631,6 +670,8 @@ productRouter.get(
  *         seller:
  *           $ref: '#/components/schemas/ProductSellerSummary'
  *         primaryImageUrl: { type: string, nullable: true }
+ *         averageRating: { type: string, nullable: true, example: "4.5" }
+ *         reviewCount: { type: integer, example: 12 }
  *         createdAt: { type: string, format: date-time }
  *         updatedAt: { type: string, format: date-time }
  *     ProductDetail:

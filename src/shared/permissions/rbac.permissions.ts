@@ -71,6 +71,12 @@ export const permissions = {
   auditLogs: {
     read: "audit-logs:read",
   },
+  reviews: {
+    create: "reviews:create",
+    update: "reviews:update",
+    delete: "reviews:delete",
+    manage: "reviews:manage",
+  },
   admin: {
     manage: "admin:manage",
   },
@@ -118,6 +124,9 @@ export const rolePermissions: Record<UserRole, readonly Permission[]> = {
     permissions.uploads.create,
     permissions.uploads.delete,
     permissions.notifications.read,
+    permissions.reviews.create,
+    permissions.reviews.update,
+    permissions.reviews.delete,
   ],
   /** Maximum seller permissions — only granted when approvalStatus is ACTIVE. */
   [UserRole.SELLER]: [

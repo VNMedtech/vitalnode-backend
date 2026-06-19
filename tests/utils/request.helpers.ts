@@ -12,6 +12,7 @@ const ADDRESSES_BASE = "/api/v1/addresses";
 const CART_BASE = "/api/v1/cart";
 const ORDERS_BASE = "/api/v1/orders";
 const PAYMENTS_BASE = "/api/v1/payments";
+const REVIEWS_BASE = "/api/v1/reviews";
 const UPLOADS_BASE = "/api/v1/uploads";
 const IDEMPOTENCY_HEADER = "idempotency-key";
 
@@ -256,6 +257,36 @@ export function productRequest(app: Express, accessToken = "") {
 
     reject: (id: string, body: Record<string, unknown> = {}) =>
       auth(request(app).post(`${PRODUCTS_BASE}/${id}/reject`)).send(body),
+
+    listReviews: (
+      productId: string,
+      query: Record<string, string | number | undefined> = {},
+    ) =>
+      auth(request(app).get(`${PRODUCTS_BASE}/${productId}/reviews`)).query(
+        query,
+      ),
+  };
+}
+
+export function reviewRequest(app: Express, accessToken = "") {
+  const auth = (req: Test) =>
+    accessToken ? req.set("Authorization", `Bearer ${accessToken}`) : req;
+
+  return {
+    create: (body: Record<string, unknown>) =>
+      auth(request(app).post(REVIEWS_BASE)).send(body),
+
+    update: (reviewId: string, body: Record<string, unknown>) =>
+      auth(request(app).patch(`${REVIEWS_BASE}/${reviewId}`)).send(body),
+
+    delete: (reviewId: string) =>
+      auth(request(app).delete(`${REVIEWS_BASE}/${reviewId}`)),
+
+    listAdmin: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(REVIEWS_BASE)).query(query),
+
+    disable: (reviewId: string) =>
+      auth(request(app).post(`${REVIEWS_BASE}/${reviewId}/disable`)),
   };
 }
 

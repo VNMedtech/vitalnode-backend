@@ -28,6 +28,8 @@ import {
 import { ProductDocumentRepository } from "../repositories/productDocument.repository.js";
 import { ProductMediaRepository } from "../repositories/productMedia.repository.js";
 import { ProductRepository } from "../repositories/product.repository.js";
+import { ReviewRepository } from "../../reviews/repositories/review.repository.js";
+import { toProductReviewStats } from "../../reviews/dto/review.dto.js";
 import type {
   CreateProductInput,
   ListProductsQuery,
@@ -95,6 +97,7 @@ function normalizeMediaInput(media: ProductMediaInput[]) {
 
 export class ProductService {
   private readonly repo = new ProductRepository(prisma);
+  private readonly reviewRepo = new ReviewRepository(prisma);
   private readonly categoryRepo = new CategoryRepository(prisma);
   private readonly sellerRepo = new SellerRepository(prisma);
   private readonly mediaRepo = new ProductMediaRepository(prisma);
@@ -468,8 +471,22 @@ export class ProductService {
       this.repo.count(filterOptions),
     ]);
 
+    const productIds = records.map((record) => record.id);
+    const reviewStatsMap =
+      await this.reviewRepo.getStatsForProductIds(productIds);
+
     return {
-      items: records.map(toProductListItemDtoFromRecord),
+      items: records.map((record) =>
+        toProductListItemDtoFromRecord(
+          record,
+          toProductReviewStats(
+            reviewStatsMap.get(record.id) ?? {
+              averageRating: null,
+              reviewCount: 0,
+            },
+          ),
+        ),
+      ),
       meta: buildPaginationMeta(query.page, query.limit, total),
     };
   }
@@ -480,7 +497,11 @@ export class ProductService {
       throw new NotFoundError("Product not found");
     }
 
-    return toProductDetailDto(product);
+    const reviewStats = toProductReviewStats(
+      await this.reviewRepo.getStatsForProduct(productId),
+    );
+
+    return toProductDetailDto(product, reviewStats);
   }
 
   async compareMarketplaceProducts(
