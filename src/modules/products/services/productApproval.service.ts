@@ -1,4 +1,5 @@
 import { prisma } from "../../../infrastructure/prisma/client.js";
+import { logger } from "../../../infrastructure/logger/logger.js";
 import {
   ConflictError,
   NotFoundError,
@@ -20,6 +21,7 @@ import {
   NOTIFICATION_TYPES,
   notificationDispatcher,
 } from "../../notifications/index.js";
+import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
 import {
   toProductDetailDto,
   toProductListItemDtoFromRecord,
@@ -56,8 +58,89 @@ function assertCurrentStatus(
   }
 }
 
+type ProductDecision = "approve" | "reject";
+
+export async function emitProductDecisionNotification(
+  productId: string,
+  sellerId: string,
+  productName: string,
+  decision: ProductDecision,
+  reason: string | undefined,
+  sellerRepo: SellerRepository,
+): Promise<void> {
+  const sellerProfile = await sellerRepo.findById(sellerId);
+  if (!sellerProfile) {
+    logger.warn(
+      { productId, sellerId },
+      "Product notification skipped — seller profile not found",
+    );
+    return;
+  }
+
+  const inApp =
+    decision === "approve"
+      ? {
+          userId: sellerProfile.userId,
+          type: NOTIFICATION_TYPES.PRODUCT_APPROVED,
+          title: "Product approved",
+          message: `Your product "${productName}" has been approved and is now visible in the marketplace.`,
+        }
+      : {
+          userId: sellerProfile.userId,
+          type: NOTIFICATION_TYPES.PRODUCT_REJECTED,
+          title: "Product rejected",
+          message: reason
+            ? `Your product "${productName}" was rejected. Reason: ${reason}`
+            : `Your product "${productName}" was rejected.`,
+        };
+
+  const sellerEmail = sellerProfile.user.email;
+  if (!sellerEmail) {
+    notificationDispatcher.createInApp(inApp);
+    logger.warn(
+      { productId, sellerId, userId: sellerProfile.userId },
+      "Product notification email skipped — seller email unavailable",
+    );
+    return;
+  }
+
+  const recipientName = buildRecipientName(
+    sellerProfile.user.firstName,
+    sellerProfile.user.lastName,
+  );
+
+  if (decision === "approve") {
+    notificationDispatcher.emit({
+      eventType: NOTIFICATION_EVENTS.PRODUCT_APPROVED,
+      correlationId: productId,
+      inApp,
+      email: {
+        to: sellerEmail,
+        recipientName,
+        productName,
+        marketplaceUrl: buildAppUrl("/products"),
+      },
+    });
+    return;
+  }
+
+  notificationDispatcher.emit({
+    eventType: NOTIFICATION_EVENTS.PRODUCT_REJECTED,
+    correlationId: productId,
+    inApp,
+    email: {
+      to: sellerEmail,
+      recipientName,
+      productName,
+      reason,
+      supportUrl: buildAppUrl("/support"),
+    },
+  });
+}
+
 export class ProductApprovalService {
   private readonly repo = new ProductRepository(prisma);
+  private readonly sellerRepo = new SellerRepository(prisma);
 
   async listPendingProducts(query: ListProductsQuery): Promise<{
     items: ProductListItemDto[];
@@ -122,28 +205,14 @@ export class ProductApprovalService {
       },
     });
 
-    const sellerInfo = await this.repo.findSellerUserIdByProductId(productId);
-    if (sellerInfo?.seller?.user?.email) {
-      notificationDispatcher.emit({
-        eventType: NOTIFICATION_EVENTS.PRODUCT_APPROVED,
-        correlationId: productId,
-        inApp: {
-          userId: sellerInfo.seller.userId,
-          type: NOTIFICATION_TYPES.PRODUCT_APPROVED,
-          title: "Product approved",
-          message: `Your product "${product.productName}" has been approved and is now visible in the marketplace.`,
-        },
-        email: {
-          to: sellerInfo.seller.user.email,
-          recipientName: buildRecipientName(
-            sellerInfo.seller.user.firstName,
-            sellerInfo.seller.user.lastName,
-          ),
-          productName: product.productName,
-          marketplaceUrl: buildAppUrl("/products"),
-        },
-      });
-    }
+    await emitProductDecisionNotification(
+      productId,
+      product.sellerId,
+      product.productName,
+      "approve",
+      undefined,
+      this.sellerRepo,
+    );
 
     return toProductDetailDto(updated);
   }
@@ -185,31 +254,14 @@ export class ProductApprovalService {
       },
     });
 
-    const sellerInfo = await this.repo.findSellerUserIdByProductId(productId);
-    if (sellerInfo?.seller?.user?.email) {
-      notificationDispatcher.emit({
-        eventType: NOTIFICATION_EVENTS.PRODUCT_REJECTED,
-        correlationId: productId,
-        inApp: {
-          userId: sellerInfo.seller.userId,
-          type: NOTIFICATION_TYPES.PRODUCT_REJECTED,
-          title: "Product rejected",
-          message: input.reason
-            ? `Your product "${product.productName}" was rejected. Reason: ${input.reason}`
-            : `Your product "${product.productName}" was rejected.`,
-        },
-        email: {
-          to: sellerInfo.seller.user.email,
-          recipientName: buildRecipientName(
-            sellerInfo.seller.user.firstName,
-            sellerInfo.seller.user.lastName,
-          ),
-          productName: product.productName,
-          reason: input.reason,
-          supportUrl: buildAppUrl("/support"),
-        },
-      });
-    }
+    await emitProductDecisionNotification(
+      productId,
+      product.sellerId,
+      product.productName,
+      "reject",
+      input.reason,
+      this.sellerRepo,
+    );
 
     return toProductDetailDto(updated);
   }
