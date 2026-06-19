@@ -21,6 +21,7 @@ import {
   PRODUCT_EDITABLE_STATUSES,
 } from "../constants/product.constants.js";
 import {
+  toProductCompareDto,
   toProductDetailDto,
   toProductListItemDtoFromRecord,
 } from "../dto/product.dto.js";
@@ -30,6 +31,7 @@ import { ProductRepository } from "../repositories/product.repository.js";
 import type {
   CreateProductInput,
   ListProductsQuery,
+  ProductCompareDto,
   ProductDetailDto,
   ProductDocumentInput,
   ProductListItemDto,
@@ -479,5 +481,19 @@ export class ProductService {
     }
 
     return toProductDetailDto(product);
+  }
+
+  async compareMarketplaceProducts(
+    productIds: string[],
+  ): Promise<ProductCompareDto> {
+    const records = await this.repo.findMarketplaceDetailsByIds(productIds);
+
+    if (records.length !== productIds.length) {
+      throw new NotFoundError(
+        "One or more products are not available for comparison",
+      );
+    }
+
+    return toProductCompareDto(productIds, records);
   }
 }

@@ -138,3 +138,33 @@ export interface ListProductsQuery {
 export interface RejectProductInput {
   reason?: string;
 }
+
+export interface ProductCompareItemDto {
+  id: string;
+  productName: string;
+  category: ProductCategorySummaryDto;
+  brand: string;
+  model: string;
+  productType: string;
+  color: string | null;
+  weight: string | null;
+  length: string | null;
+  warrantyPeriod: number | null;
+  returnTime: number | null;
+  deliveryTime: number | null;
+  pricing: string;
+  moq: number;
+  primaryImageUrl: string | null;
+}
+
+export interface ProductCompareAttributeDto {
+  key: string;
+  label: string;
+  values: (string | number | null)[];
+}
+
+export interface ProductCompareDto {
+  productIds: string[];
+  products: ProductCompareItemDto[];
+  attributes: ProductCompareAttributeDto[];
+}

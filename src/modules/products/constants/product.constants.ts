@@ -49,6 +49,9 @@ export const PRODUCT_PUBLIC_STATUSES: readonly ProductStatus[] = [
   ProductStatus.APPROVED,
 ];
 
+export const PRODUCT_COMPARE_MIN_COUNT = 2;
+export const PRODUCT_COMPARE_MAX_COUNT = 4;
+
 export const PRODUCT_EDITABLE_STATUSES: readonly ProductStatus[] = [
   ProductStatus.PENDING_APPROVAL,
   ProductStatus.APPROVED,

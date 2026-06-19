@@ -24,6 +24,7 @@ import {
   listPendingProductsQuerySchema,
 } from "../validators/query.schema.js";
 import { rejectProductBodySchema } from "../validators/rejectProduct.schema.js";
+import { compareProductsQuerySchema } from "../validators/compareProducts.schema.js";
 
 export const productRouter = Router();
 
@@ -94,6 +95,52 @@ productRouter.get(
   "/",
   validate({ query: listMarketplaceProductsQuerySchema }),
   productController.listMarketplaceProducts,
+);
+
+/**
+ * @openapi
+ * /api/v1/products/compare:
+ *   get:
+ *     tags: [Products]
+ *     summary: Compare marketplace products
+ *     description: |
+ *       Public endpoint. Compares 2 to 4 approved, marketplace-visible products side by side.
+ *       Returns comparison attributes aligned to the requested product order.
+ *     parameters:
+ *       - in: query
+ *         name: productIds
+ *         required: true
+ *         schema:
+ *           type: array
+ *           minItems: 2
+ *           maxItems: 4
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         style: form
+ *         explode: true
+ *         description: Repeat the parameter for each product ID (e.g. `?productIds=uuid1&productIds=uuid2`)
+ *     responses:
+ *       200:
+ *         description: Products compared successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: Products compared successfully }
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductCompare'
+ *       400:
+ *         description: Validation failed
+ *       404:
+ *         description: One or more products are not available for comparison
+ */
+productRouter.get(
+  "/compare",
+  validate({ query: compareProductsQuerySchema }),
+  productController.compareMarketplaceProducts,
 );
 
 /**
@@ -612,6 +659,53 @@ productRouter.get(
  *                 $ref: '#/components/schemas/ProductDocument'
  *             inventory:
  *               $ref: '#/components/schemas/ProductInventorySummary'
+ *     ProductCompareItem:
+ *       type: object
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         productName: { type: string, example: Portable Ultrasound Scanner }
+ *         category:
+ *           $ref: '#/components/schemas/ProductCategorySummary'
+ *         brand: { type: string, example: Siemens }
+ *         model: { type: string, example: ACUSON P500 }
+ *         productType: { type: string, example: Diagnostic Device }
+ *         color: { type: string, nullable: true, example: White }
+ *         weight: { type: string, nullable: true, example: "12.50" }
+ *         length: { type: string, nullable: true, example: "45.00" }
+ *         warrantyPeriod: { type: integer, nullable: true, example: 24 }
+ *         returnTime: { type: integer, nullable: true, example: 14 }
+ *         deliveryTime: { type: integer, nullable: true, example: 7 }
+ *         pricing: { type: string, example: "125000.00" }
+ *         moq: { type: integer, example: 1 }
+ *         primaryImageUrl: { type: string, nullable: true }
+ *     ProductCompareAttribute:
+ *       type: object
+ *       properties:
+ *         key: { type: string, example: productName }
+ *         label: { type: string, example: Product Name }
+ *         values:
+ *           type: array
+ *           items:
+ *             oneOf:
+ *               - { type: string }
+ *               - { type: number }
+ *               - { type: "null" }
+ *     ProductCompare:
+ *       type: object
+ *       properties:
+ *         productIds:
+ *           type: array
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         products:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ProductCompareItem'
+ *         attributes:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ProductCompareAttribute'
  *     CreateProductRequest:
  *       type: object
  *       required:

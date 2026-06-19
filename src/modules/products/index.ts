@@ -12,6 +12,7 @@ export * from "./validators/approveProduct.schema.js";
 export * from "./validators/rejectProduct.schema.js";
 export * from "./validators/productParams.schema.js";
 export * from "./validators/query.schema.js";
+export * from "./validators/compareProducts.schema.js";
 export * from "./dto/product.dto.js";
 export * from "./routes/product.routes.js";
 export * from "./types/product.types.js";

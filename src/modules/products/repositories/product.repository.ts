@@ -336,6 +336,28 @@ export class ProductRepository {
     });
   }
 
+  findMarketplaceDetailsByIds(ids: string[]) {
+    return this.prisma.product.findMany({
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+        status: ProductStatus.APPROVED,
+        seller: {
+          approvalStatus: SellerApprovalStatus.ACTIVE,
+          user: {
+            deletedAt: null,
+            status: "ACTIVE",
+          },
+        },
+        category: {
+          deletedAt: null,
+          isActive: true,
+        },
+      },
+      select: productDetailSelect,
+    });
+  }
+
   findByIdForSeller(id: string, sellerId: string) {
     return this.prisma.product.findFirst({
       where: {

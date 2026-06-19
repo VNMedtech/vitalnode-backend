@@ -16,6 +16,7 @@ import type {
 } from "../validators/query.schema.js";
 import type { RejectProductBody } from "../validators/rejectProduct.schema.js";
 import type { UpdateProductMultipartBody } from "../validators/productMultipart.schema.js";
+import type { CompareProductsQueryInput } from "../validators/compareProducts.schema.js";
 
 const productService = new ProductService();
 const productApprovalService = new ProductApprovalService();
@@ -54,6 +55,20 @@ export const getMarketplaceProductById: RequestHandler = async (req, res, next) 
     res
       .status(200)
       .json(successResponse(product, "Product fetched successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const compareMarketplaceProducts: RequestHandler = async (req, res, next) => {
+  try {
+    const { productIds } = req.query as unknown as CompareProductsQueryInput;
+    const comparison = await productService.compareMarketplaceProducts(productIds);
+    res
+      .status(200)
+      .json(
+        successResponse(comparison, "Products compared successfully"),
+      );
   } catch (err) {
     next(err);
   }

@@ -195,6 +195,9 @@ export function productRequest(app: Express, accessToken = "") {
     getMarketplaceById: (id: string) =>
       auth(request(app).get(`${PRODUCTS_BASE}/${id}`)),
 
+    compare: (productIds: string[]) =>
+      auth(request(app).get(`${PRODUCTS_BASE}/compare`)).query({ productIds }),
+
     getOwnById: (id: string) =>
       auth(request(app).get(`${PRODUCTS_BASE}/mine/${id}`)),
 
