@@ -16,6 +16,7 @@ export * as uploads from "./uploads/index.js";
 export * as email from "./email/index.js";
 export * as notifications from "./notifications/index.js";
 export * as analytics from "./analytics/index.js";
+export * as salesReports from "./sales-reports/index.js";
 export * as auditLogs from "./auditLogs/index.js";
 export * as audit from "./audit/index.js";
 export * as reviews from "./reviews/index.js";

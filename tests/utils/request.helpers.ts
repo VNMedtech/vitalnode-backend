@@ -13,6 +13,8 @@ const CART_BASE = "/api/v1/cart";
 const ORDERS_BASE = "/api/v1/orders";
 const PAYMENTS_BASE = "/api/v1/payments";
 const REVIEWS_BASE = "/api/v1/reviews";
+const ANALYTICS_BASE = "/api/v1/analytics";
+const SALES_REPORTS_BASE = "/api/v1/sales-reports";
 const UPLOADS_BASE = "/api/v1/uploads";
 const IDEMPOTENCY_HEADER = "idempotency-key";
 
@@ -544,6 +546,37 @@ export function paymentRequest(app: Express, accessToken = "") {
       auth(request(app).post(`${PAYMENTS_BASE}/refund`))
         .set(IDEMPOTENCY_HEADER, idempotencyKey)
         .send(body),
+  };
+}
+
+export function analyticsRequest(app: Express, accessToken: string) {
+  const auth = (req: Test) => req.set("Authorization", `Bearer ${accessToken}`);
+
+  return {
+    getPlatformSalesReport: (
+      query: Record<string, string | number | undefined> = {},
+    ) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/sales`)).query(query),
+
+    listSellerSalesReport: (
+      query: Record<string, string | number | undefined> = {},
+    ) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/sales/sellers`)).query(query),
+  };
+}
+
+export function salesReportsRequest(app: Express, accessToken: string) {
+  const auth = (req: Test) => req.set("Authorization", `Bearer ${accessToken}`);
+
+  return {
+    getSummary: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${SALES_REPORTS_BASE}/summary`)).query(query),
+
+    getOrders: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${SALES_REPORTS_BASE}/orders`)).query(query),
+
+    getRevenue: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${SALES_REPORTS_BASE}/revenue`)).query(query),
   };
 }
 

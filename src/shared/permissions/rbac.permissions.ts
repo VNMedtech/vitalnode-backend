@@ -68,6 +68,9 @@ export const permissions = {
   analytics: {
     read: "analytics:read",
   },
+  salesReports: {
+    read: "sales-reports:read",
+  },
   auditLogs: {
     read: "audit-logs:read",
   },
@@ -143,6 +146,7 @@ export const rolePermissions: Record<UserRole, readonly Permission[]> = {
     permissions.orders.read,
     permissions.orders.cancel,
     permissions.orders.updateStatus,
+    permissions.salesReports.read,
     permissions.payments.read,
     permissions.uploads.create,
     permissions.uploads.delete,

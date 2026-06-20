@@ -17,6 +17,10 @@ import { paymentRouter } from "../modules/payments/routes/payment.routes.js";
 import { uploadRouter } from "../modules/uploads/routes/upload.routes.js";
 import { notificationRouter } from "../modules/notifications/routes/notification.routes.js";
 import { analyticsRouter } from "../modules/analytics/routes/analytics.routes.js";
+import {
+  adminSalesReportsRouter,
+  salesReportsRouter,
+} from "../modules/sales-reports/routes/sales-reports.routes.js";
 import { auditRouter } from "../modules/audit/routes/audit.routes.js";
 import { adminRouter } from "../modules/admin/routes/admin.routes.js";
 import { reviewRouter } from "../modules/reviews/routes/review.routes.js";
@@ -38,6 +42,8 @@ apiRouter.use("/payments", paymentRouter);
 apiRouter.use("/uploads", uploadRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/analytics", analyticsRouter);
+apiRouter.use("/analytics", adminSalesReportsRouter);
+apiRouter.use("/sales-reports", salesReportsRouter);
 apiRouter.use("/audit-logs", auditRouter);
 apiRouter.use("/reviews", reviewRouter);
 apiRouter.use("/admin", adminRouter);
