@@ -9,6 +9,7 @@ import { SellerService } from "../services/seller.service.js";
 import type { DisableSellerBody } from "../validators/disableSeller.schema.js";
 import type { EnableSellerBody } from "../validators/enableSeller.schema.js";
 import type { ListSellersQueryInput } from "../validators/query.schema.js";
+import type { ApproveSellerBody } from "../validators/approveSeller.schema.js";
 import type { RejectSellerBody } from "../validators/rejectSeller.schema.js";
 import type { SellerIdParam } from "../validators/sellerParams.schema.js";
 
@@ -58,7 +59,12 @@ export const approveSeller: RequestHandler = async (req, res, next) => {
   try {
     const actorUserId = requireAuthenticatedUserId(req);
     const { id } = req.params as SellerIdParam;
-    const seller = await sellerApprovalService.approveSeller(actorUserId, id);
+    const body = req.body as ApproveSellerBody;
+    const seller = await sellerApprovalService.approveSeller(
+      actorUserId,
+      id,
+      body,
+    );
     res
       .status(200)
       .json(successResponse(seller, "Seller approved successfully"));

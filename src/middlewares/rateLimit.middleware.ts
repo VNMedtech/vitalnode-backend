@@ -9,6 +9,7 @@ function createRateLimiter(max: number) {
   return rateLimit({
     windowMs: env.rateLimitWindowMs,
     max,
+    skip: () => env.nodeEnv === "development",
     standardHeaders: true,
     legacyHeaders: false,
     handler: (_req, res) => {

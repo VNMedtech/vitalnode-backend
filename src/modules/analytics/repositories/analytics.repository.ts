@@ -1,5 +1,7 @@
 import {
+  OrderStatus,
   Prisma,
+  SettlementBatchStatus,
   type PaymentStatus,
   type PrismaClient,
   type ProductStatus,
@@ -26,6 +28,9 @@ export interface DashboardSummaryRecord {
   pendingProducts: number;
   totalOrders: number;
   totalRevenue: Prisma.Decimal;
+  totalPlatformCommission: Prisma.Decimal;
+  pendingSettlementsNet: Prisma.Decimal;
+  completedSettlementsNet: Prisma.Decimal;
   lowStockProducts: number;
 }
 
@@ -149,6 +154,9 @@ export class AnalyticsRepository {
       pendingProducts,
       totalOrders,
       revenueAggregate,
+      commissionAggregate,
+      pendingSettlementAggregate,
+      completedSettlementAggregate,
       lowStockProducts,
     ] = await Promise.all([
       this.db.user.count({ where: this.activeUserWhere }),
@@ -176,6 +184,23 @@ export class AnalyticsRepository {
         where: { paymentStatus: "SUCCESS" as PaymentStatus },
         _sum: { amount: true },
       }),
+      this.db.order.aggregate({
+        where: {
+          commissionAmount: { not: null },
+        },
+        _sum: { commissionAmount: true },
+      }),
+      this.db.order.aggregate({
+        where: {
+          orderStatus: OrderStatus.PENDING_SETTLEMENT,
+          settlementBatchId: null,
+        },
+        _sum: { sellerReceivableAmount: true },
+      }),
+      this.db.settlementBatch.aggregate({
+        where: { status: SettlementBatchStatus.DISBURSED },
+        _sum: { netAmount: true },
+      }),
       this.countLowStockProducts(),
     ]);
 
@@ -187,6 +212,13 @@ export class AnalyticsRepository {
       pendingProducts,
       totalOrders,
       totalRevenue: revenueAggregate._sum.amount ?? new Prisma.Decimal(0),
+      totalPlatformCommission:
+        commissionAggregate._sum.commissionAmount ?? new Prisma.Decimal(0),
+      pendingSettlementsNet:
+        pendingSettlementAggregate._sum.sellerReceivableAmount ??
+        new Prisma.Decimal(0),
+      completedSettlementsNet:
+        completedSettlementAggregate._sum.netAmount ?? new Prisma.Decimal(0),
       lowStockProducts,
     };
   }
@@ -628,5 +660,100 @@ export class AnalyticsRepository {
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
     `.then((rows) => Number(rows[0]?.count ?? 0));
+  }
+
+  async getCommissionStatistics(from?: Date, to?: Date) {
+    const deliveredAt = buildPlacedAtFilter(from, to);
+
+    const [
+      totalCommission,
+      periodCommission,
+      pendingAgg,
+      completedAgg,
+      completedBatchCount,
+      sellerGroups,
+    ] = await Promise.all([
+      this.db.order.aggregate({
+        where: { commissionAmount: { not: null } },
+        _sum: { commissionAmount: true },
+      }),
+      this.db.order.aggregate({
+        where: {
+          commissionAmount: { not: null },
+          ...(deliveredAt ? { deliveredAt } : {}),
+        },
+        _sum: { commissionAmount: true },
+      }),
+      this.db.order.aggregate({
+        where: {
+          orderStatus: OrderStatus.PENDING_SETTLEMENT,
+          settlementBatchId: null,
+        },
+        _count: { _all: true },
+        _sum: {
+          grossAmount: true,
+          commissionAmount: true,
+          sellerReceivableAmount: true,
+        },
+      }),
+      this.db.settlementBatch.aggregate({
+        where: { status: SettlementBatchStatus.DISBURSED },
+        _sum: {
+          grossAmount: true,
+          commissionAmount: true,
+          netAmount: true,
+        },
+      }),
+      this.db.settlementBatch.count({
+        where: { status: SettlementBatchStatus.DISBURSED },
+      }),
+      this.db.order.groupBy({
+        by: ["sellerId"],
+        where: {
+          commissionAmount: { not: null },
+          ...(deliveredAt ? { deliveredAt } : {}),
+        },
+        _sum: { commissionAmount: true },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const sellers = sellerGroups.length
+      ? await this.db.sellerProfile.findMany({
+          where: { id: { in: sellerGroups.map((row) => row.sellerId) } },
+          select: { id: true, businessName: true },
+        })
+      : [];
+
+    const sellerMap = new Map(sellers.map((seller) => [seller.id, seller]));
+
+    return {
+      totalPlatformCommission:
+        totalCommission._sum.commissionAmount ?? new Prisma.Decimal(0),
+      commissionInPeriod:
+        periodCommission._sum.commissionAmount ?? new Prisma.Decimal(0),
+      pendingSettlements: {
+        orderCount: pendingAgg._count._all,
+        grossAmount: pendingAgg._sum.grossAmount ?? new Prisma.Decimal(0),
+        commissionAmount:
+          pendingAgg._sum.commissionAmount ?? new Prisma.Decimal(0),
+        netAmount:
+          pendingAgg._sum.sellerReceivableAmount ?? new Prisma.Decimal(0),
+      },
+      completedSettlements: {
+        batchCount: completedBatchCount,
+        grossAmount: completedAgg._sum.grossAmount ?? new Prisma.Decimal(0),
+        commissionAmount:
+          completedAgg._sum.commissionAmount ?? new Prisma.Decimal(0),
+        netAmount: completedAgg._sum.netAmount ?? new Prisma.Decimal(0),
+      },
+      commissionBySeller: sellerGroups.map((row) => ({
+        sellerId: row.sellerId,
+        businessName: sellerMap.get(row.sellerId)?.businessName ?? "Unknown",
+        commissionAmount:
+          row._sum.commissionAmount ?? new Prisma.Decimal(0),
+        orderCount: row._count._all,
+      })),
+    };
   }
 }

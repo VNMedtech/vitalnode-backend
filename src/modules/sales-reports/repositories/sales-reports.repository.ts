@@ -4,6 +4,7 @@ import {
   type PaymentStatus,
   type PrismaClient,
 } from "../../../../generated/prisma/client.js";
+import { POST_DELIVERY_ORDER_STATUSES } from "../../../shared/constants/orderSettlement.constants.js";
 import type { SalesReportsRevenueGroupBy } from "../constants/sales-reports.constants.js";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -51,7 +52,9 @@ export interface SellerSalesReportRecord {
   productVolume: bigint;
 }
 
-const COMPLETED_ORDER_STATUSES: OrderStatus[] = [OrderStatus.DELIVERED];
+const COMPLETED_ORDER_STATUSES: OrderStatus[] = [
+  ...POST_DELIVERY_ORDER_STATUSES,
+];
 
 const CANCELLED_ORDER_STATUSES: OrderStatus[] = [
   OrderStatus.CANCELLED,

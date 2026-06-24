@@ -65,9 +65,16 @@ enum OrderStatus {
   PROCESSING
   OUT_FOR_DELIVERY
   DELIVERED
+  PENDING_SETTLEMENT
+  SETTLED
   DELIVERY_FAILED
   CANCELLED
   REFUNDED
+}
+
+enum SettlementBatchStatus {
+  PENDING
+  DISBURSED
 }
 
 enum ProofType {
@@ -148,6 +155,7 @@ model User {
   fileUploads            FileUpload[]
   authSessions           AuthSession[]
   passwordResetTokens    PasswordResetToken[]
+  createdSettlementBatches SettlementBatch[]    @relation("SettlementBatchCreator")
 
   @@index([role])
   @@index([status])
@@ -172,26 +180,28 @@ model BuyerProfile {
 }
 
 model SellerProfile {
-  id             String               @id @default(uuid())
-  userId         String               @unique
-  businessName   String
-  contactPerson  String
-  addressLine1   String
-  addressLine2   String?
-  city           String
-  state          String
-  country        String
-  postalCode     String
-  latitude       Decimal?             @db.Decimal(10, 7)
-  longitude      Decimal?             @db.Decimal(10, 7)
-  approvalStatus SellerApprovalStatus
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  id                   String               @id @default(uuid())
+  userId               String               @unique
+  businessName         String
+  contactPerson        String
+  addressLine1         String
+  addressLine2         String?
+  city                 String
+  state                String
+  country              String
+  postalCode           String
+  latitude             Decimal?             @db.Decimal(10, 7)
+  longitude            Decimal?             @db.Decimal(10, 7)
+  approvalStatus       SellerApprovalStatus
+  commissionPercentage Decimal?             @db.Decimal(5, 2)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict)
-  documents SellerDocument[]
-  products  Product[]
-  orders    Order[]
+  user               User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  documents          SellerDocument[]
+  products           Product[]
+  orders             Order[]
+  settlementBatches  SettlementBatch[]
 }
 
 model SellerDocument {
@@ -433,22 +443,29 @@ model CartItem {
 // =============================================================================
 
 model Order {
-  id                      String      @id @default(uuid())
-  orderNumber             String      @unique
-  buyerId                 String
-  sellerId                String
-  deliveryPartnerId       String?
-  shippingAddressSnapshot Json
-  orderStatus             OrderStatus
-  subtotal                Decimal     @db.Decimal(12, 2)
-  totalAmount             Decimal     @db.Decimal(12, 2)
-  placedAt                DateTime?
-  createdAt               DateTime    @default(now())
-  updatedAt               DateTime    @updatedAt
+  id                           String       @id @default(uuid())
+  orderNumber                  String       @unique
+  buyerId                      String
+  sellerId                     String
+  deliveryPartnerId            String?
+  shippingAddressSnapshot      Json
+  orderStatus                  OrderStatus
+  subtotal                     Decimal      @db.Decimal(12, 2)
+  totalAmount                  Decimal      @db.Decimal(12, 2)
+  deliveredAt                  DateTime?
+  grossAmount                  Decimal?     @db.Decimal(12, 2)
+  commissionPercentageSnapshot Decimal?     @db.Decimal(5, 2)
+  commissionAmount             Decimal?     @db.Decimal(12, 2)
+  sellerReceivableAmount       Decimal?     @db.Decimal(12, 2)
+  settlementBatchId            String?
+  placedAt                     DateTime?
+  createdAt                    DateTime     @default(now())
+  updatedAt                    DateTime     @updatedAt
 
   buyer           BuyerProfile            @relation(fields: [buyerId], references: [id], onDelete: Restrict)
   seller          SellerProfile           @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   deliveryPartner DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id], onDelete: Restrict)
+  settlementBatch SettlementBatch?        @relation(fields: [settlementBatchId], references: [id], onDelete: Restrict)
   items           OrderItem[]
   payment         Payment?
   proofs          OrderProof[]
@@ -458,6 +475,8 @@ model Order {
   @@index([deliveryPartnerId])
   @@index([orderStatus])
   @@index([placedAt])
+  @@index([settlementBatchId])
+  @@index([deliveredAt])
 }
 
 model OrderItem {
@@ -494,6 +513,36 @@ model OrderProof {
   @@index([orderId])
   @@index([uploadedBy])
   @@index([proofType])
+}
+
+// =============================================================================
+// SETTLEMENT DOMAIN
+// =============================================================================
+
+model SettlementBatch {
+  id                String                @id @default(uuid())
+  sellerId          String
+  batchNumber       String                @unique
+  status            SettlementBatchStatus
+  grossAmount       Decimal               @db.Decimal(12, 2)
+  commissionAmount  Decimal               @db.Decimal(12, 2)
+  netAmount         Decimal               @db.Decimal(12, 2)
+  paymentReference  String?
+  remarks           String?
+  disbursedAt       DateTime?
+  createdByAdminId  String
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  seller  SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  creator User          @relation("SettlementBatchCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  orders  Order[]
+
+  @@index([sellerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([disbursedAt])
+  @@index([createdByAdminId])
 }
 
 // =============================================================================

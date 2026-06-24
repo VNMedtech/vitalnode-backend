@@ -16,6 +16,7 @@ import { disableSellerBodySchema } from "../validators/disableSeller.schema.js";
 import { enableSellerBodySchema } from "../validators/enableSeller.schema.js";
 import { listSellersQuerySchema } from "../validators/query.schema.js";
 import { rejectSellerBodySchema } from "../validators/rejectSeller.schema.js";
+import { approveSellerBodySchema } from "../validators/approveSeller.schema.js";
 import { sellerIdParamSchema } from "../validators/sellerParams.schema.js";
 
 export const sellerRouter = Router();
@@ -202,7 +203,10 @@ sellerRouter.post(
   "/:id/approve",
   authenticate,
   authorizePermission(permissions.sellers.approve),
-  validate({ params: sellerIdParamSchema }),
+  validate({
+    params: sellerIdParamSchema,
+    body: approveSellerBodySchema,
+  }),
   sellerController.approveSeller,
 );
 

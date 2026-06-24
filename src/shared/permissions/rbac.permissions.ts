@@ -83,6 +83,10 @@ export const permissions = {
   admin: {
     manage: "admin:manage",
   },
+  settlements: {
+    read: "settlements:read",
+    manage: "settlements:manage",
+  },
   deliveryPartners: {
     read: "delivery-partners:read",
     manage: "delivery-partners:manage",
@@ -147,6 +151,7 @@ export const rolePermissions: Record<UserRole, readonly Permission[]> = {
     permissions.orders.cancel,
     permissions.orders.updateStatus,
     permissions.salesReports.read,
+    permissions.settlements.read,
     permissions.payments.read,
     permissions.uploads.create,
     permissions.uploads.delete,

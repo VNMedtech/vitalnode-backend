@@ -8,6 +8,7 @@ import type {
   RevenueStatisticsDto,
   SellerStatisticsDto,
   UserStatisticsDto,
+  CommissionStatisticsDto,
 } from "../types/analytics.types.js";
 import type {
   DashboardSummaryRecord,
@@ -51,6 +52,9 @@ export function toDashboardSummaryDto(
     pendingProducts: record.pendingProducts,
     totalOrders: record.totalOrders,
     totalRevenue: decimalToString(record.totalRevenue),
+    totalPlatformCommission: decimalToString(record.totalPlatformCommission),
+    pendingSettlementsNet: decimalToString(record.pendingSettlementsNet),
+    completedSettlementsNet: decimalToString(record.completedSettlementsNet),
     lowStockProducts: record.lowStockProducts,
     generatedAt: new Date().toISOString(),
   };
@@ -152,6 +156,46 @@ export function toRevenueStatisticsDto(
     failedPayments: record.failedPayments,
     pendingPayments: record.pendingPayments,
     buckets: buckets.map(toRevenueBucketDto),
+    period: toAnalyticsPeriodDto(from, to),
+  };
+}
+
+type CommissionStatisticsRecord = Awaited<
+  ReturnType<
+    import("../repositories/analytics.repository.js").AnalyticsRepository["getCommissionStatistics"]
+  >
+>;
+
+export function toCommissionStatisticsDto(
+  record: CommissionStatisticsRecord,
+  from?: Date,
+  to?: Date,
+): CommissionStatisticsDto {
+  return {
+    totalPlatformCommission: decimalToString(record.totalPlatformCommission),
+    commissionInPeriod: decimalToString(record.commissionInPeriod),
+    pendingSettlements: {
+      orderCount: record.pendingSettlements.orderCount,
+      grossAmount: decimalToString(record.pendingSettlements.grossAmount),
+      commissionAmount: decimalToString(
+        record.pendingSettlements.commissionAmount,
+      ),
+      netAmount: decimalToString(record.pendingSettlements.netAmount),
+    },
+    completedSettlements: {
+      batchCount: record.completedSettlements.batchCount,
+      grossAmount: decimalToString(record.completedSettlements.grossAmount),
+      commissionAmount: decimalToString(
+        record.completedSettlements.commissionAmount,
+      ),
+      netAmount: decimalToString(record.completedSettlements.netAmount),
+    },
+    commissionBySeller: record.commissionBySeller.map((row) => ({
+      sellerId: row.sellerId,
+      businessName: row.businessName,
+      commissionAmount: decimalToString(row.commissionAmount),
+      orderCount: row.orderCount,
+    })),
     period: toAnalyticsPeriodDto(from, to),
   };
 }

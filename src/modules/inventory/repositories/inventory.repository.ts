@@ -154,7 +154,7 @@ export class InventoryRepository {
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
           AND i."availableQuantity" <= p.moq
-          ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}::uuid` : Prisma.empty}
+          ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
         ORDER BY i."availableQuantity" ASC, i."updatedAt" DESC
         LIMIT ${limit}
         OFFSET ${skip}
@@ -176,7 +176,7 @@ export class InventoryRepository {
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
           AND i."availableQuantity" = 0
-          ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}::uuid` : Prisma.empty}
+          ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
         ORDER BY i."updatedAt" DESC
         LIMIT ${limit}
         OFFSET ${skip}
@@ -198,7 +198,7 @@ export class InventoryRepository {
       WHERE p."deletedAt" IS NULL
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
-        ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}::uuid` : Prisma.empty}
+        ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
       ORDER BY i."availableQuantity" ASC, i."updatedAt" DESC
       LIMIT ${limit}
       OFFSET ${skip}
@@ -218,7 +218,7 @@ export class InventoryRepository {
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
           AND i."availableQuantity" <= p.moq
-          ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}::uuid` : Prisma.empty}
+          ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
       `.then((rows) => Number(rows[0]?.count ?? 0));
     }
 
@@ -229,7 +229,7 @@ export class InventoryRepository {
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
           AND i."availableQuantity" = 0
-          ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}::uuid` : Prisma.empty}
+          ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
       `.then((rows) => Number(rows[0]?.count ?? 0));
     }
 
@@ -240,7 +240,7 @@ export class InventoryRepository {
       WHERE p."deletedAt" IS NULL
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
-        ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}::uuid` : Prisma.empty}
+        ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
     `.then((rows) => Number(rows[0]?.count ?? 0));
   }
 

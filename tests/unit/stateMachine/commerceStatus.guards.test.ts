@@ -66,9 +66,12 @@ const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   [OrderStatus.PROCESSING]: [OrderStatus.OUT_FOR_DELIVERY],
   [OrderStatus.OUT_FOR_DELIVERY]: [
     OrderStatus.DELIVERED,
+    OrderStatus.PENDING_SETTLEMENT,
     OrderStatus.DELIVERY_FAILED,
   ],
-  [OrderStatus.DELIVERED]: [],
+  [OrderStatus.DELIVERED]: [OrderStatus.PENDING_SETTLEMENT],
+  [OrderStatus.PENDING_SETTLEMENT]: [],
+  [OrderStatus.SETTLED]: [],
   [OrderStatus.DELIVERY_FAILED]: [],
   [OrderStatus.CANCELLED]: [OrderStatus.REFUNDED],
   [OrderStatus.REFUNDED]: [],

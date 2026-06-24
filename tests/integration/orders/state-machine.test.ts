@@ -14,7 +14,7 @@ import { useOrdersTestLifecycle } from "./setup.js";
 describe("Orders — Section 8: State Machine", () => {
   const { getApp } = useOrdersTestLifecycle();
 
-  it("follows happy path: PLACED → ASSIGNED → PROCESSING → OUT_FOR_DELIVERY → DELIVERED", async () => {
+  it("follows happy path: PLACED → ASSIGNED → PROCESSING → OUT_FOR_DELIVERY → PENDING_SETTLEMENT", async () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupDeliveredOrder(app, prisma);
@@ -22,7 +22,7 @@ describe("Orders — Section 8: State Machine", () => {
     const order = await prisma.order.findUnique({
       where: { id: context.orderId },
     });
-    expect(order?.orderStatus).toBe("DELIVERED");
+    expect(order?.orderStatus).toBe("PENDING_SETTLEMENT");
   });
 
   it("allows PLACED → CANCELLED transition", async () => {

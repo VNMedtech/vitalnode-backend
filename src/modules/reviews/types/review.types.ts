@@ -55,3 +55,12 @@ export interface ListAdminReviewsQuery extends ListProductReviewsQuery {
   buyerId?: string;
   status?: ReviewStatus;
 }
+
+export interface ListFeaturedReviewsQuery {
+  limit: number;
+}
+
+export interface FeaturedReviewsPayload {
+  reviews: ReviewDto[];
+  stats: ProductReviewStats;
+}
