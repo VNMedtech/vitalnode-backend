@@ -89,3 +89,9 @@ export const inventoryAlertsQuerySchema = z
 export type InventoryAlertsQueryInput = z.infer<
   typeof inventoryAlertsQuerySchema
 >;
+
+export const commissionStatisticsQuerySchema = analyticsDateRangeQuerySchema;
+
+export type CommissionStatisticsQueryInput = z.infer<
+  typeof commissionStatisticsQuerySchema
+>;

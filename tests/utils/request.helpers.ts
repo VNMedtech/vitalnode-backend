@@ -14,6 +14,9 @@ const ORDERS_BASE = "/api/v1/orders";
 const PAYMENTS_BASE = "/api/v1/payments";
 const REVIEWS_BASE = "/api/v1/reviews";
 const ANALYTICS_BASE = "/api/v1/analytics";
+const ADMIN_BASE = "/api/v1/admin";
+const SELLER_EARNINGS_BASE = "/api/v1/seller/earnings";
+const SELLER_SETTLEMENTS_BASE = "/api/v1/seller/settlements";
 const SALES_REPORTS_BASE = "/api/v1/sales-reports";
 const UPLOADS_BASE = "/api/v1/uploads";
 const IDEMPOTENCY_HEADER = "idempotency-key";
@@ -96,10 +99,11 @@ export function sellerRequest(app: Express, accessToken: string) {
         .get(`${SELLERS_BASE}/${id}`)
         .set("Authorization", `Bearer ${accessToken}`),
 
-    approve: (id: string) =>
+    approve: (id: string, body: Record<string, unknown> = { commissionPercentage: 10 }) =>
       request(app)
         .post(`${SELLERS_BASE}/${id}/approve`)
-        .set("Authorization", `Bearer ${accessToken}`),
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send(body),
 
     reject: (id: string, body: Record<string, unknown> = {}) =>
       request(app)
@@ -562,6 +566,9 @@ export function analyticsRequest(app: Express, accessToken: string) {
       query: Record<string, string | number | undefined> = {},
     ) =>
       auth(request(app).get(`${ANALYTICS_BASE}/sales/sellers`)).query(query),
+
+    commission: (query: Record<string, string | undefined> = {}) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/commission`)).query(query),
   };
 }
 
@@ -628,4 +635,70 @@ export function extractResetTokenFromEmailPayload(input: {
   }
 
   throw new Error("Could not extract password reset token from email payload");
+}
+
+export function adminSettlementRequest(app: Express, accessToken: string) {
+  return {
+    listPending: () =>
+      request(app)
+        .get(`${ADMIN_BASE}/settlements/pending`)
+        .set("Authorization", `Bearer ${accessToken}`),
+
+    getSellerPending: (sellerId: string) =>
+      request(app)
+        .get(`${ADMIN_BASE}/settlements/seller/${sellerId}`)
+        .set("Authorization", `Bearer ${accessToken}`),
+
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      request(app)
+        .get(`${ADMIN_BASE}/settlements`)
+        .query(query)
+        .set("Authorization", `Bearer ${accessToken}`),
+
+    getById: (id: string) =>
+      request(app)
+        .get(`${ADMIN_BASE}/settlements/${id}`)
+        .set("Authorization", `Bearer ${accessToken}`),
+
+    create: (body: Record<string, unknown>) =>
+      request(app)
+        .post(`${ADMIN_BASE}/settlements`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send(body),
+
+    disburse: (id: string, body: Record<string, unknown>) =>
+      request(app)
+        .patch(`${ADMIN_BASE}/settlements/${id}/disburse`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send(body),
+
+    updateSellerCommission: (
+      sellerId: string,
+      body: Record<string, unknown>,
+    ) =>
+      request(app)
+        .patch(`${ADMIN_BASE}/sellers/${sellerId}/commission`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send(body),
+  };
+}
+
+export function sellerSettlementRequest(app: Express, accessToken: string) {
+  return {
+    earningsSummary: () =>
+      request(app)
+        .get(`${SELLER_EARNINGS_BASE}/summary`)
+        .set("Authorization", `Bearer ${accessToken}`),
+
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      request(app)
+        .get(`${SELLER_SETTLEMENTS_BASE}`)
+        .query(query)
+        .set("Authorization", `Bearer ${accessToken}`),
+
+    getById: (id: string) =>
+      request(app)
+        .get(`${SELLER_SETTLEMENTS_BASE}/${id}`)
+        .set("Authorization", `Bearer ${accessToken}`),
+  };
 }

@@ -97,7 +97,7 @@ describe("Inventory — Stock Management", () => {
     expect(res.body.data[0].inventoryStatus).toBe("LOW_STOCK");
   });
 
-  it("4b. seller low stock alerts fail due to SQL type mismatch (known bug)", async () => {
+  it("4b. lists low stock alerts for seller (scoped to own products)", async () => {
     const prisma = getTestPrisma();
     const setup = await setupMarketplaceProduct(app, prisma, {
       inventoryQuantity: 1,
@@ -108,7 +108,11 @@ describe("Inventory — Stock Management", () => {
       { alertStatus: "LOW_STOCK" },
     );
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].productId).toBe(setup.productId);
+    expect(res.body.data[0].inventoryStatus).toBe("LOW_STOCK");
   });
 
   it("5. requires idempotency key for inventory updates", async () => {

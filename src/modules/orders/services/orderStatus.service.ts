@@ -29,12 +29,13 @@ import {
   ORDER_AUDIT_ENTITY_TYPE,
 } from "../constants/order.constants.js";
 import { toOrderDetailDto } from "../dto/order.dto.js";
+import { OrderRepository } from "../repositories/order.repository.js";
+import { OrderProofRepository } from "../repositories/orderProof.repository.js";
+import { finalizeOrderEarningsOnDelivery } from "../../settlements/services/sellerCommission.service.js";
 import {
   notificationDispatcher,
   orderNotificationContextService,
 } from "../../notifications/index.js";
-import { OrderRepository } from "../repositories/order.repository.js";
-import { OrderProofRepository } from "../repositories/orderProof.repository.js";
 import type {
   DeliveryFailedInput,
   OrderDetailDto,
@@ -427,7 +428,7 @@ export class OrderStatusService {
     );
 
     const from = order.orderStatus;
-    const to = OrderStatus.DELIVERED;
+    const to = OrderStatus.PENDING_SETTLEMENT;
     assertTransition(from, to);
 
     const hasDeliveryProof = order.proofs.some(
@@ -493,6 +494,13 @@ export class OrderStatusService {
       if (updated.count !== 1) {
         throw new ConflictError("Order status update failed");
       }
+
+      await finalizeOrderEarningsOnDelivery(
+        tx,
+        orderId,
+        locked.sellerId,
+        locked.totalAmount,
+      );
 
       await recordCommerceAudit(tx, {
         actorUserId,

@@ -19,6 +19,7 @@ import {
   productStatisticsQuerySchema,
   revenueStatisticsQuerySchema,
   sellerStatisticsQuerySchema,
+  commissionStatisticsQuerySchema,
   userStatisticsQuerySchema,
 } from "../validators/query.schema.js";
 
@@ -222,4 +223,12 @@ analyticsRouter.get(
   authorizePermission(permissions.analytics.read),
   validate({ query: inventoryAlertsQuerySchema }),
   analyticsController.listInventoryAlerts,
+);
+
+analyticsRouter.get(
+  "/commission",
+  authenticate,
+  authorizePermission(permissions.analytics.read),
+  validate({ query: commissionStatisticsQuerySchema }),
+  analyticsController.getCommissionStatistics,
 );

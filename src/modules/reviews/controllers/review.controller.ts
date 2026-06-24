@@ -8,6 +8,7 @@ import { ReviewService } from "../services/review.service.js";
 import type { CreateReviewBody } from "../validators/createReview.schema.js";
 import type {
   ListAdminReviewsQueryInput,
+  ListFeaturedReviewsQueryInput,
   ListProductReviewsQueryInput,
 } from "../validators/query.schema.js";
 import type {
@@ -64,6 +65,18 @@ export const deleteReview: RequestHandler = async (req, res, next) => {
     const { reviewId } = req.params as ReviewIdParam;
     await reviewService.deleteReview(actorUserId, reviewId);
     res.status(200).json(successResponse(null, "Review deleted successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const listFeaturedReviews: RequestHandler = async (req, res, next) => {
+  try {
+    const query = req.query as unknown as ListFeaturedReviewsQueryInput;
+    const result = await reviewService.listFeaturedReviews(query);
+    res
+      .status(200)
+      .json(successResponse(result, "Featured reviews fetched successfully"));
   } catch (err) {
     next(err);
   }

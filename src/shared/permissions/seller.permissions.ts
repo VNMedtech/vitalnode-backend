@@ -38,6 +38,7 @@ export const sellerOperationalPermissions = [
   permissions.orders.cancel,
   permissions.orders.updateStatus,
   permissions.salesReports.read,
+  permissions.settlements.read,
   permissions.uploads.create,
   permissions.uploads.delete,
 ] as const satisfies readonly Permission[];

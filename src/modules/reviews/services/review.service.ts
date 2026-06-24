@@ -15,13 +15,16 @@ import {
 } from "../constants/review.constants.js";
 import {
   toAdminReviewDto,
+  toProductReviewStats,
   toReviewDto,
 } from "../dto/review.dto.js";
 import { ReviewEligibilityRepository } from "../repositories/reviewEligibility.repository.js";
 import { ReviewRepository } from "../repositories/review.repository.js";
 import type {
   CreateReviewInput,
+  FeaturedReviewsPayload,
   ListAdminReviewsQuery,
+  ListFeaturedReviewsQuery,
   ListProductReviewsQuery,
   ReviewDto,
   UpdateReviewInput,
@@ -146,6 +149,20 @@ export class ReviewService {
       entityId: reviewId,
       metadata: { productId: review.productId },
     });
+  }
+
+  async listFeaturedReviews(
+    query: ListFeaturedReviewsQuery,
+  ): Promise<FeaturedReviewsPayload> {
+    const [records, stats] = await Promise.all([
+      this.reviewRepo.findFeatured(query.limit),
+      this.reviewRepo.getPlatformStats(),
+    ]);
+
+    return {
+      reviews: records.map((record) => toAdminReviewDto(record)),
+      stats: toProductReviewStats(stats),
+    };
   }
 
   async listProductReviews(

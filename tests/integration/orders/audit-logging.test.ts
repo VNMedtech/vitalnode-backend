@@ -63,7 +63,7 @@ describe("Orders — Section 10: Audit Logging", () => {
       (a) => (a.metadata as Record<string, unknown>)?.newStatus,
     );
     expect(newStatuses).toEqual(
-      expect.arrayContaining(["PROCESSING", "OUT_FOR_DELIVERY", "DELIVERED"]),
+      expect.arrayContaining(["PROCESSING", "OUT_FOR_DELIVERY", "PENDING_SETTLEMENT"]),
     );
   });
 

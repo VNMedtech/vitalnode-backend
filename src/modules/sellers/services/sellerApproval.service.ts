@@ -1,7 +1,9 @@
 import { prisma } from "../../../infrastructure/prisma/client.js";
+import { Prisma } from "../../../../generated/prisma/client.js";
 import {
   ConflictError,
   NotFoundError,
+  ValidationError,
 } from "../../../shared/errors/app.errors.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
@@ -23,6 +25,7 @@ import {
 import { toSellerDetailDto } from "../dto/seller.dto.js";
 import { SellerRepository } from "../repositories/seller.repository.js";
 import type {
+  ApproveSellerInput,
   DisableSellerInput,
   EnableSellerInput,
   RejectSellerInput,
@@ -58,6 +61,7 @@ export class SellerApprovalService {
   async approveSeller(
     actorUserId: string,
     sellerId: string,
+    input: ApproveSellerInput,
   ): Promise<SellerDetailDto> {
     const seller = await this.repo.findById(sellerId);
     if (!seller) {
@@ -72,9 +76,21 @@ export class SellerApprovalService {
     );
     assertTransitionAllowed(currentStatus, SellerApprovalStatus.ACTIVE);
 
-    const updated = await this.repo.updateApprovalStatus(
+    if (
+      input.commissionPercentage < 0 ||
+      input.commissionPercentage > 100
+    ) {
+      throw new ValidationError("Validation failed", [
+        {
+          field: "commissionPercentage",
+          message: "Commission percentage must be between 0 and 100",
+        },
+      ]);
+    }
+
+    const updated = await this.repo.approveWithCommission(
       sellerId,
-      SellerApprovalStatus.ACTIVE,
+      new Prisma.Decimal(input.commissionPercentage),
     );
 
     auditLogger.log({
@@ -87,6 +103,7 @@ export class SellerApprovalService {
         newStatus: SellerApprovalStatus.ACTIVE,
         userId: seller.userId,
         businessName: seller.businessName,
+        commissionPercentage: input.commissionPercentage,
       },
     });
 
@@ -97,7 +114,7 @@ export class SellerApprovalService {
         userId: seller.userId,
         type: NOTIFICATION_TYPES.SELLER_APPROVED,
         title: "Seller account approved",
-        message: `Your seller account for ${seller.businessName} has been approved. You can now list and sell products.`,
+        message: `Your seller account for ${seller.businessName} has been approved with a ${input.commissionPercentage}% platform commission. You can now list and sell products.`,
       },
       email: {
         to: seller.user.email,
