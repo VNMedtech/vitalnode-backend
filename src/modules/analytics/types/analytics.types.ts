@@ -11,6 +11,9 @@ export interface DashboardSummaryDto {
   pendingProducts: number;
   totalOrders: number;
   totalRevenue: string;
+  totalPlatformCommission: string;
+  pendingSettlementsNet: string;
+  completedSettlementsNet: string;
   lowStockProducts: number;
   generatedAt: string;
 }
@@ -83,4 +86,30 @@ export interface RevenueStatisticsDto {
 export interface AnalyticsPeriodDto {
   from: string | null;
   to: string | null;
+}
+
+export interface CommissionBySellerDto {
+  sellerId: string;
+  businessName: string;
+  commissionAmount: string;
+  orderCount: number;
+}
+
+export interface CommissionStatisticsDto {
+  totalPlatformCommission: string;
+  commissionInPeriod: string;
+  pendingSettlements: {
+    orderCount: number;
+    grossAmount: string;
+    commissionAmount: string;
+    netAmount: string;
+  };
+  completedSettlements: {
+    batchCount: number;
+    grossAmount: string;
+    commissionAmount: string;
+    netAmount: string;
+  };
+  commissionBySeller: CommissionBySellerDto[];
+  period: AnalyticsPeriodDto | null;
 }

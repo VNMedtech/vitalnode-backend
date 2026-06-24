@@ -4,6 +4,7 @@ import type {
   ReviewStatus as PrismaReviewStatus,
 } from "../../../../generated/prisma/client.js";
 import { ReviewStatus } from "../../../shared/enums/reviewStatus.enum.js";
+import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
 
 const buyerSummarySelect = {
   id: true,
@@ -163,6 +164,44 @@ export class ReviewRepository {
   async getStatsForProduct(productId: string): Promise<ProductReviewStatsRecord> {
     const stats = await this.getStatsForProductIds([productId]);
     return stats.get(productId) ?? { averageRating: null, reviewCount: 0 };
+  }
+
+  findFeatured(limit: number) {
+    return this.prisma.productReview.findMany({
+      where: {
+        status: ReviewStatus.ACTIVE as PrismaReviewStatus,
+        rating: { gte: 4 },
+        product: {
+          status: ProductStatus.APPROVED,
+        },
+      },
+      select: adminReviewSelect,
+      orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
+      take: limit,
+    });
+  }
+
+  async getPlatformStats(): Promise<ProductReviewStatsRecord> {
+    const [aggregate, reviewCount] = await Promise.all([
+      this.prisma.productReview.aggregate({
+        where: {
+          status: ReviewStatus.ACTIVE as PrismaReviewStatus,
+          product: { status: "APPROVED" },
+        },
+        _avg: { rating: true },
+      }),
+      this.prisma.productReview.count({
+        where: {
+          status: ReviewStatus.ACTIVE as PrismaReviewStatus,
+          product: { status: "APPROVED" },
+        },
+      }),
+    ]);
+
+    return {
+      averageRating: aggregate._avg.rating,
+      reviewCount,
+    };
   }
 
   async getStatsForProductIds(

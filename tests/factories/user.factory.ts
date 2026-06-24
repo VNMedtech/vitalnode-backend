@@ -74,10 +74,16 @@ export async function setSellerApprovalStatus(
   prisma: PrismaClient,
   userId: string,
   approvalStatus: SellerApprovalStatus,
+  commissionPercentage?: number,
 ) {
   return prisma.sellerProfile.update({
     where: { userId },
-    data: { approvalStatus },
+    data: {
+      approvalStatus,
+      ...(commissionPercentage !== undefined
+        ? { commissionPercentage }
+        : {}),
+    },
   });
 }
 
@@ -102,6 +108,7 @@ export async function createApprovedSeller(
     prisma,
     registered.auth.user.id,
     SellerApprovalStatus.ACTIVE,
+    10,
   );
 
   const login = await loginViaApi(app, registered.payload.email as string);

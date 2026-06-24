@@ -23,6 +23,10 @@ import {
 } from "../modules/sales-reports/routes/sales-reports.routes.js";
 import { auditRouter } from "../modules/audit/routes/audit.routes.js";
 import { adminRouter } from "../modules/admin/routes/admin.routes.js";
+import {
+  sellerEarningsRouter,
+  sellerSettlementRouter,
+} from "../modules/settlements/routes/sellerSettlement.routes.js";
 import { reviewRouter } from "../modules/reviews/routes/review.routes.js";
 
 export const apiRouter = Router();
@@ -47,3 +51,5 @@ apiRouter.use("/sales-reports", salesReportsRouter);
 apiRouter.use("/audit-logs", auditRouter);
 apiRouter.use("/reviews", reviewRouter);
 apiRouter.use("/admin", adminRouter);
+apiRouter.use("/seller/earnings", sellerEarningsRouter);
+apiRouter.use("/seller/settlements", sellerSettlementRouter);

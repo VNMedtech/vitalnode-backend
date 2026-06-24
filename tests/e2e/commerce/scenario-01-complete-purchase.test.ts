@@ -141,7 +141,7 @@ describe("E2E Commerce — Scenario 1: Complete Purchase Flow", () => {
       where: { id: orderId },
       include: { payment: true },
     });
-    expect(order.orderStatus).toBe("DELIVERED");
+    expect(order.orderStatus).toBe("PENDING_SETTLEMENT");
 
     // Audit logs across lifecycle
     const placedAudit = await prisma.auditLog.findFirst({
@@ -164,7 +164,7 @@ describe("E2E Commerce — Scenario 1: Complete Purchase Flow", () => {
       (a) => (a.metadata as Record<string, unknown>)?.newStatus,
     );
     expect(statuses).toEqual(
-      expect.arrayContaining(["PROCESSING", "OUT_FOR_DELIVERY", "DELIVERED"]),
+      expect.arrayContaining(["PROCESSING", "OUT_FOR_DELIVERY", "PENDING_SETTLEMENT"]),
     );
 
     const inventoryAudit = await prisma.auditLog.findFirst({

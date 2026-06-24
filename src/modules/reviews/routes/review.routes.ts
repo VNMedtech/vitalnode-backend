@@ -13,7 +13,10 @@ import {
 import { permissions } from "../../../shared/permissions/rbac.permissions.js";
 import * as reviewController from "../controllers/review.controller.js";
 import { createReviewBodySchema } from "../validators/createReview.schema.js";
-import { listAdminReviewsQuerySchema } from "../validators/query.schema.js";
+import {
+  listAdminReviewsQuerySchema,
+  listFeaturedReviewsQuerySchema,
+} from "../validators/query.schema.js";
 import { reviewIdParamSchema } from "../validators/reviewParams.schema.js";
 import { updateReviewBodySchema } from "../validators/updateReview.schema.js";
 
@@ -56,6 +59,22 @@ reviewRouter.post(
   authorizePermission(permissions.reviews.create),
   validate({ body: createReviewBodySchema }),
   reviewController.createReview,
+);
+
+/**
+ * @openapi
+ * /api/v1/reviews/featured:
+ *   get:
+ *     tags: [Reviews]
+ *     summary: List featured reviews
+ *     description: |
+ *       Public endpoint. Returns top-rated active reviews from approved products
+ *       plus platform-wide review statistics.
+ */
+reviewRouter.get(
+  "/featured",
+  validate({ query: listFeaturedReviewsQuerySchema }),
+  reviewController.listFeaturedReviews,
 );
 
 /**

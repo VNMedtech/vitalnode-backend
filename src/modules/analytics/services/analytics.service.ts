@@ -9,6 +9,7 @@ import {
   toRevenueStatisticsDto,
   toSellerStatisticsDto,
   toUserStatisticsDto,
+  toCommissionStatisticsDto,
 } from "../dto/analytics.dto.js";
 import { AnalyticsRepository } from "../repositories/analytics.repository.js";
 import type {
@@ -18,9 +19,11 @@ import type {
   RevenueStatisticsDto,
   SellerStatisticsDto,
   UserStatisticsDto,
+  CommissionStatisticsDto,
 } from "../types/analytics.types.js";
 import type {
   InventoryAlertsQueryInput,
+  CommissionStatisticsQueryInput,
   RevenueStatisticsQueryInput,
 } from "../validators/query.schema.js";
 
@@ -96,5 +99,13 @@ export class AnalyticsService {
       items: alerts.map(toLowStockAlertDto),
       meta: buildPaginationMeta(query.page, query.limit, total),
     };
+  }
+
+  async getCommissionStatistics(
+    query: CommissionStatisticsQueryInput,
+  ): Promise<CommissionStatisticsDto> {
+    const { from, to } = query;
+    const record = await this.analyticsRepo.getCommissionStatistics(from, to);
+    return toCommissionStatisticsDto(record, from, to);
   }
 }

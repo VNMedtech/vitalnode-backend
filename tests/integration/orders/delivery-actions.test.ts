@@ -68,12 +68,12 @@ describe("Orders — Section 5: Delivery Actions", () => {
     ).markDelivered(context.orderId);
 
     expect(res.status).toBe(200);
-    expect(res.body.data.orderStatus).toBe("DELIVERED");
+    expect(res.body.data.orderStatus).toBe("PENDING_SETTLEMENT");
 
     const order = await prisma.order.findUnique({
       where: { id: context.orderId },
     });
-    expect(order?.orderStatus).toBe("DELIVERED");
+    expect(order?.orderStatus).toBe("PENDING_SETTLEMENT");
   });
 
   it("does not list orders for unassigned delivery partners", async () => {

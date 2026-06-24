@@ -26,6 +26,7 @@ export interface SellerListItemDto {
   state: string;
   country: string;
   approvalStatus: SellerApprovalStatus;
+  commissionPercentage: string | null;
   user: SellerUserSummaryDto;
   createdAt: Date;
   updatedAt: Date;
@@ -64,4 +65,12 @@ export interface DisableSellerInput {
 
 export interface EnableSellerInput {
   reason?: string;
+}
+
+export interface ApproveSellerInput {
+  commissionPercentage: number;
+}
+
+export interface UpdateSellerCommissionInput {
+  commissionPercentage: number;
 }

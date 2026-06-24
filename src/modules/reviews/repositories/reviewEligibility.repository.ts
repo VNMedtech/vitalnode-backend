@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import { OrderStatus } from "../../../../generated/prisma/client.js";
+import { POST_DELIVERY_ORDER_STATUSES } from "../../../shared/constants/orderSettlement.constants.js";
 
 export class ReviewEligibilityRepository {
   constructor(
@@ -11,7 +11,7 @@ export class ReviewEligibilityRepository {
       .findFirst({
         where: {
           buyerId,
-          orderStatus: OrderStatus.DELIVERED,
+          orderStatus: { in: [...POST_DELIVERY_ORDER_STATUSES] },
           items: {
             some: { productId },
           },

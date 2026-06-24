@@ -23,3 +23,13 @@ export const listAdminReviewsQuerySchema = paginationQuerySchema
 export type ListAdminReviewsQueryInput = z.infer<
   typeof listAdminReviewsQuerySchema
 >;
+
+export const listFeaturedReviewsQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(12).default(3),
+  })
+  .strict();
+
+export type ListFeaturedReviewsQueryInput = z.infer<
+  typeof listFeaturedReviewsQuerySchema
+>;

@@ -23,6 +23,7 @@ const sellerListSelect = {
   state: true,
   country: true,
   approvalStatus: true,
+  commissionPercentage: true,
   createdAt: true,
   updatedAt: true,
   user: {
@@ -204,6 +205,28 @@ export class SellerRepository {
     return this.prisma.sellerProfile.update({
       where: { id },
       data: { approvalStatus },
+      select: sellerDetailSelect,
+    });
+  }
+
+  approveWithCommission(
+    id: string,
+    commissionPercentage: Prisma.Decimal,
+  ) {
+    return this.prisma.sellerProfile.update({
+      where: { id },
+      data: {
+        approvalStatus: "ACTIVE",
+        commissionPercentage,
+      },
+      select: sellerDetailSelect,
+    });
+  }
+
+  updateCommissionPercentage(id: string, commissionPercentage: Prisma.Decimal) {
+    return this.prisma.sellerProfile.update({
+      where: { id },
+      data: { commissionPercentage },
       select: sellerDetailSelect,
     });
   }

@@ -30,6 +30,7 @@ function toSellerListItemDto(record: SellerListRecord): SellerListItemDto {
     state: record.state,
     country: record.country,
     approvalStatus: record.approvalStatus as SellerApprovalStatus,
+    commissionPercentage: record.commissionPercentage?.toString() ?? null,
     user: {
       id: record.user.id,
       email: record.user.email,

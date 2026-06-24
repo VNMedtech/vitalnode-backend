@@ -9,6 +9,7 @@ import type {
   OrderStatisticsQueryInput,
   ProductStatisticsQueryInput,
   RevenueStatisticsQueryInput,
+  CommissionStatisticsQueryInput,
   SellerStatisticsQueryInput,
   UserStatisticsQueryInput,
 } from "../validators/query.schema.js";
@@ -112,6 +113,20 @@ export const listInventoryAlerts: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const getCommissionStatistics: RequestHandler = async (req, res, next) => {
+  try {
+    const query = req.query as unknown as CommissionStatisticsQueryInput;
+    const statistics = await analyticsService.getCommissionStatistics(query);
+    res
+      .status(200)
+      .json(
+        successResponse(statistics, "Commission statistics fetched successfully"),
+      );
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const analyticsController = {
   getDashboardSummary,
   getUserStatistics,
@@ -120,4 +135,5 @@ export const analyticsController = {
   getOrderStatistics,
   getRevenueStatistics,
   listInventoryAlerts,
+  getCommissionStatistics,
 };
