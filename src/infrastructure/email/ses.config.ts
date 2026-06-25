@@ -4,9 +4,9 @@
 import { env } from "../../config/env.js";
 
 export const sesConfig = {
-  region: env.aws.region,
-  accessKeyId: env.aws.accessKeyId,
-  secretAccessKey: env.aws.secretAccessKey,
+  region: env.ses.region,
+  accessKeyId: env.ses.accessKeyId,
+  secretAccessKey: env.ses.secretAccessKey,
   fromEmail: env.ses.fromEmail,
   fromName: env.ses.fromName,
   replyToEmail: env.ses.replyToEmail,

@@ -29,9 +29,9 @@ Supported templates:
 Add to `server/.env`:
 
 ```env
-AWS_REGION=ap-south-1
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_SES_REGION=ap-south-1
+AWS_SES_ACCESS_KEY_ID=your_ses_access_key
+AWS_SES_SECRET_ACCESS_KEY=your_ses_secret_key
 SES_FROM_EMAIL=noreply@yourdomain.com
 SES_FROM_NAME=Medical Equipment Marketplace
 SES_REPLY_TO_EMAIL=support@yourdomain.com
@@ -165,7 +165,7 @@ Replace the recipient with a verified address in SES sandbox mode.
 
 | Scenario | Expected behavior |
 |----------|-------------------|
-| Missing `SES_FROM_EMAIL` / AWS credentials | `503 EMAIL_NOT_CONFIGURED` when send is awaited |
+| Missing `SES_FROM_EMAIL` / `AWS_SES_*` credentials | `503 EMAIL_NOT_CONFIGURED` when send is awaited |
 | Invalid recipient (sandbox) | `502 EMAIL_SEND_FAILED`, error logged with SES message |
 | SES throttling / service error | `502 EMAIL_SEND_FAILED`, full error in server logs |
 | Approval workflow with SES down | API succeeds; email failure logged silently |
@@ -210,5 +210,5 @@ AWS SES SDK v3
 1. **Email not received** — Check spam folder; confirm sender/recipient are verified in sandbox.
 2. **`MessageRejected`** — Sender identity not verified in SES.
 3. **`AccessDenied`** — IAM policy missing `ses:SendEmail`.
-4. **Wrong region** — `AWS_REGION` must match the region where the identity was verified.
+4. **Wrong region** — `AWS_SES_REGION` (or shared `AWS_REGION` fallback) must match the region where the identity was verified.
 5. **No reset link in email** — Set `WEB_APP_BASE_URL`; otherwise the email includes a raw token.

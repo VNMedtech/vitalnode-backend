@@ -49,10 +49,27 @@ const envSchema = z.object({
   SES_FROM_NAME: z.string().optional(),
   SES_REPLY_TO_EMAIL: z.string().email().optional(),
   WEB_APP_BASE_URL: z.string().url().optional(),
+  AWS_S3_REGION: z.string().optional(),
+  AWS_S3_BUCKET_NAME: z.string().optional(),
+  AWS_S3_ACCESS_KEY_ID: z.string().optional(),
+  AWS_S3_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_S3_SIGNED_URL_EXPIRES_IN_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
+  AWS_SES_REGION: z.string().optional(),
+  AWS_SES_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SES_SECRET_ACCESS_KEY: z.string().optional(),
+  /** @deprecated Use AWS_S3_* — kept as S3-only fallback */
   AWS_REGION: z.string().optional(),
+  /** @deprecated Use AWS_S3_* — kept as S3-only fallback */
   AWS_BUCKET_NAME: z.string().optional(),
+  /** @deprecated Use AWS_S3_* — kept as S3-only fallback */
   AWS_ACCESS_KEY_ID: z.string().optional(),
+  /** @deprecated Use AWS_S3_* — kept as S3-only fallback */
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  /** @deprecated Use AWS_S3_* — kept as S3-only fallback */
   AWS_SIGNED_URL_EXPIRES_IN_SECONDS: z.coerce
     .number()
     .int()
@@ -83,6 +100,9 @@ export interface EnvConfig {
     fromEmail: string;
   };
   ses: {
+    region: string;
+    accessKeyId: string;
+    secretAccessKey: string;
     fromEmail: string;
     fromName: string;
     replyToEmail: string;
@@ -140,6 +160,9 @@ function parseEnvConfig(): EnvConfig {
       fromEmail: env.SMTP_FROM_EMAIL ?? "",
     },
     ses: {
+      region: env.AWS_SES_REGION ?? env.AWS_REGION ?? "",
+      accessKeyId: env.AWS_SES_ACCESS_KEY_ID ?? "",
+      secretAccessKey: env.AWS_SES_SECRET_ACCESS_KEY ?? "",
       fromEmail: env.SES_FROM_EMAIL ?? env.SMTP_FROM_EMAIL ?? "",
       fromName: env.SES_FROM_NAME ?? "Medical Equipment Marketplace",
       replyToEmail: env.SES_REPLY_TO_EMAIL ?? "",
@@ -150,11 +173,14 @@ function parseEnvConfig(): EnvConfig {
     rateLimitMax: env.RATE_LIMIT_MAX,
     authRateLimitMax: env.AUTH_RATE_LIMIT_MAX,
     aws: {
-      region: env.AWS_REGION ?? "",
-      bucketName: env.AWS_BUCKET_NAME ?? "",
-      accessKeyId: env.AWS_ACCESS_KEY_ID ?? "",
-      secretAccessKey: env.AWS_SECRET_ACCESS_KEY ?? "",
-      signedUrlExpiresInSeconds: env.AWS_SIGNED_URL_EXPIRES_IN_SECONDS,
+      region: env.AWS_S3_REGION ?? env.AWS_REGION ?? "",
+      bucketName: env.AWS_S3_BUCKET_NAME ?? env.AWS_BUCKET_NAME ?? "",
+      accessKeyId: env.AWS_S3_ACCESS_KEY_ID ?? env.AWS_ACCESS_KEY_ID ?? "",
+      secretAccessKey:
+        env.AWS_S3_SECRET_ACCESS_KEY ?? env.AWS_SECRET_ACCESS_KEY ?? "",
+      signedUrlExpiresInSeconds:
+        env.AWS_S3_SIGNED_URL_EXPIRES_IN_SECONDS ??
+        env.AWS_SIGNED_URL_EXPIRES_IN_SECONDS,
     },
     razorpay: {
       keyId: env.RAZORPAY_KEY_ID ?? "",
@@ -173,6 +199,11 @@ export function loadEnvConfig(): EnvConfig {
   }
 
   return cachedEnv;
+}
+
+/** Clears the cached config so the next `loadEnvConfig()` re-reads `process.env`. */
+export function resetEnvConfigCache(): void {
+  cachedEnv = undefined;
 }
 
 /** Validated environment configuration singleton. */
