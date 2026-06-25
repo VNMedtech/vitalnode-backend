@@ -156,7 +156,7 @@ describe("Permission system", () => {
       ).toBe(true);
     });
 
-    it("denies disabled seller operational access", () => {
+    it("grants disabled sellers in-flight order fulfillment only", () => {
       expect(
         userHasPermission(
           {
@@ -166,6 +166,15 @@ describe("Permission system", () => {
           permissions.inventory.update,
         ),
       ).toBe(false);
+      expect(
+        userHasPermission(
+          {
+            role: UserRole.SELLER,
+            sellerApprovalStatus: SellerApprovalStatus.DISABLED,
+          },
+          permissions.orders.updateStatus,
+        ),
+      ).toBe(true);
       expect(
         userHasPermission(
           {

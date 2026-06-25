@@ -47,6 +47,20 @@ function resolveSellerApprovalStatus(
   return sellerProfile.approvalStatus as SellerApprovalStatus;
 }
 
+function assertAccountCanAuthenticate(user: AuthUserRecord): void {
+  if ((user.status as UserStatus) !== UserStatus.ACTIVE) {
+    throw new ForbiddenError("Account is disabled");
+  }
+
+  const role = user.role as UserRole;
+  if (role === UserRole.SELLER) {
+    const approvalStatus = resolveSellerApprovalStatus(role, user.sellerProfile);
+    if (approvalStatus === SellerApprovalStatus.DISABLED) {
+      throw new ForbiddenError("Account is disabled");
+    }
+  }
+}
+
 function toAuthenticatedUserDto(user: AuthUserRecord): AuthenticatedUserDto {
   const role = user.role as UserRole;
   return {
@@ -193,9 +207,7 @@ export class AuthService {
     const user = await this.repo.findUserByEmail(input.email);
     if (!user) throw new UnauthorizedError("Invalid credentials");
 
-    if ((user.status as UserStatus) !== UserStatus.ACTIVE) {
-      throw new ForbiddenError("Account is disabled");
-    }
+    assertAccountCanAuthenticate(user);
 
     const ok = await verifyPassword(input.password, user.passwordHash);
     if (!ok) throw new UnauthorizedError("Invalid credentials");
@@ -246,9 +258,7 @@ export class AuthService {
 
     const user = await this.repo.findUserById(session.userId);
     if (!user) throw new UnauthorizedError("User not found");
-    if ((user.status as UserStatus) !== UserStatus.ACTIVE) {
-      throw new ForbiddenError("Account is disabled");
-    }
+    assertAccountCanAuthenticate(user);
 
     // Rotate refresh token: revoke old session, issue new session
     await this.repo.revokeSession(session.id);

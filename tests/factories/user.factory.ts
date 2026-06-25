@@ -124,10 +124,18 @@ export async function createDisabledSeller(
   await setSellerApprovalStatus(
     prisma,
     registered.auth.user.id,
-    SellerApprovalStatus.DISABLED,
+    SellerApprovalStatus.ACTIVE,
+    10,
   );
 
   const login = await loginViaApi(app, registered.payload.email as string);
+
+  await setSellerApprovalStatus(
+    prisma,
+    registered.auth.user.id,
+    SellerApprovalStatus.DISABLED,
+  );
+
   return { ...registered, login };
 }
 

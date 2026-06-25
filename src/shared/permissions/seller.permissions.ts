@@ -48,8 +48,20 @@ const sellerPendingApprovalSet = new Set<Permission>([
   ...sellerPendingApprovalPermissions,
 ]);
 
+/** In-flight order fulfillment while account is disabled by admin. */
+export const sellerDisabledFulfillmentPermissions = [
+  ...sellerAccountPermissions,
+  permissions.orders.read,
+  permissions.orders.updateStatus,
+  permissions.uploads.create,
+] as const satisfies readonly Permission[];
+
 const sellerRejectedOrDisabledSet = new Set<Permission>([
   ...sellerAccountPermissions,
+]);
+
+const sellerDisabledFulfillmentSet = new Set<Permission>([
+  ...sellerDisabledFulfillmentPermissions,
 ]);
 
 const sellerApprovedSet = new Set<Permission>([
@@ -75,8 +87,9 @@ export function resolveSellerPermissions(
     case SellerApprovalStatus.PENDING_APPROVAL:
       return sellerPendingApprovalSet;
     case SellerApprovalStatus.REJECTED:
-    case SellerApprovalStatus.DISABLED:
       return sellerRejectedOrDisabledSet;
+    case SellerApprovalStatus.DISABLED:
+      return sellerDisabledFulfillmentSet;
     default: {
       const exhaustive: never = approvalStatus;
       return exhaustive;

@@ -7,10 +7,15 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../shared/errors/app.errors.js";
+import {
+  isDisabledDeliveryPartnerFulfillmentRoute,
+  isDisabledSellerFulfillmentRoute,
+} from "../shared/constants/disabledAccountFulfillment.constants.js";
 import { SellerApprovalStatus } from "../shared/enums/sellerApprovalStatus.enum.js";
 import { UserRole } from "../shared/enums/userRole.enum.js";
 import { UserStatus } from "../shared/enums/userStatus.enum.js";
 import { verifyAccessToken } from "../utils/jwt.util.js";
+import { getSellerAccessDeniedMessage } from "../shared/permissions/seller.permissions.js";
 
 const PASSWORD_CHANGE_ALLOWED_PATHS = new Set([
   "/api/v1/users/me/change-password",
@@ -74,14 +79,17 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
     }
 
     if (user.status !== UserStatus.ACTIVE) {
-      throw new ForbiddenError("Account is disabled");
-    }
+      const role = user.role as UserRole;
+      const allowsDisabledDeliveryFulfillment =
+        role === UserRole.DELIVERY_PARTNER &&
+        isDisabledDeliveryPartnerFulfillmentRoute(
+          req.originalUrl,
+          req.method,
+        );
 
-    if (
-      user.mustChangePassword &&
-      !isPasswordChangeAllowedRoute(req.originalUrl, req.method)
-    ) {
-      throw new ForbiddenError("Password change required before accessing this resource");
+      if (!allowsDisabledDeliveryFulfillment) {
+        throw new ForbiddenError("Account is disabled");
+      }
     }
 
     const role = user.role as UserRole;
@@ -93,6 +101,22 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
       }
       sellerApprovalStatus =
         user.sellerProfile.approvalStatus as SellerApprovalStatus;
+
+      if (
+        sellerApprovalStatus === SellerApprovalStatus.DISABLED &&
+        !isDisabledSellerFulfillmentRoute(req.originalUrl, req.method)
+      ) {
+        throw new ForbiddenError(
+          getSellerAccessDeniedMessage(SellerApprovalStatus.DISABLED),
+        );
+      }
+    }
+
+    if (
+      user.mustChangePassword &&
+      !isPasswordChangeAllowedRoute(req.originalUrl, req.method)
+    ) {
+      throw new ForbiddenError("Password change required before accessing this resource");
     }
 
     req.user = {

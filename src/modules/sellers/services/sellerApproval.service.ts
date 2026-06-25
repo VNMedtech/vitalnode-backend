@@ -7,6 +7,7 @@ import {
 } from "../../../shared/errors/app.errors.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
+import { AuthRepository } from "../../auth/repositories/auth.repository.js";
 import { canTransitionSellerApproval } from "../../../shared/stateMachine/sellerApproval.guard.js";
 import {
   SELLER_ACTIONS,
@@ -211,6 +212,8 @@ export class SellerApprovalService {
       sellerId,
       SellerApprovalStatus.DISABLED,
     );
+
+    await new AuthRepository(prisma).revokeAllActiveSessions(seller.userId);
 
     auditLogger.log({
       actorUserId,

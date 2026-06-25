@@ -7,6 +7,7 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../shared/errors/app.errors.js";
+import { isDisabledSellerFulfillmentRoute } from "../shared/constants/disabledAccountFulfillment.constants.js";
 import { SellerApprovalStatus } from "../shared/enums/sellerApprovalStatus.enum.js";
 import { UserRole } from "../shared/enums/userRole.enum.js";
 import { getSellerAccessDeniedMessage } from "../shared/permissions/seller.permissions.js";
@@ -22,9 +23,17 @@ export const requireApprovedSeller: RequestHandler = (req, _res, next) => {
     return;
   }
 
-  if (req.user.sellerApprovalStatus !== SellerApprovalStatus.ACTIVE) {
-    const status =
-      req.user.sellerApprovalStatus ?? SellerApprovalStatus.PENDING_APPROVAL;
+  const status =
+    req.user.sellerApprovalStatus ?? SellerApprovalStatus.PENDING_APPROVAL;
+
+  const allowsDisabledFulfillment =
+    status === SellerApprovalStatus.DISABLED &&
+    isDisabledSellerFulfillmentRoute(req.originalUrl, req.method);
+
+  if (
+    status !== SellerApprovalStatus.ACTIVE &&
+    !allowsDisabledFulfillment
+  ) {
     next(new ForbiddenError(getSellerAccessDeniedMessage(status)));
     return;
   }

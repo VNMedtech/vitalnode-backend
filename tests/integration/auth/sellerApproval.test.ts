@@ -4,9 +4,7 @@ import {
   createApprovedSeller,
   createDisabledSeller,
   registerSellerViaApi,
-  setSellerApprovalStatus,
 } from "../../factories/user.factory.js";
-import { SellerApprovalStatus } from "../../../src/shared/enums/sellerApprovalStatus.enum.js";
 import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../../utils/db.js";
 import {
   sellerProbeRequest,
@@ -67,20 +65,13 @@ describe("Auth — Seller Approval", () => {
   });
 
   it("25. blocks disabled sellers from operational routes", async () => {
-    const { login, auth } = await createDisabledSeller(app, getTestPrisma());
-
-    const prisma = getTestPrisma();
-    await setSellerApprovalStatus(
-      prisma,
-      auth.user.id,
-      SellerApprovalStatus.DISABLED,
-    );
+    const { login } = await createDisabledSeller(app, getTestPrisma());
 
     const profileRes = await userRequest(
       app,
       login.auth.accessToken,
     ).getProfile();
-    expect(profileRes.status).toBe(200);
+    expect(profileRes.status).toBe(403);
 
     const operationalRes = await sellerProbeRequest(
       app,

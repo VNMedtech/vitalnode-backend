@@ -177,6 +177,13 @@ export class AuthRepository {
     });
   }
 
+  revokeAllActiveSessions(userId: string, revokedAt = new Date()) {
+    return this.prisma.authSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt },
+    });
+  }
+
   createPasswordResetToken(input: {
     userId: string;
     tokenHash: string;

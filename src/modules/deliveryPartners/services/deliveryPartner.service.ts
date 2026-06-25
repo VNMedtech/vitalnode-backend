@@ -12,6 +12,7 @@ import {
   hashPassword,
 } from "../../../utils/password.util.js";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
+import { AuthRepository } from "../../auth/repositories/auth.repository.js";
 import {
   DELIVERY_PARTNER_ACTIONS,
   DELIVERY_PARTNER_AUDIT_ENTITY_TYPE,
@@ -287,6 +288,7 @@ export class DeliveryPartnerService {
     }
 
     await this.repo.updateUserStatus(partner.userId, UserStatus.DISABLED);
+    await new AuthRepository(prisma).revokeAllActiveSessions(partner.userId);
 
     const updated = await this.repo.findById(id);
     if (!updated) {
