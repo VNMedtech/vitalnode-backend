@@ -587,6 +587,36 @@ export function salesReportsRequest(app: Express, accessToken: string) {
   };
 }
 
+export function adminUserRequest(app: Express, accessToken: string) {
+  const auth = (req: Test) =>
+    req.set("Authorization", `Bearer ${accessToken}`);
+
+  return {
+    stats: () => auth(request(app).get(`${ADMIN_BASE}/users/stats`)),
+
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${ADMIN_BASE}/users`)).query(query),
+
+    getById: (id: string) =>
+      auth(request(app).get(`${ADMIN_BASE}/users/${id}`)),
+
+    activity: (id: string) =>
+      auth(request(app).get(`${ADMIN_BASE}/users/${id}/activity`)),
+
+    update: (id: string, body: Record<string, unknown>) =>
+      auth(request(app).patch(`${ADMIN_BASE}/users/${id}`)).send(body),
+
+    disable: (id: string, body: Record<string, unknown> = {}) =>
+      auth(request(app).patch(`${ADMIN_BASE}/users/${id}/disable`)).send(body),
+
+    enable: (id: string, body: Record<string, unknown> = {}) =>
+      auth(request(app).patch(`${ADMIN_BASE}/users/${id}/enable`)).send(body),
+
+    delete: (id: string) =>
+      auth(request(app).delete(`${ADMIN_BASE}/users/${id}`)),
+  };
+}
+
 export function sellerProbeRequest(app: Express, accessToken: string): Test {
   return request(app)
     .post("/api/v1/test/seller-operational")

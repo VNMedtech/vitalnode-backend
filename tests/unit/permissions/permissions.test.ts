@@ -21,6 +21,10 @@ describe("Permission system", () => {
       expect(
         roleHasPermission(UserRole.ADMIN, permissions.products.approve),
       ).toBe(true);
+      expect(roleHasPermission(UserRole.ADMIN, permissions.users.list)).toBe(true);
+      expect(roleHasPermission(UserRole.ADMIN, permissions.users.disable)).toBe(
+        true,
+      );
     });
 
     it("grants buyer cart and order permissions", () => {
