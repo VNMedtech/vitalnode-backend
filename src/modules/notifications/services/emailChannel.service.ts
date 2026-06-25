@@ -197,6 +197,10 @@ export class EmailChannelService {
         );
         return;
 
+      case "SETTLEMENT_BATCH_CREATED":
+      case "SETTLEMENT_BATCH_DISBURSED":
+        return;
+
       default: {
         const exhaustiveCheck: never = event;
         logger.error(

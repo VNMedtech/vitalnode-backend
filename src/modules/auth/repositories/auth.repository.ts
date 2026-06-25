@@ -76,6 +76,7 @@ export class AuthRepository {
         id: true,
         email: true,
         role: true,
+        status: true,
         sellerProfile: {
           select: {
             approvalStatus: true,
@@ -126,6 +127,7 @@ export class AuthRepository {
         id: true,
         email: true,
         role: true,
+        status: true,
         sellerProfile: {
           select: {
             approvalStatus: true,

@@ -30,6 +30,7 @@ type AuthUserRecord = {
   id: string;
   email: string;
   role: string;
+  status: string;
   mustChangePassword?: boolean;
   sellerProfile?: { approvalStatus: string } | null;
 };

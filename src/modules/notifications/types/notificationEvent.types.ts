@@ -111,6 +111,18 @@ export interface OrderDeliveredEvent {
   }>;
 }
 
+export interface SettlementBatchCreatedEvent {
+  eventType: typeof NOTIFICATION_EVENTS.SETTLEMENT_BATCH_CREATED;
+  correlationId: string;
+  inApp: InAppNotificationPayload;
+}
+
+export interface SettlementBatchDisbursedEvent {
+  eventType: typeof NOTIFICATION_EVENTS.SETTLEMENT_BATCH_DISBURSED;
+  correlationId: string;
+  inApp: InAppNotificationPayload;
+}
+
 export type NotificationEvent =
   | SellerApprovedEvent
   | SellerRejectedEvent
@@ -119,4 +131,6 @@ export type NotificationEvent =
   | OrderPlacedEvent
   | OrderCancelledEvent
   | DeliveryAssignedEvent
-  | OrderDeliveredEvent;
+  | OrderDeliveredEvent
+  | SettlementBatchCreatedEvent
+  | SettlementBatchDisbursedEvent;

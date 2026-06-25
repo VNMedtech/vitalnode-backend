@@ -159,7 +159,8 @@ describe("Products — Marketplace sorting (SOW default)", () => {
       sortOrder: "desc",
     });
 
-    expect(res.body.data[0].id).toBe(products[products.length - 1].id);
+    const newestProduct = products.at(-1)!;
+    expect(res.body.data[0].id).toBe(newestProduct.id);
   });
 
   it("5. keeps default sort with category filter", async () => {

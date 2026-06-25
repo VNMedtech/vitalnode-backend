@@ -165,7 +165,7 @@ export class ProductApprovalService {
     ]);
 
     return {
-      items: records.map(toProductListItemDtoFromRecord),
+      items: records.map((record) => toProductListItemDtoFromRecord(record)),
       meta: buildPaginationMeta(query.page, query.limit, total),
     };
   }

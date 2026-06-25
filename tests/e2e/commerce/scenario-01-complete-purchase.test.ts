@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ORDER_ACTIONS } from "../../../src/modules/orders/constants/order.constants.js";
-import { PAYMENT_ACTIONS } from "../../../src/modules/payments/constants/payment.constants.js";
+import {
+  ORDER_ACTIONS as PAYMENT_ORDER_ACTIONS,
+  PAYMENT_ACTIONS,
+} from "../../../src/modules/payments/constants/payment.constants.js";
 import { getTestPrisma } from "../../utils/db.js";
 import {
   browseMarketplaceProduct,
@@ -106,7 +109,7 @@ describe("E2E Commerce — Scenario 1: Complete Purchase Flow", () => {
 
     order = await prisma.order.findUniqueOrThrow({
       where: { id: orderId },
-      include: { payment: true },
+      include: { items: true, payment: true },
     });
     expect(order.orderStatus).toBe("PLACED");
     expect(order.payment?.paymentStatus).toBe("SUCCESS");
@@ -139,13 +142,13 @@ describe("E2E Commerce — Scenario 1: Complete Purchase Flow", () => {
 
     order = await prisma.order.findUniqueOrThrow({
       where: { id: orderId },
-      include: { payment: true },
+      include: { items: true, payment: true },
     });
     expect(order.orderStatus).toBe("PENDING_SETTLEMENT");
 
     // Audit logs across lifecycle
     const placedAudit = await prisma.auditLog.findFirst({
-      where: { action: ORDER_ACTIONS.PLACED, entityId: orderId },
+      where: { action: PAYMENT_ORDER_ACTIONS.PLACED, entityId: orderId },
     });
     expect(placedAudit).not.toBeNull();
 

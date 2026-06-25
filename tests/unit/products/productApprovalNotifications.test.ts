@@ -45,6 +45,7 @@ describe("emitProductDecisionNotification", () => {
       state: "MH",
       country: "IN",
       approvalStatus: "ACTIVE",
+      commissionPercentage: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       addressLine1: "123 Main St",
@@ -74,7 +75,7 @@ describe("emitProductDecisionNotification", () => {
 
     expect(emitMock).toHaveBeenCalledOnce();
     expect(createInAppMock).not.toHaveBeenCalled();
-    expect(emitMock.mock.calls[0][0]).toMatchObject({
+    expect(emitMock.mock.calls[0]![0]).toMatchObject({
       eventType: NOTIFICATION_EVENTS.PRODUCT_APPROVED,
       correlationId: "product-1",
       inApp: {
@@ -98,6 +99,7 @@ describe("emitProductDecisionNotification", () => {
       state: "MH",
       country: "IN",
       approvalStatus: "ACTIVE",
+      commissionPercentage: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       addressLine1: "123 Main St",
@@ -127,7 +129,7 @@ describe("emitProductDecisionNotification", () => {
 
     expect(createInAppMock).toHaveBeenCalledOnce();
     expect(emitMock).not.toHaveBeenCalled();
-    expect(createInAppMock.mock.calls[0][0]).toMatchObject({
+    expect(createInAppMock.mock.calls[0]![0]).toMatchObject({
       userId: "user-1",
       type: NOTIFICATION_TYPES.PRODUCT_REJECTED,
       message: expect.stringContaining("Incomplete documentation"),
