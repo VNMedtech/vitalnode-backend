@@ -176,6 +176,7 @@ model BuyerProfile {
   addresses Address[]
   cart      Cart?
   orders    Order[]
+  invoices  Invoice[]
   reviews   ProductReview[]
 }
 
@@ -201,6 +202,7 @@ model SellerProfile {
   documents          SellerDocument[]
   products           Product[]
   orders             Order[]
+  invoices           Invoice[]
   settlementBatches  SettlementBatch[]
 }
 
@@ -469,6 +471,7 @@ model Order {
   items           OrderItem[]
   payment         Payment?
   proofs          OrderProof[]
+  invoice         Invoice?
 
   @@index([buyerId])
   @@index([sellerId])
@@ -563,6 +566,32 @@ model Payment {
   order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   @@index([paymentStatus])
+}
+
+// =============================================================================
+// INVOICE DOMAIN
+// =============================================================================
+
+model Invoice {
+  id            String   @id @default(uuid())
+  invoiceNumber String   @unique
+  orderId       String   @unique
+  buyerId       String
+  sellerId      String
+  totalAmount   Decimal  @db.Decimal(12, 2)
+  currency      String   @default("INR")
+  pdfUrl        String
+  generatedAt   DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order  Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  buyer  BuyerProfile  @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+  seller SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([generatedAt])
 }
 
 model IdempotencyKey {

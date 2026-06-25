@@ -31,7 +31,10 @@ describe("Permission system", () => {
       expect(roleHasPermission(UserRole.BUYER, permissions.cart.mutate)).toBe(
         true,
       );
-      expect(roleHasPermission(UserRole.BUYER, permissions.orders.create)).toBe(
+      expect(
+        roleHasPermission(UserRole.BUYER, permissions.orders.create),
+      ).toBe(true);
+      expect(roleHasPermission(UserRole.BUYER, permissions.invoices.read)).toBe(
         true,
       );
       expect(

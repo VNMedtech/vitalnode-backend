@@ -66,6 +66,9 @@ export const permissions = {
     read: "payments:read",
     refund: "payments:refund",
   },
+  invoices: {
+    read: "invoices:read",
+  },
   uploads: {
     create: "uploads:create",
     delete: "uploads:delete",
@@ -136,6 +139,7 @@ export const rolePermissions: Record<UserRole, readonly Permission[]> = {
     permissions.payments.create,
     permissions.payments.verify,
     permissions.payments.read,
+    permissions.invoices.read,
     permissions.uploads.create,
     permissions.uploads.delete,
     permissions.notifications.read,

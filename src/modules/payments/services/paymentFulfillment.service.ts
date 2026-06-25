@@ -36,6 +36,7 @@ import {
   notificationDispatcher,
   orderNotificationContextService,
 } from "../../notifications/index.js";
+import { InvoiceGenerationService } from "../../invoices/services/invoiceGeneration.service.js";
 import { PaymentRepository } from "../repositories/payment.repository.js";
 import { amountsMatch, decimalToPaise } from "../utils/money.util.js";
 import type {
@@ -59,6 +60,7 @@ function parseProductStatus(snapshot: Prisma.JsonValue): ProductStatus {
 
 export class PaymentFulfillmentService {
   private readonly movementService = new InventoryMovementService();
+  private readonly invoiceGenerationService = new InvoiceGenerationService();
 
   async fulfillSuccessfulPayment(
     input: FulfillSuccessfulPaymentInput,
@@ -72,6 +74,10 @@ export class PaymentFulfillmentService {
     }
 
     if (payment.paymentStatus === PaymentStatus.SUCCESS) {
+      await this.invoiceGenerationService.generateForOrder(
+        payment.orderId,
+        input.actorUserId,
+      );
       return {
         orderId: payment.orderId,
         orderNumber: payment.order.orderNumber,
@@ -235,6 +241,11 @@ export class PaymentFulfillmentService {
           notificationDispatcher.emit(orderPlacedEvent);
         }
       }
+
+      await this.invoiceGenerationService.generateForOrder(
+        result.orderId,
+        input.actorUserId,
+      );
 
       return result;
     } catch (error) {

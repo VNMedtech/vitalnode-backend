@@ -15,6 +15,7 @@ const PAYMENTS_BASE = "/api/v1/payments";
 const REVIEWS_BASE = "/api/v1/reviews";
 const ANALYTICS_BASE = "/api/v1/analytics";
 const ADMIN_BASE = "/api/v1/admin";
+const BUYERS_BASE = "/api/v1/buyers";
 const SELLER_EARNINGS_BASE = "/api/v1/seller/earnings";
 const SELLER_SETTLEMENTS_BASE = "/api/v1/seller/settlements";
 const SALES_REPORTS_BASE = "/api/v1/sales-reports";
@@ -730,5 +731,38 @@ export function sellerSettlementRequest(app: Express, accessToken: string) {
       request(app)
         .get(`${SELLER_SETTLEMENTS_BASE}/${id}`)
         .set("Authorization", `Bearer ${accessToken}`),
+  };
+}
+
+export function buyerInvoiceRequest(app: Express, accessToken?: string) {
+  const auth = (req: Test) =>
+    accessToken
+      ? req.set("Authorization", `Bearer ${accessToken}`)
+      : req;
+
+  return {
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${BUYERS_BASE}/invoices`)).query(query),
+
+    getById: (id: string) =>
+      auth(request(app).get(`${BUYERS_BASE}/invoices/${id}`)),
+
+    getByOrderId: (orderId: string) =>
+      auth(request(app).get(`${BUYERS_BASE}/orders/${orderId}/invoice`)),
+  };
+}
+
+export function adminInvoiceRequest(app: Express, accessToken?: string) {
+  const auth = (req: Test) =>
+    accessToken
+      ? req.set("Authorization", `Bearer ${accessToken}`)
+      : req;
+
+  return {
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${ADMIN_BASE}/invoices`)).query(query),
+
+    getById: (id: string) =>
+      auth(request(app).get(`${ADMIN_BASE}/invoices/${id}`)),
   };
 }

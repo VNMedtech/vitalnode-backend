@@ -15,6 +15,7 @@ import {
 } from "./helpers.js";
 import {
   addressRequest,
+  buyerInvoiceRequest,
   cartRequest,
   orderRequest,
   productRequest,
@@ -114,6 +115,22 @@ describe("E2E Commerce — Scenario 1: Complete Purchase Flow", () => {
     expect(order.orderStatus).toBe("PLACED");
     expect(order.payment?.paymentStatus).toBe("SUCCESS");
     expect(order.payment?.razorpayPaymentId).toBe(payment.razorpayPaymentId);
+
+    // Invoice generated for paid order
+    const invoice = await prisma.invoice.findUnique({
+      where: { orderId },
+    });
+    expect(invoice).not.toBeNull();
+    expect(invoice?.invoiceNumber).toMatch(/^VN-INV-\d{8}-\d{6}$/);
+    expect(invoice?.pdfUrl).toContain("invoices/");
+
+    const invoiceRes = await buyerInvoiceRequest(
+      app,
+      buyerAuth.accessToken,
+    ).getByOrderId(orderId);
+    expect(invoiceRes.status).toBe(200);
+    expect(invoiceRes.body.data.paymentStatus).toBe("PAID");
+    expect(invoiceRes.body.data.downloadUrl).toContain("https://");
 
     // Inventory deducted on payment
     const inventoryAfterPayment = await prisma.inventory.findUnique({
