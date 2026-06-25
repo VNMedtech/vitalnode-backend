@@ -32,6 +32,7 @@ import { ReviewRepository } from "../../reviews/repositories/review.repository.j
 import { toProductReviewStats } from "../../reviews/dto/review.dto.js";
 import type {
   CreateProductInput,
+  ListMarketplaceProductsQuery,
   ListProductsQuery,
   ProductCompareDto,
   ProductDetailDto,
@@ -45,6 +46,7 @@ import {
   validateProductDocumentTypes,
   validateProductImageCount,
 } from "../utils/productUpload.util.js";
+import { usesMarketplaceDefaultSort } from "../utils/productSort.util.js";
 
 function toDecimal(value: string): Prisma.Decimal {
   return new Prisma.Decimal(value);
@@ -450,7 +452,7 @@ export class ProductService {
     };
   }
 
-  async listMarketplaceProducts(query: ListProductsQuery): Promise<{
+  async listMarketplaceProducts(query: ListMarketplaceProductsQuery): Promise<{
     items: ProductListItemDto[];
     meta: ReturnType<typeof buildPaginationMeta>;
   }> {
@@ -463,9 +465,18 @@ export class ProductService {
       marketplaceOnly: true,
     };
 
+    const useMarketplaceDefaultSort = usesMarketplaceDefaultSort(
+      query.sortBy,
+      query.sortOrder,
+    );
+
     const [records, total] = await Promise.all([
       this.repo.findManyPaginated({
-        ...query,
+        page: query.page,
+        limit: query.limit,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+        useMarketplaceDefaultSort,
         ...filterOptions,
       }),
       this.repo.count(filterOptions),

@@ -6,6 +6,7 @@ import type {
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
 import type { ProductSortField } from "../constants/product.constants.js";
+import { buildProductOrderBy } from "../utils/productSort.util.js";
 
 const categorySummarySelect = {
   id: true,
@@ -105,8 +106,9 @@ export type ProductDetailRecord = Prisma.ProductGetPayload<{
 export interface FindProductsOptions {
   page: number;
   limit: number;
-  sortBy: ProductSortField;
-  sortOrder: "asc" | "desc";
+  sortBy?: ProductSortField;
+  sortOrder?: "asc" | "desc";
+  useMarketplaceDefaultSort?: boolean;
   search?: string;
   categoryId?: string;
   brand?: string;
@@ -115,20 +117,6 @@ export interface FindProductsOptions {
   maxPrice?: string;
   sellerId?: string;
   marketplaceOnly: boolean;
-}
-
-function mapSortField(
-  sortBy: ProductSortField,
-): keyof Prisma.ProductOrderByWithRelationInput {
-  switch (sortBy) {
-    case "price":
-      return "pricing";
-    case "deliveryTime":
-      return "deliveryTime";
-    case "newest":
-    default:
-      return "createdAt";
-  }
 }
 
 function buildSearchWhere(search?: string): Prisma.ProductWhereInput | undefined {
@@ -370,17 +358,19 @@ export class ProductRepository {
   }
 
   findManyPaginated(options: FindProductsOptions) {
-    const { page, limit, sortBy, sortOrder } = options;
+    const { page, limit, sortBy, sortOrder, useMarketplaceDefaultSort } = options;
     const skip = (page - 1) * limit;
     const where = buildProductWhere(options);
-    const sortField = mapSortField(sortBy);
+    const orderBy = buildProductOrderBy({
+      sortBy,
+      sortOrder,
+      useMarketplaceDefaultSort,
+    });
 
     return this.prisma.product.findMany({
       where,
       select: productListSelect,
-      orderBy: {
-        [sortField]: sortOrder,
-      },
+      orderBy,
       skip,
       take: limit,
     });

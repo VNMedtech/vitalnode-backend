@@ -19,6 +19,12 @@ export const PRODUCT_SORT_FIELDS = [
 
 export type ProductSortField = (typeof PRODUCT_SORT_FIELDS)[number];
 
+/** SOW marketplace default: lowest delivery days, then lowest price. */
+export const MARKETPLACE_DEFAULT_SORT_ORDER = [
+  { field: "deliveryTime", direction: "asc" },
+  { field: "pricing", direction: "asc" },
+] as const;
+
 export const PRODUCT_DEFAULT_PAGE = 1;
 export const PRODUCT_DEFAULT_LIMIT = 20;
 export const PRODUCT_MAX_LIMIT = 100;

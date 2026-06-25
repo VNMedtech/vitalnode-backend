@@ -137,6 +137,18 @@ export interface ListProductsQuery {
   maxPrice?: string;
 }
 
+export interface ListMarketplaceProductsQuery {
+  page: number;
+  limit: number;
+  sortBy?: ProductSortField;
+  sortOrder?: "asc" | "desc";
+  search?: string;
+  categoryId?: string;
+  brand?: string;
+  minPrice?: string;
+  maxPrice?: string;
+}
+
 export interface RejectProductInput {
   reason?: string;
 }

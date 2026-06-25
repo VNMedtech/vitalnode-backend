@@ -42,6 +42,8 @@ export const productRouter = Router();
  *     description: |
  *       Public endpoint. Returns paginated approved products from active sellers
  *       in active categories. Supports search, filters, and sorting.
+ *       Default sort (when sortBy and sortOrder are omitted): deliveryTime ascending,
+ *       then pricing ascending per SOW business rule.
  *     parameters:
  *       - in: query
  *         name: page
@@ -54,13 +56,13 @@ export const productRouter = Router();
  *         schema:
  *           type: string
  *           enum: [price, newest, deliveryTime]
- *           default: newest
+ *         description: Optional. Omit with sortOrder for SOW default (deliveryTime asc, pricing asc)
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
- *           default: desc
+ *         description: Optional. Used only when sortBy is provided
  *       - in: query
  *         name: search
  *         schema: { type: string, maxLength: 120 }

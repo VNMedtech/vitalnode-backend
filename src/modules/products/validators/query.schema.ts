@@ -39,7 +39,11 @@ const baseListProductsQuerySchema = z
   .strict();
 
 export const listMarketplaceProductsQuerySchema = baseListProductsQuerySchema
-  .omit({ status: true })
+  .omit({ status: true, sortBy: true, sortOrder: true })
+  .extend({
+    sortBy: z.enum(PRODUCT_SORT_FIELDS).optional(),
+    sortOrder: z.enum(["asc", "desc"]).optional(),
+  })
   .strict();
 
 export const listOwnProductsQuerySchema = baseListProductsQuerySchema.strict();
