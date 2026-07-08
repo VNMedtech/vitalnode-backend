@@ -151,6 +151,40 @@ function parseEnvConfig(): EnvConfig {
     );
   }
 
+  if (env.NODE_ENV === "production") {
+    const missing: string[] = [];
+
+    // S3 (uploads, invoices)
+    if (!(env.AWS_S3_REGION ?? env.AWS_REGION)) missing.push("AWS_S3_REGION");
+    if (!(env.AWS_S3_BUCKET_NAME ?? env.AWS_BUCKET_NAME))
+      missing.push("AWS_S3_BUCKET_NAME");
+    if (!(env.AWS_S3_ACCESS_KEY_ID ?? env.AWS_ACCESS_KEY_ID))
+      missing.push("AWS_S3_ACCESS_KEY_ID");
+    if (!(env.AWS_S3_SECRET_ACCESS_KEY ?? env.AWS_SECRET_ACCESS_KEY))
+      missing.push("AWS_S3_SECRET_ACCESS_KEY");
+
+    // SES (transactional email)
+    if (!(env.AWS_SES_REGION ?? env.AWS_REGION)) missing.push("AWS_SES_REGION");
+    if (!env.AWS_SES_ACCESS_KEY_ID) missing.push("AWS_SES_ACCESS_KEY_ID");
+    if (!env.AWS_SES_SECRET_ACCESS_KEY)
+      missing.push("AWS_SES_SECRET_ACCESS_KEY");
+    if (!(env.SES_FROM_EMAIL ?? env.SMTP_FROM_EMAIL)) missing.push("SES_FROM_EMAIL");
+
+    // Razorpay (payments)
+    if (!env.RAZORPAY_KEY_ID) missing.push("RAZORPAY_KEY_ID");
+    if (!env.RAZORPAY_KEY_SECRET) missing.push("RAZORPAY_KEY_SECRET");
+    if (!env.RAZORPAY_WEBHOOK_SECRET) missing.push("RAZORPAY_WEBHOOK_SECRET");
+    if (!env.SYSTEM_ACTOR_USER_ID) missing.push("SYSTEM_ACTOR_USER_ID");
+
+    if (missing.length > 0) {
+      throw new Error(
+        `Missing required production integration configuration:\n${missing
+          .map((k) => `- ${k}`)
+          .join("\n")}`,
+      );
+    }
+  }
+
   return {
     nodeEnv: env.NODE_ENV,
     port: env.PORT,
