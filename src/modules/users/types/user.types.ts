@@ -9,14 +9,24 @@ export interface BuyerProfileSummary {
 export interface SellerProfileSummary {
   id: string;
   businessName: string;
+  contactPerson: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
   approvalStatus: string;
 }
 
 export interface DeliveryPartnerProfileSummary {
   id: string;
+  addressLine1: string;
+  addressLine2: string | null;
   city: string;
   state: string;
   country: string;
+  postalCode: string;
 }
 
 export interface UserProfileDto {

@@ -60,15 +60,25 @@ export const userRouter = Router();
  *                       properties:
  *                         id: { type: string, format: uuid }
  *                         businessName: { type: string }
+ *                         contactPerson: { type: string }
+ *                         addressLine1: { type: string }
+ *                         addressLine2: { type: string, nullable: true }
+ *                         city: { type: string }
+ *                         state: { type: string }
+ *                         country: { type: string }
+ *                         postalCode: { type: string }
  *                         approvalStatus: { type: string }
  *                     deliveryPartnerProfile:
  *                       type: object
  *                       nullable: true
  *                       properties:
  *                         id: { type: string, format: uuid }
+ *                         addressLine1: { type: string }
+ *                         addressLine2: { type: string, nullable: true }
  *                         city: { type: string }
  *                         state: { type: string }
  *                         country: { type: string }
+ *                         postalCode: { type: string }
  *       401:
  *         description: Unauthorized
  *       403:

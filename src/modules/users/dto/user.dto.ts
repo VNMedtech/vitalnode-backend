@@ -8,14 +8,24 @@ export const buyerProfileSummaryDtoSchema = z.object({
 export const sellerProfileSummaryDtoSchema = z.object({
   id: z.string().uuid(),
   businessName: z.string(),
+  contactPerson: z.string(),
+  addressLine1: z.string(),
+  addressLine2: z.string().nullable(),
+  city: z.string(),
+  state: z.string(),
+  country: z.string(),
+  postalCode: z.string(),
   approvalStatus: z.string(),
 });
 
 export const deliveryPartnerProfileSummaryDtoSchema = z.object({
   id: z.string().uuid(),
+  addressLine1: z.string(),
+  addressLine2: z.string().nullable(),
   city: z.string(),
   state: z.string(),
   country: z.string(),
+  postalCode: z.string(),
 });
 
 export const userProfileDtoSchema = z.object({

@@ -22,15 +22,25 @@ const userProfileSelect = {
     select: {
       id: true,
       businessName: true,
+      contactPerson: true,
+      addressLine1: true,
+      addressLine2: true,
+      city: true,
+      state: true,
+      country: true,
+      postalCode: true,
       approvalStatus: true,
     },
   },
   deliveryPartnerProfile: {
     select: {
       id: true,
+      addressLine1: true,
+      addressLine2: true,
       city: true,
       state: true,
       country: true,
+      postalCode: true,
     },
   },
 } satisfies Prisma.UserSelect;
