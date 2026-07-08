@@ -30,9 +30,3 @@ npm test
 ```
 
 Integration tests use `tests/.env.test` (see `tests/.env.test.example`).
-
-## Documentation
-
-- [Backend architecture](../docs/BACKEND_ARCHITECTURE.md)
-- [Upload testing guide](../docs/testing/uploads-testing.md)
-- [Email testing notes](src/modules/email/TESTING_NOTES.md)

@@ -6,9 +6,10 @@ import cors from "cors";
 import helmet from "helmet";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
-import { corsOptions, swaggerOptions } from "./config/index.js";
+import { corsOptions, env, swaggerOptions } from "./config/index.js";
 import { registerNotificationHandlers } from "./modules/notifications/handlers/registerNotificationHandlers.js";
 import { apiRouter } from "./routes/index.js";
+import { healthRouter } from "./routes/health.routes.js";
 import { errorHandler, rateLimiter, requestLogger } from "./middlewares/index.js";
 
 registerNotificationHandlers();
@@ -16,6 +17,10 @@ registerNotificationHandlers();
 export const app = express();
 
 app.disable("x-powered-by");
+
+if (env.trustProxy) {
+  app.set("trust proxy", 1);
+}
 
 app.use(helmet());
 app.use(cors(corsOptions));
@@ -42,15 +47,18 @@ app.use((req, res, next) => {
 });
 app.use(express.urlencoded({ extended: true }));
 
+app.use(healthRouter);
 app.use(requestLogger);
 app.use(rateLimiter);
 
-const openapiSpec = swaggerJSDoc({
-  definition: swaggerOptions,
-  apis: ["./src/modules/**/routes/*.ts", "./src/routes/*.ts"],
-});
+if (env.nodeEnv !== "production") {
+  const openapiSpec = swaggerJSDoc({
+    definition: swaggerOptions,
+    apis: ["./src/modules/**/routes/*.ts", "./src/routes/*.ts"],
+  });
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
+}
 
 app.use("/api/v1", apiRouter);
 

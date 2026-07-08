@@ -40,6 +40,10 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  TRUST_PROXY: z
+    .string()
+    .default("false")
+    .transform((value) => value === "true"),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_USER: z.string().optional(),
@@ -112,6 +116,7 @@ export interface EnvConfig {
   rateLimitWindowMs: number;
   rateLimitMax: number;
   authRateLimitMax: number;
+  trustProxy: boolean;
   aws: {
     region: string;
     bucketName: string;
@@ -139,6 +144,12 @@ function parseEnvConfig(): EnvConfig {
   }
 
   const env = result.data;
+
+  if (env.NODE_ENV === "production" && env.CORS_ORIGIN === "*") {
+    throw new Error(
+      "CORS_ORIGIN must not be '*' in production. Set explicit portal origin(s).",
+    );
+  }
 
   return {
     nodeEnv: env.NODE_ENV,
@@ -172,6 +183,7 @@ function parseEnvConfig(): EnvConfig {
     rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
     rateLimitMax: env.RATE_LIMIT_MAX,
     authRateLimitMax: env.AUTH_RATE_LIMIT_MAX,
+    trustProxy: env.TRUST_PROXY,
     aws: {
       region: env.AWS_S3_REGION ?? env.AWS_REGION ?? "",
       bucketName: env.AWS_S3_BUCKET_NAME ?? env.AWS_BUCKET_NAME ?? "",
