@@ -13,6 +13,7 @@
     "db:push": "prisma db push",
     "db:validate": "prisma validate",
     "db:seed": "prisma db seed",
+    "db:bootstrap": "tsx prisma/bootstrap.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run tests/integration",

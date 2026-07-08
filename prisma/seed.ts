@@ -1,11 +1,14 @@
 /**
  * Database seed script — Medical Equipment Marketplace
  *
+ * Development / demo data only — do not run in production.
+ * For production admin + system actor setup, use: npm run db:bootstrap
+ *
  * Idempotent: safe to run multiple times. Uses upsert on unique fields
  * (email, category name, profile userId) so existing records are updated
  * rather than duplicated.
  *
- * Run: npx prisma db seed
+ * Run: npm run db:seed
  */
 
 import "dotenv/config";

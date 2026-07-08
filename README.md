@@ -16,12 +16,44 @@ Node.js / Express API for the Medical Equipment Marketplace.
 
    Never use one shared `AWS_ACCESS_KEY_ID` for both S3 and SES, and never define duplicate keys in `.env`.
 
-3. Install dependencies and start the dev server:
+3. Install dependencies, migrate, and seed (local development):
 
    ```bash
    npm install
+   npm run db:migrate
+   npm run db:seed
    npm run dev
    ```
+
+   `db:seed` creates demo users (admin, seller, buyer, delivery partner), categories, and a system actor. Default password: `Password123!` (see `prisma/seed.ts`).
+
+## Database scripts
+
+| Command | Purpose |
+|---------|---------|
+| `npm run db:migrate` | Apply migrations (development) |
+| `npm run db:migrate:deploy` | Apply migrations (production) |
+| `npm run db:seed` | **Development only** — demo data + known password |
+| `npm run db:bootstrap` | **Production** — create admin + system actor from env |
+
+### Production bootstrap
+
+Set in `.env` before first deploy:
+
+```env
+BOOTSTRAP_CONFIRM=true
+BOOTSTRAP_ADMIN_EMAIL=admin@yourdomain.com
+BOOTSTRAP_ADMIN_PASSWORD=<strong-password>
+```
+
+Then after migrate:
+
+```bash
+npm run db:migrate:deploy
+npm run db:bootstrap
+```
+
+Copy the printed `SYSTEM_ACTOR_USER_ID` into `.env`. Re-running bootstrap is safe: an existing admin password is **not** changed.
 
 ## Tests
 
