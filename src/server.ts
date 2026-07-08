@@ -68,7 +68,3 @@ export function startServer(): Server {
   registerShutdownHandlers();
   return server;
 }
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  startServer();
-}
