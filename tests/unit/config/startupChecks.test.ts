@@ -68,6 +68,8 @@ function createProductionConfig(
       webhookSecret: "",
     },
     systemActorUserId: "",
+    pendingPaymentTtlMinutes: 30,
+    pendingPaymentSweepIntervalMs: 300_000,
     ...overrides,
   };
 }

@@ -87,6 +87,14 @@ const envSchema = z.object({
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
   SYSTEM_ACTOR_USER_ID: z.string().uuid().optional(),
+  /** Auto-cancel PENDING_PAYMENT orders older than this many minutes. */
+  PENDING_PAYMENT_TTL_MINUTES: z.coerce.number().int().positive().default(30),
+  /** How often the stale unpaid-order sweep runs (ms). */
+  PENDING_PAYMENT_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(300_000),
 });
 
 export interface EnvConfig {
@@ -141,6 +149,8 @@ export interface EnvConfig {
     webhookSecret: string;
   };
   systemActorUserId: string;
+  pendingPaymentTtlMinutes: number;
+  pendingPaymentSweepIntervalMs: number;
 }
 
 function parseEnvConfig(): EnvConfig {
@@ -252,6 +262,8 @@ function parseEnvConfig(): EnvConfig {
       webhookSecret: env.RAZORPAY_WEBHOOK_SECRET ?? "",
     },
     systemActorUserId: env.SYSTEM_ACTOR_USER_ID ?? "",
+    pendingPaymentTtlMinutes: env.PENDING_PAYMENT_TTL_MINUTES,
+    pendingPaymentSweepIntervalMs: env.PENDING_PAYMENT_SWEEP_INTERVAL_MS,
   };
 }
 

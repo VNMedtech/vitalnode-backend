@@ -24,6 +24,7 @@ export const ORDER_SORT_FIELDS = ["createdAt", "placedAt", "totalAmount"] as con
 export type OrderSortField = (typeof ORDER_SORT_FIELDS)[number];
 
 export const CANCELLABLE_ORDER_STATUSES = [
+  "PENDING_PAYMENT",
   "PLACED",
   "ASSIGNED_DELIVERY_PARTNER",
 ] as const;

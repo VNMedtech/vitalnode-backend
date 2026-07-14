@@ -7,6 +7,10 @@ import { env } from "./config/env.js";
 import { runStartupChecks } from "./config/startupChecks.js";
 import { disconnectPrisma } from "./infrastructure/prisma/client.js";
 import { logger } from "./infrastructure/logger/logger.js";
+import {
+  startExpirePendingOrdersJob,
+  stopExpirePendingOrdersJob,
+} from "./jobs/cleanup/expirePendingOrders.job.js";
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -21,6 +25,7 @@ function registerShutdownHandlers(): void {
 
     isShuttingDown = true;
     logger.info({ signal }, "Shutdown signal received");
+    stopExpirePendingOrdersJob();
 
     const forceExitTimer = setTimeout(() => {
       logger.error("Graceful shutdown timed out; forcing exit");
@@ -65,6 +70,7 @@ export function startServer(): Server {
   server.listen(env.port, () => {
     logger.info({ port: env.port }, "Server listening");
   });
+  startExpirePendingOrdersJob();
   registerShutdownHandlers();
   return server;
 }

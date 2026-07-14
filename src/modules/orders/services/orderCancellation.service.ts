@@ -1,15 +1,20 @@
 /**
  * @transaction-owner
  * @idempotent: yes (inventory restore dedupe + status guards)
- * @external-calls: Razorpay refund (post-TX via RefundService)
+ * @external-calls: Razorpay refund (post-TX via RefundService) — only when payment was SUCCESS
  */
-import { OrderStatus, type Prisma } from "../../../../generated/prisma/client.js";
+import {
+  OrderStatus,
+  PaymentStatus,
+  type Prisma,
+} from "../../../../generated/prisma/client.js";
 import { prisma } from "../../../infrastructure/prisma/client.js";
 import { logger } from "../../../infrastructure/logger/logger.js";
 import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  ValidationError,
 } from "../../../shared/errors/app.errors.js";
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
 import { UserRole } from "../../../shared/enums/userRole.enum.js";
@@ -19,6 +24,7 @@ import { runInTransaction } from "../../../shared/transactions/runInTransaction.
 import { recordCommerceAudit } from "../../auditLogs/services/commerceAudit.service.js";
 import { INVENTORY_ACTIONS } from "../../inventory/constants/inventory.constants.js";
 import { InventoryMovementService } from "../../inventory/services/inventoryMovement.service.js";
+import { PaymentRepository } from "../../payments/repositories/payment.repository.js";
 import { RefundService } from "../../payments/services/refund.service.js";
 import { BuyerRepository } from "../../buyers/repositories/buyer.repository.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
@@ -147,9 +153,12 @@ export class OrderCancellationService {
       }
 
       let didCancel = false;
+      const paymentWasSuccessful =
+        order.payment?.paymentStatus === PaymentStatus.SUCCESS;
 
       await runInTransaction(async (tx) => {
         const orderRepo = new OrderRepository(tx);
+        const paymentRepo = new PaymentRepository(tx);
 
         const locked = await orderRepo.lockById(orderId);
         if (!locked) {
@@ -207,6 +216,15 @@ export class OrderCancellationService {
           throw new ConflictError("Order cancellation failed");
         }
 
+        // Unpaid abandon: close the pending payment so checkout is fully released.
+        if (
+          locked.orderStatus === OrderStatus.PENDING_PAYMENT &&
+          locked.payment?.id &&
+          locked.payment.paymentStatus === PaymentStatus.PENDING
+        ) {
+          await paymentRepo.markFailed(locked.payment.id);
+        }
+
         didCancel = true;
 
         await recordCommerceAudit(tx, {
@@ -219,20 +237,26 @@ export class OrderCancellationService {
             newStatus: to,
             reason: reason ?? null,
             cancelledByRole: role,
+            abandonedUnpaid: locked.orderStatus === OrderStatus.PENDING_PAYMENT,
+            expiredUnpaid:
+              locked.orderStatus === OrderStatus.PENDING_PAYMENT &&
+              Boolean(reason?.startsWith("Expired:")),
           },
         });
       });
 
-      try {
-        await this.refundService.initiateRefund(actorUserId, { orderId });
-      } catch (error) {
-        logger.error(
-          {
-            orderId,
-            message: error instanceof Error ? error.message : "Unknown error",
-          },
-          "Refund initiation failed after order cancellation — retry via POST /api/v1/payments/refund",
-        );
+      if (paymentWasSuccessful) {
+        try {
+          await this.refundService.initiateRefund(actorUserId, { orderId });
+        } catch (error) {
+          logger.error(
+            {
+              orderId,
+              message: error instanceof Error ? error.message : "Unknown error",
+            },
+            "Refund initiation failed after order cancellation — retry via POST /api/v1/payments/refund",
+          );
+        }
       }
 
       const detail = await this.orderRepo.findDetailById(orderId);
@@ -282,5 +306,56 @@ export class OrderCancellationService {
       input.reason,
       idempotencyKey,
     );
+  }
+
+  /**
+   * Cancels PENDING_PAYMENT orders older than the unpaid-checkout TTL.
+   * Safe under concurrency: cancel is status-guarded and idempotent for CANCELLED.
+   */
+  async expireStalePendingPaymentOrders(options?: {
+    olderThanMs?: number;
+    limit?: number;
+    actorUserId?: string;
+  }): Promise<{ scanned: number; cancelled: number; failed: number }> {
+    const actorUserId = options?.actorUserId;
+    if (!actorUserId) {
+      throw new ValidationError("System actor user is not configured");
+    }
+
+    const olderThanMs = options?.olderThanMs ?? 30 * 60 * 1000;
+    const limit = options?.limit ?? 50;
+    const createdBefore = new Date(Date.now() - olderThanMs);
+
+    const stale = await this.orderRepo.findStalePendingPaymentOrders(
+      createdBefore,
+      limit,
+    );
+
+    let cancelled = 0;
+    let failed = 0;
+
+    for (const order of stale) {
+      try {
+        await this.cancelOrder(
+          actorUserId,
+          UserRole.ADMIN,
+          order.id,
+          "Expired: unpaid PENDING_PAYMENT past TTL",
+        );
+        cancelled += 1;
+      } catch (error) {
+        failed += 1;
+        logger.warn(
+          {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            message: error instanceof Error ? error.message : "Unknown error",
+          },
+          "Failed to expire stale PENDING_PAYMENT order",
+        );
+      }
+    }
+
+    return { scanned: stale.length, cancelled, failed };
   }
 }

@@ -55,6 +55,17 @@ npm run db:bootstrap
 
 Copy the printed `SYSTEM_ACTOR_USER_ID` into `.env`. Re-running bootstrap is safe: an existing admin password is **not** changed.
 
+## Unpaid checkout TTL
+
+Orders left in `PENDING_PAYMENT` longer than the TTL are auto-cancelled (same outcome as buyer abandon):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PENDING_PAYMENT_TTL_MINUTES` | `30` | Age after which unpaid checkout expires |
+| `PENDING_PAYMENT_SWEEP_INTERVAL_MS` | `300000` | How often the server scans (5 minutes) |
+
+Requires `SYSTEM_ACTOR_USER_ID`. Job: `src/jobs/cleanup/expirePendingOrders.job.ts` (started from `startServer`).
+
 ## Tests
 
 ```bash

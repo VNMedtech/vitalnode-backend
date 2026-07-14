@@ -249,6 +249,18 @@ export class OrderRepository {
     });
   }
 
+  findStalePendingPaymentOrders(createdBefore: Date, take: number) {
+    return this.db.order.findMany({
+      where: {
+        orderStatus: OrderStatus.PENDING_PAYMENT,
+        createdAt: { lt: createdBefore },
+      },
+      select: { id: true, orderNumber: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+      take,
+    });
+  }
+
   findDetailById(orderId: string) {
     return this.db.order.findUnique({
       where: { id: orderId },
