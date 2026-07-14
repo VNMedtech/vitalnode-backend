@@ -367,6 +367,49 @@ productRouter.get(
 
 /**
  * @openapi
+ * /api/v1/products/pending/{id}:
+ *   get:
+ *     tags: [Products]
+ *     summary: Get pending product details
+ *     description: |
+ *       Admin only. Returns full product details for a product awaiting approval
+ *       (`PENDING_APPROVAL`), including media, documents, specifications, and inventory.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Pending product fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: Pending product fetched successfully }
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductDetail'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden — admin only
+ *       404:
+ *         description: Product not found or not pending approval
+ */
+productRouter.get(
+  "/pending/:id",
+  authenticate,
+  authorizePermission(permissions.products.approve),
+  validate({ params: productIdParamSchema }),
+  productController.getPendingProductById,
+);
+
+/**
+ * @openapi
  * /api/v1/products/{id}:
  *   patch:
  *     tags: [Products]

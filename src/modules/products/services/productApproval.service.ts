@@ -142,6 +142,19 @@ export class ProductApprovalService {
   private readonly repo = new ProductRepository(prisma);
   private readonly sellerRepo = new SellerRepository(prisma);
 
+  async getPendingProductById(productId: string): Promise<ProductDetailDto> {
+    const product = await this.repo.findDetailById(productId);
+    if (!product) {
+      throw new NotFoundError("Product not found");
+    }
+
+    if (product.status !== ProductStatus.PENDING_APPROVAL) {
+      throw new NotFoundError("Product not found");
+    }
+
+    return toProductDetailDto(product);
+  }
+
   async listPendingProducts(query: ListProductsQuery): Promise<{
     items: ProductListItemDto[];
     meta: ReturnType<typeof buildPaginationMeta>;

@@ -106,6 +106,53 @@ describe("Products — Catalog & Approval Workflow", () => {
     expect(res.body.data[0].status).toBe("PENDING_APPROVAL");
   });
 
+  it("3b. returns full pending product details for admin", async () => {
+    const prisma = getTestPrisma();
+    const { login: adminLogin } = await createAdminViaApi(app, prisma);
+    const { category } = await createCategoryViaApi(
+      app,
+      adminLogin.auth.accessToken,
+    );
+    const seller = await createApprovedSeller(app, prisma);
+    const payload = productCreationPayload(category.id);
+    const createRes = await productRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).createMultipart(
+      {
+        categoryId: payload.categoryId,
+        productName: payload.productName,
+        brand: payload.brand,
+        model: payload.model,
+        productType: payload.productType,
+        pricing: payload.pricing,
+        moq: String(payload.moq),
+        description: payload.description,
+        documentTypes: JSON.stringify(["manual"]),
+      },
+      {
+        images: [{ buffer: TEST_PNG_BUFFER, filename: "product.png" }],
+        documents: [{ buffer: TEST_PDF_BUFFER, filename: "manual.pdf" }],
+      },
+    );
+    const productId = createRes.body.data.id;
+
+    const res = await productRequest(
+      app,
+      adminLogin.auth.accessToken,
+    ).getPendingById(productId);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(productId);
+    expect(res.body.data.status).toBe("PENDING_APPROVAL");
+    expect(res.body.data.description).toBe(payload.description);
+    expect(res.body.data.media.length).toBeGreaterThan(0);
+    expect(res.body.data.documents.length).toBeGreaterThan(0);
+
+    const marketplaceRes = await productRequest(app).getMarketplaceById(productId);
+    expect(marketplaceRes.status).toBe(404);
+  });
+
   it("4. approves a pending product", async () => {
     const prisma = getTestPrisma();
     const { login: adminLogin } = await createAdminViaApi(app, prisma);

@@ -207,6 +207,9 @@ export function productRequest(app: Express, accessToken = "") {
     listPending: (query: Record<string, string | number | undefined> = {}) =>
       auth(request(app).get(`${PRODUCTS_BASE}/pending`)).query(query),
 
+    getPendingById: (id: string) =>
+      auth(request(app).get(`${PRODUCTS_BASE}/pending/${id}`)),
+
     getMarketplaceById: (id: string) =>
       auth(request(app).get(`${PRODUCTS_BASE}/${id}`)),
 

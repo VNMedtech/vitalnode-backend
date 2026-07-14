@@ -204,3 +204,15 @@ export const listPendingProducts: RequestHandler = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getPendingProductById: RequestHandler = async (req, res, next) => {
+  try {
+    const { id } = req.params as ProductIdParam;
+    const product = await productApprovalService.getPendingProductById(id);
+    res
+      .status(200)
+      .json(successResponse(product, "Pending product fetched successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
