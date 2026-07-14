@@ -44,9 +44,6 @@ export function resolvePortalBaseUrl(
 /**
  * Build an absolute URL on the chosen portal base.
  * Returns undefined when no base URL is configured.
- *
- * TODO: other buildAppUrl call sites (order notifications, seller/product approval)
- * still use a single WEB_APP_BASE_URL — only password-reset links are portal-aware.
  */
 export function buildPortalUrl(
   portal: AuthPortal | undefined,

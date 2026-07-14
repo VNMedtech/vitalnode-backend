@@ -1,8 +1,7 @@
 import { prisma } from "../../../infrastructure/prisma/client.js";
-import {
-  buildAppUrl,
-  buildRecipientName,
-} from "../../email/services/email.service.js";
+import { buildRecipientName } from "../../email/services/email.service.js";
+import { buildPortalUrl } from "../../email/utils/portalUrl.util.js";
+import { AuthPortal } from "../../../shared/enums/authPortal.enum.js";
 import { NOTIFICATION_EVENTS, NOTIFICATION_TYPES } from "../constants/notification.constants.js";
 import type {
   DeliveryAssignedEvent,
@@ -95,7 +94,7 @@ export class OrderNotificationContextService {
           ),
           orderNumber: order.orderNumber,
           totalAmount,
-          orderUrl: buildAppUrl(`/orders/${orderId}`),
+          orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
           role: "BUYER",
         },
         {
@@ -106,7 +105,7 @@ export class OrderNotificationContextService {
           ),
           orderNumber: order.orderNumber,
           totalAmount,
-          orderUrl: buildAppUrl(`/seller/orders/${orderId}`),
+          orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
           role: "SELLER",
         },
       ],
@@ -154,7 +153,7 @@ export class OrderNotificationContextService {
           ),
           orderNumber: order.orderNumber,
           reason,
-          orderUrl: buildAppUrl(`/orders/${orderId}`),
+          orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
           role: "BUYER",
         },
         {
@@ -165,7 +164,7 @@ export class OrderNotificationContextService {
           ),
           orderNumber: order.orderNumber,
           reason,
-          orderUrl: buildAppUrl(`/seller/orders/${orderId}`),
+          orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
           role: "SELLER",
         },
       ],
@@ -232,7 +231,10 @@ export class OrderNotificationContextService {
           partner.user.lastName,
         ),
         orderNumber: order.orderNumber,
-        deliveryUrl: buildAppUrl(`/delivery/orders/${orderId}`),
+        deliveryUrl: buildPortalUrl(
+          AuthPortal.DELIVERY,
+          `/delivery/orders/${orderId}`,
+        ),
         role: "DELIVERY_PARTNER" as const,
       },
       {
@@ -242,7 +244,7 @@ export class OrderNotificationContextService {
           order.buyer.user.lastName,
         ),
         orderNumber: order.orderNumber,
-        deliveryUrl: buildAppUrl(`/orders/${orderId}`),
+        deliveryUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
         role: "BUYER" as const,
       },
       {
@@ -252,7 +254,10 @@ export class OrderNotificationContextService {
           order.seller.user.lastName,
         ),
         orderNumber: order.orderNumber,
-        deliveryUrl: buildAppUrl(`/seller/orders/${orderId}`),
+        deliveryUrl: buildPortalUrl(
+          AuthPortal.SELLER,
+          `/seller/orders/${orderId}`,
+        ),
         role: "SELLER" as const,
       },
     ];
@@ -302,7 +307,7 @@ export class OrderNotificationContextService {
             order.buyer.user.lastName,
           ),
           orderNumber: order.orderNumber,
-          orderUrl: buildAppUrl(`/orders/${orderId}`),
+          orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
           role: "BUYER",
         },
         {
@@ -312,7 +317,7 @@ export class OrderNotificationContextService {
             order.seller.user.lastName,
           ),
           orderNumber: order.orderNumber,
-          orderUrl: buildAppUrl(`/seller/orders/${orderId}`),
+          orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
           role: "SELLER",
         },
       ],

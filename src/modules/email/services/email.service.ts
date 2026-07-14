@@ -1,4 +1,3 @@
-import { env } from "../../../config/env.js";
 import {
   emailClient,
   isSesConfigured,
@@ -18,6 +17,7 @@ import type {
   SellerApprovedEmailData,
   SellerRejectedEmailData,
 } from "../types/email.types.js";
+import { buildPortalUrl } from "../utils/portalUrl.util.js";
 import { templateService } from "./template.service.js";
 
 export class EmailService {
@@ -166,14 +166,13 @@ export class EmailService {
 
 export const emailService = new EmailService();
 
+/**
+ * @deprecated Prefer {@link buildPortalUrl} with an AuthPortal so links
+ * resolve to the correct frontend (store / seller / admin / delivery).
+ * Kept as a WEB_APP_BASE_URL fallback for generic links.
+ */
 export function buildAppUrl(pathname: string): string | undefined {
-  if (!env.webAppBaseUrl) {
-    return undefined;
-  }
-
-  // TODO: notification / approval deep links still use a single WEB_APP_BASE_URL.
-  // Password-reset links are portal-aware via buildPortalUrl in portalUrl.util.ts.
-  return new URL(pathname, env.webAppBaseUrl).toString();
+  return buildPortalUrl(undefined, pathname);
 }
 
 export function buildRecipientName(

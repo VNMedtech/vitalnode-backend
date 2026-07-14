@@ -15,9 +15,10 @@ import {
   SELLER_NOTIFICATION_TYPES,
 } from "../constants/seller.constants.js";
 import {
-  buildAppUrl,
   buildRecipientName,
 } from "../../email/services/email.service.js";
+import { buildPortalUrl } from "../../email/utils/portalUrl.util.js";
+import { AuthPortal } from "../../../shared/enums/authPortal.enum.js";
 import {
   NOTIFICATION_EVENTS,
   NOTIFICATION_TYPES,
@@ -124,7 +125,7 @@ export class SellerApprovalService {
           seller.user.lastName,
         ),
         businessName: seller.businessName,
-        dashboardUrl: buildAppUrl("/seller/dashboard"),
+        dashboardUrl: buildPortalUrl(AuthPortal.SELLER, "/"),
       },
     });
 
@@ -187,7 +188,7 @@ export class SellerApprovalService {
         ),
         businessName: seller.businessName,
         reason: input.reason,
-        supportUrl: buildAppUrl("/support"),
+        supportUrl: buildPortalUrl(AuthPortal.STORE, "/contact"),
       },
     });
 

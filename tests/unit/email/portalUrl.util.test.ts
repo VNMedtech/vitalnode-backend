@@ -83,4 +83,24 @@ describe("buildPortalUrl", () => {
       "https://fallback.example.com/reset-password",
     );
   });
+
+  it("builds role-specific order deep links for each portal", () => {
+    const orderId = "order-123";
+
+    expect(
+      buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`, FULL_URLS),
+    ).toBe("https://store.example.com/orders/order-123");
+
+    expect(
+      buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`, FULL_URLS),
+    ).toBe("https://seller.example.com/seller/orders/order-123");
+
+    expect(
+      buildPortalUrl(
+        AuthPortal.DELIVERY,
+        `/delivery/orders/${orderId}`,
+        FULL_URLS,
+      ),
+    ).toBe("https://delivery.example.com/delivery/orders/order-123");
+  });
 });

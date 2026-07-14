@@ -36,7 +36,8 @@ SES_FROM_EMAIL=noreply@yourdomain.com
 SES_FROM_NAME=Medical Equipment Marketplace
 SES_REPLY_TO_EMAIL=support@yourdomain.com
 WEB_APP_BASE_URL=http://localhost:3001
-# Optional per-portal bases for password-reset links (falls back to WEB_APP_BASE_URL)
+# Per-portal bases for password-reset and notification deep links
+# (falls back to WEB_APP_BASE_URL when a portal URL is unset)
 # WEB_APP_STORE_URL=http://localhost:5173
 # WEB_APP_SELLER_URL=http://localhost:5174
 # WEB_APP_ADMIN_URL=http://localhost:5176
@@ -46,6 +47,8 @@ WEB_APP_BASE_URL=http://localhost:3001
 `SES_FROM_EMAIL` is required. `SMTP_FROM_EMAIL` is used as a fallback if `SES_FROM_EMAIL` is not set.
 
 Forgot-password accepts optional `portal`: `STORE` | `SELLER` | `ADMIN` | `DELIVERY`. When set (and the matching `WEB_APP_*_URL` is configured), the reset email link opens on that portal.
+
+Order/seller/product notification CTAs use the same portal bases (delivery partner → `WEB_APP_DELIVERY_URL`, seller → `WEB_APP_SELLER_URL`, buyer → `WEB_APP_STORE_URL`).
 
 ### 3. Start the API
 

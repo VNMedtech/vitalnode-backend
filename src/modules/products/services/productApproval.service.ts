@@ -13,9 +13,10 @@ import {
   PRODUCT_AUDIT_ENTITY_TYPE,
 } from "../constants/product.constants.js";
 import {
-  buildAppUrl,
   buildRecipientName,
 } from "../../email/services/email.service.js";
+import { buildPortalUrl } from "../../email/utils/portalUrl.util.js";
+import { AuthPortal } from "../../../shared/enums/authPortal.enum.js";
 import {
   NOTIFICATION_EVENTS,
   NOTIFICATION_TYPES,
@@ -118,7 +119,7 @@ export async function emitProductDecisionNotification(
         to: sellerEmail,
         recipientName,
         productName,
-        marketplaceUrl: buildAppUrl("/products"),
+        marketplaceUrl: buildPortalUrl(AuthPortal.STORE, "/marketplace"),
       },
     });
     return;
@@ -133,7 +134,7 @@ export async function emitProductDecisionNotification(
       recipientName,
       productName,
       reason,
-      supportUrl: buildAppUrl("/support"),
+      supportUrl: buildPortalUrl(AuthPortal.STORE, "/contact"),
     },
   });
 }
