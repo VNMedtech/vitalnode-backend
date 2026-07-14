@@ -64,8 +64,35 @@ adminUserRouter.get(
  *   get:
  *     tags: [Admin Users]
  *     summary: User details
+ *     description: |
+ *       Returns full admin user detail including identity fields, role-specific profile,
+ *       summary counts, verification status, and last login.
+ *
+ *       Role-specific payload:
+ *       - BUYER: `buyerProfile` with `addresses[]` (name, phone, full address, isDefault)
+ *       - SELLER: `sellerProfile` with contact person, business address, approval, commission
+ *       - DELIVERY_PARTNER: `deliveryPartnerProfile` with full service address
+ *
+ *       `addressesCount` counts buyer-owned Address rows only.
+ *       `ordersCount` counts orders where the user is the buyer or the seller.
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User detail payload
+ *       401:
+ *         description: Missing or invalid access token
+ *       403:
+ *         description: Caller lacks users:read
+ *       404:
+ *         description: User not found (or soft-deleted)
  */
 adminUserRouter.get(
   "/:id",

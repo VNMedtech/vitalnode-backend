@@ -103,7 +103,8 @@ Content-Type: application/json
 Expected:
 
 - `200` with generic success message (no email enumeration)
-- SES delivers HTML + text email with reset link when `WEB_APP_BASE_URL` is set
+- SES delivers HTML + text email with reset link when a portal base or `WEB_APP_BASE_URL` is set
+- With `"portal": "SELLER"`, the link uses `WEB_APP_SELLER_URL` (falls back to `WEB_APP_BASE_URL`)
 - Server log: `Email sent` with `messageId` and `provider: aws-ses`
 
 ### Seller approval emails
@@ -161,13 +162,16 @@ import { emailService } from './src/modules/email/services/email.service.js';
 await emailService.sendSellerApprovedEmail('verified-recipient@example.com', {
   recipientName: 'Test Seller',
   businessName: 'Test Medical Supplies',
-  dashboardUrl: 'http://localhost:3001/seller/dashboard',
+  // Prefer WEB_APP_SELLER_URL (seller portal root), e.g. http://localhost:5174/
+  dashboardUrl: 'http://localhost:5174/',
 });
 console.log('Email sent');
 "
 ```
 
 Replace the recipient with a verified address in SES sandbox mode.
+
+Production notification builders resolve these URLs via `buildPortalUrl` (buyer → store, seller → seller portal, delivery partner → delivery portal).
 
 ---
 
@@ -221,4 +225,4 @@ AWS SES SDK v3
 2. **`MessageRejected`** — Sender identity not verified in SES.
 3. **`AccessDenied`** — IAM policy missing `ses:SendEmail`.
 4. **Wrong region** — `AWS_SES_REGION` (or shared `AWS_REGION` fallback) must match the region where the identity was verified.
-5. **No reset link in email** — Set `WEB_APP_BASE_URL`; otherwise the email includes a raw token.
+5. **No reset link in email** — Set the matching `WEB_APP_*_URL` (or `WEB_APP_BASE_URL` fallback); otherwise the email includes a raw token.

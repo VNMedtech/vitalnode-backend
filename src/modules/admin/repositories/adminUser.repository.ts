@@ -32,21 +32,47 @@ const adminUserDetailSelect = {
     select: {
       id: true,
       buyerType: true,
+      addresses: {
+        orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          addressLine1: true,
+          addressLine2: true,
+          city: true,
+          state: true,
+          country: true,
+          postalCode: true,
+          isDefault: true,
+        },
+      },
     },
   },
   sellerProfile: {
     select: {
       id: true,
       businessName: true,
+      contactPerson: true,
+      addressLine1: true,
+      addressLine2: true,
+      city: true,
+      state: true,
+      country: true,
+      postalCode: true,
       approvalStatus: true,
+      commissionPercentage: true,
     },
   },
   deliveryPartnerProfile: {
     select: {
       id: true,
+      addressLine1: true,
+      addressLine2: true,
       city: true,
       state: true,
       country: true,
+      postalCode: true,
     },
   },
 } satisfies Prisma.UserSelect;

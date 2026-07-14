@@ -47,6 +47,19 @@ export interface AdminUserListItemDto {
   updatedAt: Date;
 }
 
+export interface AdminUserAddressDto {
+  id: string;
+  name: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+  isDefault: boolean;
+}
+
 export interface AdminUserDetailDto {
   profile: {
     id: string;
@@ -63,17 +76,29 @@ export interface AdminUserDetailDto {
     buyerProfile: {
       id: string;
       buyerType: string;
+      addresses: AdminUserAddressDto[];
     } | null;
     sellerProfile: {
       id: string;
       businessName: string;
-      approvalStatus: string;
-    } | null;
-    deliveryPartnerProfile: {
-      id: string;
+      contactPerson: string;
+      addressLine1: string;
+      addressLine2: string | null;
       city: string;
       state: string;
       country: string;
+      postalCode: string;
+      approvalStatus: string;
+      commissionPercentage: string | null;
+    } | null;
+    deliveryPartnerProfile: {
+      id: string;
+      addressLine1: string;
+      addressLine2: string | null;
+      city: string;
+      state: string;
+      country: string;
+      postalCode: string;
     } | null;
   };
   addressesCount: number;

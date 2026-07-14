@@ -27,17 +27,43 @@ type UserListRecord = {
 
 type UserDetailRecord = UserListRecord & {
   profileImage: string | null;
-  buyerProfile: { id: string; buyerType: string } | null;
+  buyerProfile: {
+    id: string;
+    buyerType: string;
+    addresses: Array<{
+      id: string;
+      name: string;
+      phone: string;
+      addressLine1: string;
+      addressLine2: string | null;
+      city: string;
+      state: string;
+      country: string;
+      postalCode: string;
+      isDefault: boolean;
+    }>;
+  } | null;
   sellerProfile: {
     id: string;
     businessName: string;
-    approvalStatus: string;
-  } | null;
-  deliveryPartnerProfile: {
-    id: string;
+    contactPerson: string;
+    addressLine1: string;
+    addressLine2: string | null;
     city: string;
     state: string;
     country: string;
+    postalCode: string;
+    approvalStatus: string;
+    commissionPercentage: { toString(): string } | null;
+  } | null;
+  deliveryPartnerProfile: {
+    id: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
   } | null;
 };
 
@@ -104,8 +130,29 @@ export function toAdminUserDetailDto(
       profileImage: user.profileImage,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      buyerProfile: user.buyerProfile,
-      sellerProfile: user.sellerProfile,
+      buyerProfile: user.buyerProfile
+        ? {
+            id: user.buyerProfile.id,
+            buyerType: user.buyerProfile.buyerType,
+            addresses: user.buyerProfile.addresses,
+          }
+        : null,
+      sellerProfile: user.sellerProfile
+        ? {
+            id: user.sellerProfile.id,
+            businessName: user.sellerProfile.businessName,
+            contactPerson: user.sellerProfile.contactPerson,
+            addressLine1: user.sellerProfile.addressLine1,
+            addressLine2: user.sellerProfile.addressLine2,
+            city: user.sellerProfile.city,
+            state: user.sellerProfile.state,
+            country: user.sellerProfile.country,
+            postalCode: user.sellerProfile.postalCode,
+            approvalStatus: user.sellerProfile.approvalStatus,
+            commissionPercentage:
+              user.sellerProfile.commissionPercentage?.toString() ?? null,
+          }
+        : null,
       deliveryPartnerProfile: user.deliveryPartnerProfile,
     },
     addressesCount: counts.addressesCount,

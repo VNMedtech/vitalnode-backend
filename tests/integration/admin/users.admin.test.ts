@@ -146,6 +146,9 @@ describe("Admin Users — Management", () => {
         id: buyer.auth.user.id,
         email: buyer.auth.user.email,
         role: "BUYER",
+        buyerProfile: {
+          addresses: [],
+        },
       },
       addressesCount: 0,
       ordersCount: 0,

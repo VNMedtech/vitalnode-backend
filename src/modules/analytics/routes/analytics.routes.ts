@@ -225,6 +225,30 @@ analyticsRouter.get(
   analyticsController.listInventoryAlerts,
 );
 
+/**
+ * @openapi
+ * /api/v1/analytics/commission:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Commission statistics
+ *     description: Admin-only platform commission totals for an optional date range.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: to
+ *         schema: { type: string, format: date-time }
+ *     responses:
+ *       200:
+ *         description: Commission statistics fetched successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden — admin only
+ */
 analyticsRouter.get(
   "/commission",
   authenticate,
