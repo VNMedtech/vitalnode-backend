@@ -167,6 +167,13 @@ authRouter.post(
  *             required: [email]
  *             properties:
  *               email: { type: string, format: email }
+ *               portal:
+ *                 type: string
+ *                 enum: [STORE, SELLER, ADMIN, DELIVERY]
+ *                 description: >
+ *                   Optional portal that initiated the request. When set, the reset
+ *                   email link uses that portal's WEB_APP_*_URL (falls back to
+ *                   WEB_APP_BASE_URL). Case-insensitive.
  *     responses:
  *       200:
  *         description: Request accepted

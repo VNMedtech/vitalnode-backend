@@ -55,8 +55,15 @@ export function authRequest(app: Express) {
     logout: (refreshToken: string) =>
       request(app).post(`${AUTH_BASE}/logout`).send({ refreshToken }),
 
-    forgotPassword: (email: string) =>
-      request(app).post(`${AUTH_BASE}/forgot-password`).send({ email }),
+    forgotPassword: (
+      emailOrBody: string | { email: string; portal?: string },
+    ) => {
+      const body =
+        typeof emailOrBody === "string"
+          ? { email: emailOrBody }
+          : emailOrBody;
+      return request(app).post(`${AUTH_BASE}/forgot-password`).send(body);
+    },
 
     resetPassword: (body: { token: string; newPassword: string }) =>
       request(app).post(`${AUTH_BASE}/reset-password`).send(body),

@@ -14,10 +14,8 @@ import { hashPassword, verifyPassword } from "../../../utils/password.util.js";
 import { randomToken, sha256 } from "../../../utils/crypto.util.js";
 import { randomUUID } from "node:crypto";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
-import {
-  buildAppUrl,
-  emailService,
-} from "../../email/services/email.service.js";
+import { emailService } from "../../email/services/email.service.js";
+import { buildPortalUrl } from "../../email/utils/portalUrl.util.js";
 import { AUTH_ACTIONS, AUTH_AUDIT_ENTITY_TYPE } from "../constants/auth.constants.js";
 import { AuthRepository } from "../repositories/auth.repository.js";
 import type {
@@ -25,6 +23,7 @@ import type {
   LoginResultDto,
   TokenPair,
 } from "../types/auth.types.js";
+import type { AuthPortal } from "../../../shared/enums/authPortal.enum.js";
 
 type AuthUserRecord = {
   id: string;
@@ -73,9 +72,14 @@ function toAuthenticatedUserDto(user: AuthUserRecord): AuthenticatedUserDto {
   };
 }
 
-function buildResetPasswordLink(token: string): string {
-  if (!env.webAppBaseUrl) return "";
-  const url = new URL("/reset-password", env.webAppBaseUrl);
+function buildResetPasswordLink(
+  token: string,
+  portal?: AuthPortal,
+): string {
+  const baseLink = buildPortalUrl(portal, "/reset-password");
+  if (!baseLink) return "";
+
+  const url = new URL(baseLink);
   url.searchParams.set("token", token);
   return url.toString();
 }
@@ -297,7 +301,10 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(input: { email: string }): Promise<void> {
+  async forgotPassword(input: {
+    email: string;
+    portal?: AuthPortal;
+  }): Promise<void> {
     const user = await this.repo.findUserByEmail(input.email);
 
     // Do not leak whether the email exists.
@@ -317,7 +324,7 @@ export class AuthService {
       expiresAt,
     });
 
-    const resetLink = buildResetPasswordLink(rawToken);
+    const resetLink = buildResetPasswordLink(rawToken, input.portal);
 
     await emailService.sendPasswordResetEmail(user.email, {
       resetLink: resetLink || undefined,

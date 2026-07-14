@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { env } from "../../../src/config/env.js";
 import { emailClient } from "../../../src/infrastructure/email/index.js";
 import { DEFAULT_PASSWORD, loginPayload } from "../../fixtures/auth.payloads.js";
 import { expirePasswordResetToken } from "../../factories/auth.factory.js";
@@ -142,5 +143,93 @@ describe("Auth — Password Reset", () => {
       password: newPassword,
     });
     expect(loginRes.status).toBe(200);
+  });
+
+  describe("portal-aware reset links", () => {
+    const savedUrls = { ...env.webAppUrls };
+
+    beforeEach(() => {
+      env.webAppUrls.store = "https://store.test.local";
+      env.webAppUrls.seller = "https://seller.test.local";
+      env.webAppUrls.admin = "https://admin.test.local";
+      env.webAppUrls.delivery = "https://delivery.test.local";
+      env.webAppUrls.fallback = "https://fallback.test.local";
+      env.webAppBaseUrl = "https://fallback.test.local";
+    });
+
+    afterAll(() => {
+      Object.assign(env.webAppUrls, savedUrls);
+      env.webAppBaseUrl = savedUrls.fallback;
+    });
+
+    it("20. uses seller base URL when portal is SELLER", async () => {
+      const { payload } = await registerBuyerViaApi(app);
+
+      const res = await authRequest(app).forgotPassword({
+        email: payload.email,
+        portal: "SELLER",
+      });
+
+      expect(res.status).toBe(200);
+      expect(sentEmails).toHaveLength(1);
+
+      const html = sentEmails[0]?.html ?? "";
+      const text = sentEmails[0]?.text ?? "";
+      expect(html + text).toContain("https://seller.test.local/reset-password?token=");
+      expect(html + text).not.toContain("https://fallback.test.local/reset-password");
+    });
+
+    it("21. uses WEB_APP_BASE_URL when portal is omitted", async () => {
+      const { payload } = await registerBuyerViaApi(app);
+
+      const res = await authRequest(app).forgotPassword(payload.email);
+
+      expect(res.status).toBe(200);
+      expect(sentEmails).toHaveLength(1);
+
+      const html = sentEmails[0]?.html ?? "";
+      const text = sentEmails[0]?.text ?? "";
+      expect(html + text).toContain(
+        "https://fallback.test.local/reset-password?token=",
+      );
+    });
+
+    it("22. unknown email with portal still returns generic success", async () => {
+      const res = await authRequest(app).forgotPassword({
+        email: "unknown-portal@example.com",
+        portal: "ADMIN",
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toBe(
+        "If the email exists, a reset link has been sent",
+      );
+      expect(sentEmails).toHaveLength(0);
+    });
+
+    it("23. reset-password still works after portal-aware forgot-password", async () => {
+      const { payload } = await registerBuyerViaApi(app);
+      const newPassword = "PortalAwarePass9!";
+
+      await authRequest(app).forgotPassword({
+        email: payload.email,
+        portal: "SELLER",
+      });
+      const rawToken = extractResetTokenFromEmailPayload(sentEmails[0]!);
+
+      const resetRes = await authRequest(app).resetPassword({
+        token: rawToken,
+        newPassword,
+      });
+
+      expect(resetRes.status).toBe(200);
+
+      const loginRes = await authRequest(app).login({
+        email: payload.email,
+        password: newPassword,
+      });
+      expect(loginRes.status).toBe(200);
+    });
   });
 });

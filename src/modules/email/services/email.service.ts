@@ -171,6 +171,8 @@ export function buildAppUrl(pathname: string): string | undefined {
     return undefined;
   }
 
+  // TODO: notification / approval deep links still use a single WEB_APP_BASE_URL.
+  // Password-reset links are portal-aware via buildPortalUrl in portalUrl.util.ts.
   return new URL(pathname, env.webAppBaseUrl).toString();
 }
 

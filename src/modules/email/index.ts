@@ -5,3 +5,4 @@ export * from "./types/email.types.js";
 export * from "./templates/index.js";
 export * from "./services/template.service.js";
 export * from "./services/email.service.js";
+export * from "./utils/portalUrl.util.js";

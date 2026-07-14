@@ -53,6 +53,10 @@ const envSchema = z.object({
   SES_FROM_NAME: z.string().optional(),
   SES_REPLY_TO_EMAIL: z.string().email().optional(),
   WEB_APP_BASE_URL: z.string().url().optional(),
+  WEB_APP_STORE_URL: z.string().url().optional(),
+  WEB_APP_SELLER_URL: z.string().url().optional(),
+  WEB_APP_ADMIN_URL: z.string().url().optional(),
+  WEB_APP_DELIVERY_URL: z.string().url().optional(),
   AWS_S3_REGION: z.string().optional(),
   AWS_S3_BUCKET_NAME: z.string().optional(),
   AWS_S3_ACCESS_KEY_ID: z.string().optional(),
@@ -96,6 +100,13 @@ export interface EnvConfig {
   bcryptSaltRounds: number;
   passwordResetTokenExpiresInMinutes: number;
   webAppBaseUrl: string;
+  webAppUrls: {
+    store: string;
+    seller: string;
+    admin: string;
+    delivery: string;
+    fallback: string;
+  };
   smtp: {
     host: string;
     port: number;
@@ -197,6 +208,13 @@ function parseEnvConfig(): EnvConfig {
     passwordResetTokenExpiresInMinutes:
       env.PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES,
     webAppBaseUrl: env.WEB_APP_BASE_URL ?? "",
+    webAppUrls: {
+      store: env.WEB_APP_STORE_URL ?? "",
+      seller: env.WEB_APP_SELLER_URL ?? "",
+      admin: env.WEB_APP_ADMIN_URL ?? "",
+      delivery: env.WEB_APP_DELIVERY_URL ?? "",
+      fallback: env.WEB_APP_BASE_URL ?? "",
+    },
     smtp: {
       host: env.SMTP_HOST ?? "",
       port: env.SMTP_PORT ?? 587,

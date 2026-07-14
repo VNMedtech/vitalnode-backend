@@ -27,6 +27,13 @@ function createProductionConfig(
     bcryptSaltRounds: 10,
     passwordResetTokenExpiresInMinutes: 30,
     webAppBaseUrl: "",
+    webAppUrls: {
+      store: "",
+      seller: "",
+      admin: "",
+      delivery: "",
+      fallback: "",
+    },
     smtp: {
       host: "",
       port: 587,
