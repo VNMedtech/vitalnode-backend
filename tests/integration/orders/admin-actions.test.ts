@@ -27,6 +27,14 @@ describe("Orders — Section 4: Admin Actions", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.orderStatus).toBe("ASSIGNED_DELIVERY_PARTNER");
     expect(res.body.data.deliveryPartnerId).toBe(partner.deliveryPartnerId);
+    expect(res.body.data.deliveryPartner).toEqual(
+      expect.objectContaining({
+        id: partner.deliveryPartnerId,
+        firstName: "Delivery",
+        lastName: "Partner",
+        phoneNumber: expect.any(String),
+      }),
+    );
 
     const order = await prisma.order.findUnique({
       where: { id: context.orderId },
@@ -56,6 +64,13 @@ describe("Orders — Section 4: Admin Actions", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.deliveryPartnerId).toBe(partnerB.deliveryPartnerId);
+    expect(res.body.data.deliveryPartner).toEqual(
+      expect.objectContaining({
+        id: partnerB.deliveryPartnerId,
+        firstName: "Delivery",
+        lastName: "Partner",
+      }),
+    );
     expect(res.body.data.orderStatus).toBe("ASSIGNED_DELIVERY_PARTNER");
   });
 

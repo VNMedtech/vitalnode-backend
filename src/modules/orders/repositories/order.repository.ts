@@ -43,6 +43,18 @@ const orderSummarySelect = {
 const orderDetailSelect = {
   ...orderSummarySelect,
   shippingAddressSnapshot: true,
+  deliveryPartner: {
+    select: {
+      id: true,
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
+        },
+      },
+    },
+  },
   payment: {
     select: {
       id: true,

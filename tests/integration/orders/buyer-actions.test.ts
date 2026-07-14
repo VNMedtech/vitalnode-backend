@@ -39,6 +39,7 @@ describe("Orders — Section 2: Buyer Actions", () => {
     expect(res.body.data.items).toHaveLength(1);
     expect(res.body.data.shippingAddressSnapshot).toBeTruthy();
     expect(res.body.data.shippingAddressSnapshot.city).toBe("Mumbai");
+    expect(res.body.data.deliveryPartner).toBeNull();
   });
 
   it("cancels a placed order via buyer cancel endpoint", async () => {

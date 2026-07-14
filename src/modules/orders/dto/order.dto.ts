@@ -6,6 +6,7 @@ import type {
 import type {
   AddressSnapshot,
   CheckoutResultDto,
+  OrderDeliveryPartnerContactDto,
   OrderDetailDto,
   OrderItemDto,
   OrderPaymentSummary,
@@ -96,6 +97,21 @@ function toProofDto(proof: OrderDetailRecord["proofs"][number]): OrderProofDto {
   };
 }
 
+function toDeliveryPartnerContactDto(
+  partner: OrderDetailRecord["deliveryPartner"],
+): OrderDeliveryPartnerContactDto | null {
+  if (!partner) {
+    return null;
+  }
+
+  return {
+    id: partner.id,
+    firstName: partner.user.firstName,
+    lastName: partner.user.lastName,
+    phoneNumber: partner.user.phoneNumber,
+  };
+}
+
 export function toOrderSummaryDto(record: OrderSummaryRecord): OrderSummaryDto {
   return {
     id: record.id,
@@ -116,6 +132,7 @@ export function toOrderDetailDto(record: OrderDetailRecord): OrderDetailDto {
   return {
     ...toOrderSummaryDto(record),
     shippingAddressSnapshot: parseAddressSnapshot(record.shippingAddressSnapshot),
+    deliveryPartner: toDeliveryPartnerContactDto(record.deliveryPartner),
     items: record.items.map(toOrderItemDto),
     payment: toPaymentSummary(record.payment),
     proofs: record.proofs.map(toProofDto),

@@ -171,6 +171,7 @@ export async function createDeliveryPartnerUser(
   overrides: {
     email?: string;
     password?: string;
+    phoneNumber?: string;
     mustChangePassword?: boolean;
   } = {},
 ) {
@@ -178,6 +179,10 @@ export async function createDeliveryPartnerUser(
   const email = overrides.email ?? `dp-${unique}@example.com`;
   const passwordHash = await hashPassword(
     overrides.password ?? DEFAULT_PASSWORD,
+  );
+  const phoneDigits = `${Date.now()}${Math.floor(Math.random() * 1e9)}`.replace(
+    /\D/g,
+    "",
   );
 
   return prisma.user.create({
@@ -189,6 +194,8 @@ export async function createDeliveryPartnerUser(
       mustChangePassword: overrides.mustChangePassword ?? true,
       firstName: "Delivery",
       lastName: "Partner",
+      phoneNumber:
+        overrides.phoneNumber ?? `9${phoneDigits.slice(-9).padStart(9, "0")}`,
       deliveryPartnerProfile: {
         create: {
           addressLine1: "1 Logistics Way",

@@ -29,6 +29,30 @@ describe("Orders — Section 3: Seller Actions", () => {
     expect(order?.orderStatus).toBe("PROCESSING");
   });
 
+  it("exposes assigned delivery partner contact on seller order details", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupAssignedOrder(app, prisma);
+
+    const res = await orderRequest(app, context.sellerToken).getById(
+      context.orderId,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.deliveryPartnerId).toBe(
+      context.deliveryPartner.deliveryPartnerId,
+    );
+    expect(res.body.data.deliveryPartner).toEqual(
+      expect.objectContaining({
+        id: context.deliveryPartner.deliveryPartnerId,
+        firstName: "Delivery",
+        lastName: "Partner",
+        phoneNumber: expect.any(String),
+      }),
+    );
+    expect(res.body.data.deliveryPartner.phoneNumber).toMatch(/^\d{10}$/);
+  });
+
   it("uploads handover proof while order is processing", async () => {
     const app = getApp();
     const prisma = getTestPrisma();

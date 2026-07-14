@@ -102,8 +102,17 @@ export interface OrderSummaryDto {
   deliveryPartnerId: string | null;
 }
 
+/** Contact fields for the assigned delivery partner (order detail only). */
+export interface OrderDeliveryPartnerContactDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string | null;
+}
+
 export interface OrderDetailDto extends OrderSummaryDto {
   shippingAddressSnapshot: AddressSnapshot;
+  deliveryPartner: OrderDeliveryPartnerContactDto | null;
   items: OrderItemDto[];
   payment: OrderPaymentSummary | null;
   proofs: OrderProofDto[];
