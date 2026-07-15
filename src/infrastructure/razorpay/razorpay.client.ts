@@ -1,5 +1,6 @@
 import Razorpay from "razorpay";
 import { env } from "../../config/env.js";
+import { AppError, ValidationError } from "../../shared/errors/app.errors.js";
 import { logger } from "../logger/logger.js";
 import type {
   RazorpayOrderCreateInput,
@@ -21,6 +22,55 @@ function assertConfigured(): { keyId: string; keySecret: string } {
     throw new Error("Razorpay credentials are not configured");
   }
   return { keyId, keySecret };
+}
+
+/** Razorpay SDK throws plain `{ statusCode, error }` objects, not Error instances. */
+function getRazorpayErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const payload = error as {
+      error?: { description?: string; code?: string };
+      message?: string;
+    };
+    if (payload.error?.description) {
+      return payload.error.description;
+    }
+    if (typeof payload.message === "string" && payload.message) {
+      return payload.message;
+    }
+  }
+
+  return "Unknown Razorpay error";
+}
+
+function getRazorpayStatusCode(error: unknown): number | undefined {
+  if (error && typeof error === "object" && "statusCode" in error) {
+    const statusCode = (error as { statusCode?: unknown }).statusCode;
+    return typeof statusCode === "number" ? statusCode : undefined;
+  }
+  return undefined;
+}
+
+function mapRazorpayError(error: unknown, operation: string): AppError {
+  if (error instanceof AppError) {
+    return error;
+  }
+
+  const message = getRazorpayErrorMessage(error);
+  const statusCode = getRazorpayStatusCode(error);
+
+  if (statusCode !== undefined && statusCode >= 400 && statusCode < 500) {
+    return new ValidationError(`Razorpay ${operation} failed: ${message}`);
+  }
+
+  return new AppError(
+    `Razorpay ${operation} failed: ${message}`,
+    502,
+    "RAZORPAY_ERROR",
+  );
 }
 
 export class RazorpayClient {
@@ -63,14 +113,21 @@ export class RazorpayClient {
           status: order.status,
         };
       } catch (error) {
-        if (attempt === MAX_ATTEMPTS) {
-          throw error;
+        const message = getRazorpayErrorMessage(error);
+        const statusCode = getRazorpayStatusCode(error);
+        // Do not retry client/validation failures from Razorpay.
+        if (
+          attempt === MAX_ATTEMPTS ||
+          (statusCode !== undefined && statusCode >= 400 && statusCode < 500)
+        ) {
+          throw mapRazorpayError(error, "order creation");
         }
         logger.warn(
           {
             attempt,
             receipt: input.receipt,
-            message: error instanceof Error ? error.message : "Unknown error",
+            message,
+            statusCode,
           },
           "Razorpay order creation retry",
         );
@@ -100,14 +157,20 @@ export class RazorpayClient {
           status: refund.status,
         };
       } catch (error) {
-        if (attempt === MAX_ATTEMPTS) {
-          throw error;
+        const message = getRazorpayErrorMessage(error);
+        const statusCode = getRazorpayStatusCode(error);
+        if (
+          attempt === MAX_ATTEMPTS ||
+          (statusCode !== undefined && statusCode >= 400 && statusCode < 500)
+        ) {
+          throw mapRazorpayError(error, "refund");
         }
         logger.warn(
           {
             attempt,
             paymentId: input.paymentId,
-            message: error instanceof Error ? error.message : "Unknown error",
+            message,
+            statusCode,
           },
           "Razorpay refund retry",
         );

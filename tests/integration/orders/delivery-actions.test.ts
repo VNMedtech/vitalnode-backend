@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ORDER_PROOF_FILE,
+  setupAssignedOrder,
   setupOutForDeliveryOrder,
 } from "../../factories/order.factory.js";
 import { getTestPrisma } from "../../utils/db.js";
@@ -27,6 +28,89 @@ describe("Orders — Section 5: Delivery Actions", () => {
         expect.objectContaining({ id: context.orderId }),
       ]),
     );
+  });
+
+  it("shows seller pickup contact and hides customer shipping before out for delivery", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupAssignedOrder(app, prisma);
+
+    const order = await prisma.order.findUniqueOrThrow({
+      where: { id: context.orderId },
+      select: {
+        seller: {
+          select: {
+            id: true,
+            businessName: true,
+            contactPerson: true,
+            addressLine1: true,
+            city: true,
+            state: true,
+            postalCode: true,
+            user: { select: { phoneNumber: true } },
+          },
+        },
+      },
+    });
+    const seller = order.seller;
+
+    const res = await orderRequest(
+      app,
+      context.deliveryPartner.deliveryPartnerToken,
+    ).getById(context.orderId);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.shippingAddressSnapshot).toBeNull();
+    expect(res.body.data.seller).toEqual(
+      expect.objectContaining({
+        id: seller.id,
+        businessName: seller.businessName,
+        contactPerson: seller.contactPerson,
+        phoneNumber: seller.user.phoneNumber,
+        addressLine1: seller.addressLine1,
+        city: seller.city,
+        state: seller.state,
+        postalCode: seller.postalCode,
+      }),
+    );
+  });
+
+  it("reveals customer shipping to delivery partner once out for delivery", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupOutForDeliveryOrder(app, prisma);
+
+    const order = await prisma.order.findUniqueOrThrow({
+      where: { id: context.orderId },
+      select: { shippingAddressSnapshot: true },
+    });
+    const snapshot = order.shippingAddressSnapshot as {
+      name: string;
+      phone: string;
+      addressLine1: string;
+    };
+
+    const res = await orderRequest(
+      app,
+      context.deliveryPartner.deliveryPartnerToken,
+    ).getById(context.orderId);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.shippingAddressSnapshot).toEqual(
+      expect.objectContaining({
+        name: snapshot.name,
+        phone: snapshot.phone,
+        addressLine1: snapshot.addressLine1,
+      }),
+    );
+    expect(res.body.data.seller).toEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        businessName: expect.any(String),
+        addressLine1: expect.any(String),
+      }),
+    );
+    expect(res.body.data.seller).toHaveProperty("phoneNumber");
   });
 
   it("uploads delivery proof while order is out for delivery", async () => {

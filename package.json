@@ -19,8 +19,7 @@
     "test:watch": "vitest",
     "test:integration": "vitest run tests/integration",
     "test:integration:auth": "vitest run tests/integration/auth",
-    "test:ci": "vitest run --reporter=verbose",
-    "smoke:test": "tsx scripts/smoke-test.ts"
+    "test:ci": "vitest run --reporter=verbose"
   },
   "keywords": [],
   "author": "",

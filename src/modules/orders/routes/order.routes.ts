@@ -231,6 +231,16 @@ orderRouter.post(
  *   get:
  *     tags: [Orders]
  *     summary: Get order details
+ *     description: |
+ *       Returns full order detail including nested `seller` pickup contact
+ *       (`businessName`, `contactPerson`, `phoneNumber`, address fields),
+ *       `shippingAddressSnapshot`, `items`, `payment`, `proofs`, and
+ *       `deliveryPartner` contact when assigned.
+ *
+ *       Delivery-partner privacy: when the actor is a delivery partner and
+ *       status is before OUT_FOR_DELIVERY, `shippingAddressSnapshot` is null.
+ *       Customer shipping is returned for OUT_FOR_DELIVERY and later statuses.
+ *       Seller pickup contact is always included on detail.
  *     security:
  *       - bearerAuth: []
  *     parameters:

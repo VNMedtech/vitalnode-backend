@@ -1,4 +1,7 @@
-import type { Prisma } from "../../../../generated/prisma/client.js";
+import {
+  OrderStatus,
+  type Prisma,
+} from "../../../../generated/prisma/client.js";
 import type {
   OrderDetailRecord,
   OrderSummaryRecord,
@@ -11,9 +14,25 @@ import type {
   OrderItemDto,
   OrderPaymentSummary,
   OrderProofDto,
+  OrderSellerContactDto,
   OrderSummaryDto,
   ProductSnapshot,
 } from "../types/order.types.js";
+
+/** Statuses where the delivery partner may see the customer shipping address. */
+const DELIVERY_PARTNER_CUSTOMER_VISIBLE_STATUSES: ReadonlySet<OrderStatus> =
+  new Set([
+    OrderStatus.OUT_FOR_DELIVERY,
+    OrderStatus.DELIVERED,
+    OrderStatus.PENDING_SETTLEMENT,
+    OrderStatus.DELIVERY_FAILED,
+  ]);
+
+export function isCustomerDetailsVisibleToDeliveryPartner(
+  status: OrderStatus,
+): boolean {
+  return DELIVERY_PARTNER_CUSTOMER_VISIBLE_STATUSES.has(status);
+}
 
 function decimalToString(value: Prisma.Decimal): string {
   return value.toString();
@@ -112,6 +131,23 @@ function toDeliveryPartnerContactDto(
   };
 }
 
+function toSellerContactDto(
+  seller: OrderDetailRecord["seller"],
+): OrderSellerContactDto {
+  return {
+    id: seller.id,
+    businessName: seller.businessName,
+    contactPerson: seller.contactPerson,
+    phoneNumber: seller.user.phoneNumber,
+    addressLine1: seller.addressLine1,
+    addressLine2: seller.addressLine2,
+    city: seller.city,
+    state: seller.state,
+    country: seller.country,
+    postalCode: seller.postalCode,
+  };
+}
+
 export function toOrderSummaryDto(record: OrderSummaryRecord): OrderSummaryDto {
   return {
     id: record.id,
@@ -128,10 +164,25 @@ export function toOrderSummaryDto(record: OrderSummaryRecord): OrderSummaryDto {
   };
 }
 
-export function toOrderDetailDto(record: OrderDetailRecord): OrderDetailDto {
+export type ToOrderDetailDtoOptions = {
+  /** When true, omit buyer shipping until the order is out for delivery. */
+  redactBuyerShippingForDeliveryPartner?: boolean;
+};
+
+export function toOrderDetailDto(
+  record: OrderDetailRecord,
+  options: ToOrderDetailDtoOptions = {},
+): OrderDetailDto {
+  const showCustomerShipping =
+    !options.redactBuyerShippingForDeliveryPartner ||
+    isCustomerDetailsVisibleToDeliveryPartner(record.orderStatus);
+
   return {
     ...toOrderSummaryDto(record),
-    shippingAddressSnapshot: parseAddressSnapshot(record.shippingAddressSnapshot),
+    shippingAddressSnapshot: showCustomerShipping
+      ? parseAddressSnapshot(record.shippingAddressSnapshot)
+      : null,
+    seller: toSellerContactDto(record.seller),
     deliveryPartner: toDeliveryPartnerContactDto(record.deliveryPartner),
     items: record.items.map(toOrderItemDto),
     payment: toPaymentSummary(record.payment),

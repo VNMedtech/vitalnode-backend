@@ -150,6 +150,9 @@ export class OrderService {
       throw new NotFoundError("Order not found");
     }
 
-    return toOrderDetailDto(record);
+    return toOrderDetailDto(record, {
+      redactBuyerShippingForDeliveryPartner:
+        role === UserRole.DELIVERY_PARTNER,
+    });
   }
 }

@@ -110,8 +110,24 @@ export interface OrderDeliveryPartnerContactDto {
   phoneNumber: string | null;
 }
 
+/** Pickup contact fields for the seller (order detail only). */
+export interface OrderSellerContactDto {
+  id: string;
+  businessName: string;
+  contactPerson: string;
+  phoneNumber: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+}
+
 export interface OrderDetailDto extends OrderSummaryDto {
-  shippingAddressSnapshot: AddressSnapshot;
+  /** Null for delivery partners until the order is out for delivery. */
+  shippingAddressSnapshot: AddressSnapshot | null;
+  seller: OrderSellerContactDto;
   deliveryPartner: OrderDeliveryPartnerContactDto | null;
   items: OrderItemDto[];
   payment: OrderPaymentSummary | null;
