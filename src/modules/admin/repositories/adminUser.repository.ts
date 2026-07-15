@@ -32,6 +32,7 @@ const adminUserDetailSelect = {
     select: {
       id: true,
       buyerType: true,
+      nmcRegistrationNumber: true,
       addresses: {
         orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
         select: {

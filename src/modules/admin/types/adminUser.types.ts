@@ -76,6 +76,7 @@ export interface AdminUserDetailDto {
     buyerProfile: {
       id: string;
       buyerType: string;
+      nmcRegistrationNumber: string | null;
       addresses: AdminUserAddressDto[];
     } | null;
     sellerProfile: {

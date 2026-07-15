@@ -57,7 +57,10 @@ describe("Users — Profile, Password & Security", () => {
       firstName: payload.firstName,
       lastName: payload.lastName,
     });
-    expect(res.body.data.buyerProfile).toBeTruthy();
+    expect(res.body.data.buyerProfile).toMatchObject({
+      buyerType: "DOCTOR",
+      nmcRegistrationNumber: payload.nmcRegistrationNumber,
+    });
   });
 
   it("2. updates profile successfully", async () => {
@@ -74,6 +77,18 @@ describe("Users — Profile, Password & Security", () => {
       lastName: "Name",
       phoneNumber: "9876543210",
     });
+  });
+
+  it("2b. updates NMC registration number for doctor", async () => {
+    const { auth } = await registerBuyerViaApi(app);
+    const nmc = `NMCPROF${Date.now().toString(36)}`;
+
+    const res = await userRequest(app, auth.accessToken).updateProfile({
+      nmcRegistrationNumber: nmc,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.buyerProfile.nmcRegistrationNumber).toBe(nmc);
   });
 
   it("3. rejects invalid profile update data", async () => {

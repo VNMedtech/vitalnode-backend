@@ -15,6 +15,7 @@
     "db:validate": "prisma validate",
     "db:seed": "prisma db seed",
     "db:bootstrap": "tsx prisma/bootstrap.ts",
+    "db:backfill-nmc": "tsx prisma/backfill-nmc.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run tests/integration",

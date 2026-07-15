@@ -37,6 +37,9 @@ export const authRouter = Router();
  *               lastName: { type: string }
  *               phoneNumber: { type: string }
  *               buyerType: { type: string, enum: [DOCTOR, HOSPITAL] }
+ *               nmcRegistrationNumber:
+ *                 type: string
+ *                 description: Required when buyerType is DOCTOR; alphanumeric only; unique
  *     responses:
  *       201:
  *         description: Buyer registered

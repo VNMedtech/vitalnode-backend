@@ -147,6 +147,8 @@ describe("Admin Users — Management", () => {
         email: buyer.auth.user.email,
         role: "BUYER",
         buyerProfile: {
+          buyerType: "DOCTOR",
+          nmcRegistrationNumber: buyer.payload.nmcRegistrationNumber,
           addresses: [],
         },
       },

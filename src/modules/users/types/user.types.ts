@@ -4,6 +4,7 @@ import type { UserStatus } from "../../../shared/enums/userStatus.enum.js";
 export interface BuyerProfileSummary {
   id: string;
   buyerType: string;
+  nmcRegistrationNumber: string | null;
 }
 
 export interface SellerProfileSummary {
@@ -51,6 +52,7 @@ export interface UpdateProfileInput {
   lastName?: string;
   phoneNumber?: string | null;
   profileImage?: string | null;
+  nmcRegistrationNumber?: string;
 }
 
 export interface ChangePasswordInput {

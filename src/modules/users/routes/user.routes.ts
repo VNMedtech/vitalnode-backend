@@ -54,6 +54,7 @@ export const userRouter = Router();
  *                       properties:
  *                         id: { type: string, format: uuid }
  *                         buyerType: { type: string, enum: [DOCTOR, HOSPITAL] }
+ *                         nmcRegistrationNumber: { type: string, nullable: true }
  *                     sellerProfile:
  *                       type: object
  *                       nullable: true
@@ -113,6 +114,9 @@ userRouter.get(
  *               lastName: { type: string, minLength: 1, maxLength: 80 }
  *               phoneNumber: { type: string, minLength: 8, maxLength: 20, nullable: true }
  *               profileImage: { type: string, format: uri, nullable: true }
+ *               nmcRegistrationNumber:
+ *                 type: string
+ *                 description: Doctor buyers only; alphanumeric; unique
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -123,7 +127,7 @@ userRouter.get(
  *       403:
  *         description: Forbidden
  *       409:
- *         description: Phone number already in use
+ *         description: Phone number or NMC registration number already in use
  */
 userRouter.patch(
   "/me",

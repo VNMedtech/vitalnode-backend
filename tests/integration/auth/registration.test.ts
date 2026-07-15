@@ -46,7 +46,78 @@ describe("Auth — Registration", () => {
 
     expect(user).not.toBeNull();
     expect(user?.buyerProfile?.buyerType).toBe(BuyerType.DOCTOR);
+    expect(user?.buyerProfile?.nmcRegistrationNumber).toBe(payload.nmcRegistrationNumber);
     expect(user?.role).toBe("BUYER");
+  });
+
+  it("1b. registers a hospital buyer without NMC", async () => {
+    const payload = buyerRegistrationPayload({
+      buyerType: BuyerType.HOSPITAL,
+      nmcRegistrationNumber: undefined,
+    });
+    // Explicitly omit nmc so HOSPITAL payloads do not carry the doctor default
+    delete (payload as { nmcRegistrationNumber?: string }).nmcRegistrationNumber;
+
+    const res = await authRequest(app).registerBuyer(payload);
+
+    expect(res.status).toBe(201);
+
+    const prisma = getTestPrisma();
+    const user = await prisma.user.findUnique({
+      where: { email: payload.email },
+      include: { buyerProfile: true },
+    });
+
+    expect(user?.buyerProfile?.buyerType).toBe(BuyerType.HOSPITAL);
+    expect(user?.buyerProfile?.nmcRegistrationNumber).toBeNull();
+  });
+
+  it("1c. rejects doctor registration without NMC", async () => {
+    const payload = buyerRegistrationPayload();
+    delete (payload as { nmcRegistrationNumber?: string }).nmcRegistrationNumber;
+
+    const res = await authRequest(app).registerBuyer(payload);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("1d. rejects invalid NMC format", async () => {
+    const res = await authRequest(app).registerBuyer(
+      buyerRegistrationPayload({ nmcRegistrationNumber: "NMC-123" }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("1e. rejects duplicate NMC registration", async () => {
+    const nmc = "NMCDEDUP001";
+    const first = await registerBuyerViaApi(app, {
+      nmcRegistrationNumber: nmc,
+    });
+    expect(first.response.status).toBe(201);
+
+    const duplicate = await authRequest(app).registerBuyer(
+      buyerRegistrationPayload({ nmcRegistrationNumber: nmc }),
+    );
+
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.message).toBe(
+      "NMC registration number is already registered",
+    );
+  });
+
+  it("1f. rejects NMC on hospital registration", async () => {
+    const res = await authRequest(app).registerBuyer(
+      buyerRegistrationPayload({
+        buyerType: BuyerType.HOSPITAL,
+        nmcRegistrationNumber: "NMC123456",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
   });
 
   it("2. registers a seller with pending approval status", async () => {

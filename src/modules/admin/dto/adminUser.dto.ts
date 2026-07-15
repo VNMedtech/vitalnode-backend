@@ -30,6 +30,7 @@ type UserDetailRecord = UserListRecord & {
   buyerProfile: {
     id: string;
     buyerType: string;
+    nmcRegistrationNumber: string | null;
     addresses: Array<{
       id: string;
       name: string;
@@ -134,6 +135,7 @@ export function toAdminUserDetailDto(
         ? {
             id: user.buyerProfile.id,
             buyerType: user.buyerProfile.buyerType,
+            nmcRegistrationNumber: user.buyerProfile.nmcRegistrationNumber,
             addresses: user.buyerProfile.addresses,
           }
         : null,

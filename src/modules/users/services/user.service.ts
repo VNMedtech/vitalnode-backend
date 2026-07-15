@@ -4,6 +4,7 @@ import {
   ForbiddenError,
   NotFoundError,
   UnauthorizedError,
+  ValidationError,
 } from "../../../shared/errors/app.errors.js";
 import { UserRole } from "../../../shared/enums/userRole.enum.js";
 import { UserStatus } from "../../../shared/enums/userStatus.enum.js";
@@ -19,6 +20,30 @@ import type {
   UpdateProfileInput,
   UserProfileDto,
 } from "../types/user.types.js";
+
+function isPrismaUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === "P2002"
+  );
+}
+
+function uniqueConstraintTargets(error: unknown): string[] {
+  if (typeof error !== "object" || error === null || !("meta" in error)) {
+    return [];
+  }
+  const meta = (error as { meta?: { target?: unknown } }).meta;
+  const target = meta?.target;
+  if (Array.isArray(target)) {
+    return target.map(String);
+  }
+  if (typeof target === "string") {
+    return [target];
+  }
+  return [];
+}
 
 function toUserProfileDto(record: UserProfileRecord): UserProfileDto {
   return {
@@ -63,6 +88,12 @@ function buildProfileUpdateMetadata(
   ) {
     changedFields.push("profileImage");
   }
+  if (
+    input.nmcRegistrationNumber !== undefined &&
+    input.nmcRegistrationNumber !== before.buyerProfile?.nmcRegistrationNumber
+  ) {
+    changedFields.push("nmcRegistrationNumber");
+  }
 
   return { changedFields };
 }
@@ -92,6 +123,22 @@ export class UserService {
 
     assertUserCanModifyProfile(existing.status as UserStatus);
 
+    if (input.nmcRegistrationNumber !== undefined) {
+      if (!existing.buyerProfile || existing.buyerProfile.buyerType !== "DOCTOR") {
+        throw new ValidationError(
+          "NMC registration number can only be updated for doctor buyers",
+        );
+      }
+
+      const nmcTaken = await this.repo.findBuyerProfileByNmcExcludingUser(
+        input.nmcRegistrationNumber,
+        userId,
+      );
+      if (nmcTaken) {
+        throw new ConflictError("NMC registration number is already registered");
+      }
+    }
+
     if (input.phoneNumber) {
       const phoneTaken = await this.repo.findByPhoneNumberExcludingUser(
         input.phoneNumber,
@@ -102,7 +149,21 @@ export class UserService {
       }
     }
 
-    const updated = await this.repo.updateProfile(userId, input);
+    let updated;
+    try {
+      updated = await this.repo.updateProfile(userId, input);
+    } catch (error) {
+      if (isPrismaUniqueConstraintError(error)) {
+        const targets = uniqueConstraintTargets(error);
+        if (
+          targets.some((t) => t.includes("nmcRegistrationNumber")) ||
+          (input.nmcRegistrationNumber !== undefined && targets.length === 0)
+        ) {
+          throw new ConflictError("NMC registration number is already registered");
+        }
+      }
+      throw error;
+    }
 
     auditLogger.log({
       actorUserId: userId,

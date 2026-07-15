@@ -25,6 +25,30 @@ import type {
 } from "../types/auth.types.js";
 import type { AuthPortal } from "../../../shared/enums/authPortal.enum.js";
 
+function isPrismaUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === "P2002"
+  );
+}
+
+function uniqueConstraintTargets(error: unknown): string[] {
+  if (typeof error !== "object" || error === null || !("meta" in error)) {
+    return [];
+  }
+  const meta = (error as { meta?: { target?: unknown } }).meta;
+  const target = meta?.target;
+  if (Array.isArray(target)) {
+    return target.map(String);
+  }
+  if (typeof target === "string") {
+    return [target];
+  }
+  return [];
+}
+
 type AuthUserRecord = {
   id: string;
   email: string;
@@ -94,24 +118,52 @@ export class AuthService {
     lastName: string;
     phoneNumber?: string;
     buyerType: "DOCTOR" | "HOSPITAL";
+    nmcRegistrationNumber?: string;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<LoginResultDto> {
     const existing = await this.repo.findUserByEmail(input.email);
     if (existing) throw new ConflictError("Email already registered");
 
+    if (input.nmcRegistrationNumber) {
+      const nmcTaken = await this.repo.findBuyerProfileByNmc(
+        input.nmcRegistrationNumber,
+      );
+      if (nmcTaken) {
+        throw new ConflictError("NMC registration number is already registered");
+      }
+    }
+
     const passwordHash = await hashPassword(input.password);
 
-    const created = await this.repo.createBuyerUser({
-      email: input.email,
-      passwordHash,
-      firstName: input.firstName,
-      lastName: input.lastName,
-      phoneNumber: input.phoneNumber,
-      userStatus: UserStatus.ACTIVE,
-      role: UserRole.BUYER,
-      buyerType: input.buyerType,
-    });
+    let created;
+    try {
+      created = await this.repo.createBuyerUser({
+        email: input.email,
+        passwordHash,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phoneNumber: input.phoneNumber,
+        userStatus: UserStatus.ACTIVE,
+        role: UserRole.BUYER,
+        buyerType: input.buyerType,
+        nmcRegistrationNumber: input.nmcRegistrationNumber,
+      });
+    } catch (error) {
+      if (isPrismaUniqueConstraintError(error)) {
+        const targets = uniqueConstraintTargets(error);
+        if (
+          targets.some((t) => t.includes("nmcRegistrationNumber")) ||
+          (input.nmcRegistrationNumber && targets.length === 0)
+        ) {
+          throw new ConflictError("NMC registration number is already registered");
+        }
+        if (targets.some((t) => t.includes("email"))) {
+          throw new ConflictError("Email already registered");
+        }
+      }
+      throw error;
+    }
 
     const userDto = toAuthenticatedUserDto(created);
     const tokens = await this.issueTokenPair(userDto, {

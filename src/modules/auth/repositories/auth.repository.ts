@@ -47,6 +47,13 @@ export class AuthRepository {
     });
   }
 
+  findBuyerProfileByNmc(nmcRegistrationNumber: string) {
+    return this.prisma.buyerProfile.findUnique({
+      where: { nmcRegistrationNumber },
+      select: { id: true },
+    });
+  }
+
   createBuyerUser(input: {
     email: string;
     passwordHash: string;
@@ -56,6 +63,7 @@ export class AuthRepository {
     userStatus: UserStatus;
     role: UserRole;
     buyerType: BuyerType;
+    nmcRegistrationNumber?: string;
   }) {
     return this.prisma.user.create({
       data: {
@@ -69,6 +77,7 @@ export class AuthRepository {
         buyerProfile: {
           create: {
             buyerType: input.buyerType,
+            nmcRegistrationNumber: input.nmcRegistrationNumber,
           },
         },
       },

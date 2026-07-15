@@ -13,6 +13,7 @@ export function buyerRegistrationPayload(
     firstName: "Test",
     lastName: "Buyer",
     buyerType: BuyerType.DOCTOR,
+    nmcRegistrationNumber: `NMC${unique.replace(/[^A-Za-z0-9]/g, "").slice(0, 20)}`,
     ...overrides,
   };
 }

@@ -35,6 +35,18 @@ Node.js / Express API for the Medical Equipment Marketplace.
 | `npm run db:migrate:deploy` | Apply migrations (production) |
 | `npm run db:seed` | **Development only** — demo data + known password |
 | `npm run db:bootstrap` | **Production** — create admin + system actor from env |
+| `npm run db:backfill-nmc` | **Temporary** — assign placeholder NMC numbers to legacy doctor buyers (null `nmcRegistrationNumber`) |
+
+### Temporary NMC backfill
+
+After deploying the NMC registration migration on an environment that already has doctor buyers:
+
+```bash
+npm run db:migrate:deploy
+npm run db:backfill-nmc
+```
+
+The script is idempotent: it only updates `BuyerProfile` rows where `buyerType = DOCTOR` and `nmcRegistrationNumber` is null, using placeholders like `TEMP` + part of the user id. Doctors can replace these with their real NMC via `PATCH /users/me`. Remove the script once all environments are backfilled / real values collected.
 
 ### Production bootstrap
 

@@ -16,6 +16,7 @@ const userProfileSelect = {
     select: {
       id: true,
       buyerType: true,
+      nmcRegistrationNumber: true,
     },
   },
   sellerProfile: {
@@ -80,6 +81,19 @@ export class UserRepository {
     });
   }
 
+  findBuyerProfileByNmcExcludingUser(
+    nmcRegistrationNumber: string,
+    excludeUserId: string,
+  ) {
+    return this.prisma.buyerProfile.findFirst({
+      where: {
+        nmcRegistrationNumber,
+        userId: { not: excludeUserId },
+      },
+      select: { id: true },
+    });
+  }
+
   updateProfile(
     userId: string,
     data: {
@@ -87,11 +101,25 @@ export class UserRepository {
       lastName?: string;
       phoneNumber?: string | null;
       profileImage?: string | null;
+      nmcRegistrationNumber?: string;
     },
   ) {
+    const { nmcRegistrationNumber, ...userData } = data;
+
     return this.prisma.user.update({
       where: { id: userId },
-      data,
+      data: {
+        ...userData,
+        ...(nmcRegistrationNumber !== undefined
+          ? {
+              buyerProfile: {
+                update: {
+                  nmcRegistrationNumber,
+                },
+              },
+            }
+          : {}),
+      },
       select: userProfileSelect,
     });
   }

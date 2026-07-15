@@ -3,6 +3,7 @@ import { z } from "zod";
 export const buyerProfileSummaryDtoSchema = z.object({
   id: z.string().uuid(),
   buyerType: z.string(),
+  nmcRegistrationNumber: z.string().nullable(),
 });
 
 export const sellerProfileSummaryDtoSchema = z.object({

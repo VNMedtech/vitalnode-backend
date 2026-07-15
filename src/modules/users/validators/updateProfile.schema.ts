@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nmcRegistrationNumberSchema } from "../../../shared/validators/nmcRegistrationNumber.schema.js";
 
 export const updateProfileBodySchema = z
   .object({
@@ -6,6 +7,7 @@ export const updateProfileBodySchema = z
     lastName: z.string().min(1).max(80).trim().optional(),
     phoneNumber: z.string().min(8).max(20).trim().nullable().optional(),
     profileImage: z.string().url().max(2048).nullable().optional(),
+    nmcRegistrationNumber: nmcRegistrationNumberSchema.optional(),
   })
   .strict()
   .refine(
@@ -13,7 +15,8 @@ export const updateProfileBodySchema = z
       data.firstName !== undefined ||
       data.lastName !== undefined ||
       data.phoneNumber !== undefined ||
-      data.profileImage !== undefined,
+      data.profileImage !== undefined ||
+      data.nmcRegistrationNumber !== undefined,
     { message: "At least one profile field must be provided" },
   );
 

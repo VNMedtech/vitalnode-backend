@@ -303,10 +303,12 @@ async function seedBuyer(passwordHash: string) {
     where: { userId: buyerUser.id },
     update: {
       buyerType: BuyerType.DOCTOR,
+      nmcRegistrationNumber: "NMC123456",
     },
     create: {
       userId: buyerUser.id,
       buyerType: BuyerType.DOCTOR,
+      nmcRegistrationNumber: "NMC123456",
     },
   });
 

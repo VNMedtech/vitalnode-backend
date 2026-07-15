@@ -166,11 +166,12 @@ model User {
 // =============================================================================
 
 model BuyerProfile {
-  id        String    @id @default(uuid())
-  userId    String    @unique
-  buyerType BuyerType
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                     String    @id @default(uuid())
+  userId                 String    @unique
+  buyerType              BuyerType
+  nmcRegistrationNumber  String?   @unique
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   addresses Address[]
