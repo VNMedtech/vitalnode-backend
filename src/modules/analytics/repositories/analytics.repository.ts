@@ -426,7 +426,7 @@ export class AnalyticsRepository {
       ? { placedAt: placedAtFilter }
       : undefined;
 
-    const [totalOrders, placedOrders, averageAggregate, statusGroups, ordersInPeriod] =
+    const [totalOrders, placedOrders, averageAggregate, statusGroups, periodOrderCount] =
       await Promise.all([
         this.db.order.count(),
         this.db.order.count({ where: { placedAt: { not: null } } }),
@@ -440,7 +440,7 @@ export class AnalyticsRepository {
         }),
         periodWhere
           ? this.db.order.count({ where: periodWhere })
-          : Promise.resolve(0),
+          : Promise.resolve(null),
       ]);
 
     const byStatus = statusGroups.reduce<Record<string, number>>((acc, row) => {
@@ -454,7 +454,8 @@ export class AnalyticsRepository {
       averageOrderValue:
         averageAggregate._avg.totalAmount ?? new Prisma.Decimal(0),
       byStatus,
-      ordersInPeriod,
+      // No range → all-time placed orders (same criterion as period filter).
+      ordersInPeriod: periodWhere ? (periodOrderCount ?? 0) : placedOrders,
     };
   }
 

@@ -303,9 +303,17 @@ export class SalesReportsRepository {
         ? { placedAt: { not: null } }
         : undefined;
 
+    const commissionOrderWhere: Prisma.OrderWhereInput = {
+      commissionAmount: { not: null },
+      placedAt: { not: null },
+      ...(placedAtFilter ? { placedAt: placedAtFilter } : {}),
+    };
+
     const [
       totalRevenueAggregate,
       periodRevenueAggregate,
+      allTimeCommissionAggregate,
+      periodCommissionAggregate,
       orderVolume,
       productVolumeAggregate,
     ] = await Promise.all([
@@ -319,6 +327,17 @@ export class SalesReportsRepository {
             _sum: { amount: true },
           })
         : Promise.resolve({ _sum: { amount: null } }),
+      this.db.order.aggregate({
+        where: {
+          commissionAmount: { not: null },
+          placedAt: { not: null },
+        },
+        _sum: { commissionAmount: true },
+      }),
+      this.db.order.aggregate({
+        where: commissionOrderWhere,
+        _sum: { commissionAmount: true },
+      }),
       orderWhere
         ? this.db.order.count({ where: orderWhere })
         : this.db.order.count({ where: { placedAt: { not: null } } }),
@@ -337,11 +356,14 @@ export class SalesReportsRepository {
           }),
     ]);
 
-    const totalRevenue =
-      totalRevenueAggregate._sum.amount ?? new Prisma.Decimal(0);
-    const sellerRevenue = hasPeriod
-      ? periodRevenueAggregate._sum.amount ?? new Prisma.Decimal(0)
-      : totalRevenue;
+    const zero = new Prisma.Decimal(0);
+    const totalRevenue = hasPeriod
+      ? periodRevenueAggregate._sum.amount ?? zero
+      : totalRevenueAggregate._sum.amount ?? zero;
+    const platformCommission = hasPeriod
+      ? periodCommissionAggregate._sum.commissionAmount ?? zero
+      : allTimeCommissionAggregate._sum.commissionAmount ?? zero;
+    const sellerRevenue = Prisma.Decimal.max(totalRevenue.sub(platformCommission), zero);
 
     return {
       totalRevenue,

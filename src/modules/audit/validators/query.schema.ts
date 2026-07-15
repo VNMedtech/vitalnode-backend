@@ -1,26 +1,18 @@
 import { z } from "zod";
 import {
+  isoDateFromSchema,
+  isoDateToSchema,
+} from "../../../shared/validators/dateRange.schema.js";
+import {
   AUDIT_DEFAULT_LIMIT,
   AUDIT_DEFAULT_PAGE,
   AUDIT_MAX_LIMIT,
 } from "../constants/audit.constants.js";
 
-const isoDateString = z
-  .string()
-  .datetime({ offset: true })
-  .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
-  .transform((value) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new Error("Invalid date");
-    }
-    return date;
-  });
-
 const dateRangeSchema = z
   .object({
-    from: isoDateString.optional(),
-    to: isoDateString.optional(),
+    from: isoDateFromSchema.optional(),
+    to: isoDateToSchema.optional(),
   })
   .strict()
   .refine(

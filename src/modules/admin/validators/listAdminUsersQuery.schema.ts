@@ -2,6 +2,10 @@ import { z } from "zod";
 import { UserRole } from "../../../shared/enums/userRole.enum.js";
 import { UserStatus } from "../../../shared/enums/userStatus.enum.js";
 import {
+  isoDateFromSchema,
+  isoDateToSchema,
+} from "../../../shared/validators/dateRange.schema.js";
+import {
   ADMIN_USER_DEFAULT_LIMIT,
   ADMIN_USER_DEFAULT_PAGE,
   ADMIN_USER_MAX_LIMIT,
@@ -9,18 +13,6 @@ import {
   ADMIN_USER_SORT_FIELDS,
   ADMIN_USER_VERIFICATION_STATUSES,
 } from "../constants/adminUser.constants.js";
-
-const isoDateString = z
-  .string()
-  .datetime({ offset: true })
-  .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
-  .transform((value) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new Error("Invalid date");
-    }
-    return date;
-  });
 
 export const listAdminUsersQuerySchema = z
   .object({
@@ -42,8 +34,8 @@ export const listAdminUsersQuerySchema = z
     role: z.nativeEnum(UserRole).optional(),
     status: z.nativeEnum(UserStatus).optional(),
     verificationStatus: z.enum(ADMIN_USER_VERIFICATION_STATUSES).optional(),
-    from: isoDateString.optional(),
-    to: isoDateString.optional(),
+    from: isoDateFromSchema.optional(),
+    to: isoDateToSchema.optional(),
   })
   .strict()
   .refine(

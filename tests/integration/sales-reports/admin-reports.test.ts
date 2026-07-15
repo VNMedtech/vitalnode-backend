@@ -64,5 +64,8 @@ describe("Sales Reports — Admin", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.period).not.toBeNull();
     expect(res.body.data.orderVolume).toBe(1);
+    expect(Number(res.body.data.sellerRevenue)).toBeLessThanOrEqual(
+      Number(res.body.data.totalRevenue),
+    );
   });
 });

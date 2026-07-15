@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  isoDateFromSchema,
+  isoDateToSchema,
+} from "../../../shared/validators/dateRange.schema.js";
+import {
   SALES_REPORTS_DEFAULT_LIMIT,
   SALES_REPORTS_DEFAULT_PAGE,
   SALES_REPORTS_DEFAULT_TOP_PRODUCTS_LIMIT,
@@ -8,22 +12,10 @@ import {
   SALES_REPORTS_REVENUE_GROUP_BY,
 } from "../constants/sales-reports.constants.js";
 
-const isoDateString = z
-  .string()
-  .datetime({ offset: true })
-  .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
-  .transform((value) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new Error("Invalid date");
-    }
-    return date;
-  });
-
 const salesReportPeriodQuerySchema = z
   .object({
-    from: isoDateString.optional(),
-    to: isoDateString.optional(),
+    from: isoDateFromSchema.optional(),
+    to: isoDateToSchema.optional(),
     month: z.coerce.number().int().min(1).max(12).optional(),
     year: z.coerce.number().int().min(2000).max(2100).optional(),
   })
