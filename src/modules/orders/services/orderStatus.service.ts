@@ -25,6 +25,7 @@ import {
 import { runInTransaction } from "../../../shared/transactions/runInTransaction.js";
 import { recordCommerceAudit } from "../../auditLogs/services/commerceAudit.service.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
+import { SellerAddressRepository } from "../../sellerAddresses/repositories/sellerAddress.repository.js";
 import { UPLOAD_TYPES } from "../../uploads/constants/upload.constants.js";
 import { UploadAssociationService } from "../../uploads/services/uploadAssociation.service.js";
 import {
@@ -45,11 +46,32 @@ import type {
   DeliveryFailedInput,
   OrderDetailDto,
   OrderProofInput,
+  PickupAddressSnapshot,
   SaveTrackingInput,
   SwitchFulfillmentMethodInput,
 } from "../types/order.types.js";
 import type { OrderDetailRecord } from "../repositories/order.repository.js";
+import type { SellerAddressRecord } from "../../sellerAddresses/repositories/sellerAddress.repository.js";
+import type { Prisma } from "../../../../generated/prisma/client.js";
 
+function buildPickupAddressSnapshot(
+  address: SellerAddressRecord,
+): PickupAddressSnapshot {
+  return {
+    id: address.id,
+    label: address.label,
+    contactPerson: address.contactPerson,
+    phone: address.phone,
+    addressLine1: address.addressLine1,
+    addressLine2: address.addressLine2,
+    city: address.city,
+    state: address.state,
+    country: address.country,
+    postalCode: address.postalCode,
+    latitude: address.latitude == null ? null : address.latitude.toString(),
+    longitude: address.longitude == null ? null : address.longitude.toString(),
+  };
+}
 function assertTransition(from: OrderStatus, to: OrderStatus): void {
   if (!canTransitionOrderStatus(from, to)) {
     throw new ConflictError(`Invalid order status transition: ${from} -> ${to}`);
@@ -186,6 +208,28 @@ export class OrderStatusService {
       throw new ConflictError("Order already has a shipment");
     }
 
+    const pickupAddress = await new SellerAddressRepository(prisma).findById(
+      input.pickupAddressId,
+    );
+    if (!pickupAddress || pickupAddress.sellerId !== order.sellerId) {
+      throw new ValidationError("Invalid pickup warehouse address", [
+        {
+          field: "pickupAddressId",
+          message: "Pickup address must belong to the order's seller",
+        },
+      ]);
+    }
+    if (!pickupAddress.isActive) {
+      throw new ValidationError("Invalid pickup warehouse address", [
+        {
+          field: "pickupAddressId",
+          message: "Pickup address is inactive",
+        },
+      ]);
+    }
+
+    const pickupAddressSnapshot = buildPickupAddressSnapshot(pickupAddress);
+
     const bookingSource =
       input.fulfillmentMethod === FulfillmentMethod.THIRD_PARTY
         ? ShipmentBookingSource.MANUAL
@@ -217,6 +261,9 @@ export class OrderStatusService {
         orderId,
         expectedStatus: from,
         nextStatus: to,
+        pickupAddressId: pickupAddress.id,
+        pickupAddressSnapshot:
+          pickupAddressSnapshot as unknown as Prisma.InputJsonValue,
       });
 
       if (updated.count !== 1) {
@@ -239,6 +286,7 @@ export class OrderStatusService {
           previousStatus: from,
           newStatus: to,
           fulfillmentMethod: input.fulfillmentMethod,
+          pickupAddressId: pickupAddress.id,
           processedByRole: role,
         },
       });
@@ -251,6 +299,7 @@ export class OrderStatusService {
         metadata: {
           fulfillmentMethod: input.fulfillmentMethod,
           bookingSource,
+          pickupAddressId: pickupAddress.id,
         },
       });
 

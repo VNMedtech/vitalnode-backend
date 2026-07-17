@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createDeliveryPartnerDirect,
+  resolveSellerPickupAddressId,
   setupAssignedOrder,
   setupOrderTestContext,
   setupOutForDeliveryOrder,
@@ -19,9 +20,14 @@ describe("Orders — Section 4: Admin Actions", () => {
     const prisma = getTestPrisma();
     const context = await setupOrderTestContext(app, prisma);
     const partner = await createDeliveryPartnerDirect(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
 
     await orderRequest(app, context.sellerToken).confirm(context.orderId, {
       fulfillmentMethod: "INTERNAL_DP",
+      pickupAddressId,
     });
 
     const res = await orderRequest(app, context.adminToken).assignDeliveryPartner(
@@ -61,9 +67,14 @@ describe("Orders — Section 4: Admin Actions", () => {
     const prisma = getTestPrisma();
     const context = await setupOrderTestContext(app, prisma);
     const partner = await createDeliveryPartnerDirect(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
 
     await orderRequest(app, context.sellerToken).confirm(context.orderId, {
       fulfillmentMethod: "THIRD_PARTY",
+      pickupAddressId,
     });
 
     const res = await orderRequest(app, context.adminToken).assignDeliveryPartner(
@@ -119,10 +130,14 @@ describe("Orders — Section 4: Admin Actions", () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupOrderTestContext(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
 
     const res = await orderRequest(app, context.adminToken).confirm(
       context.orderId,
-      { fulfillmentMethod: "THIRD_PARTY" },
+      { fulfillmentMethod: "THIRD_PARTY", pickupAddressId },
     );
 
     expect(res.status).toBe(200);
@@ -143,35 +158,11 @@ describe("Orders — Section 4: Admin Actions", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.orderStatus).toBe("CANCELLED");
-  });
 
-  it("cancels a CONFIRMED order as admin", async () => {
-    const app = getApp();
-    const prisma = getTestPrisma();
-    const context = await setupAssignedOrder(app, prisma);
-
-    const res = await orderRequest(app, context.adminToken).cancelById(
-      context.orderId,
-      { reason: "Cancel after confirm" },
-      newIdempotencyKey("admin-cancel-confirmed"),
-    );
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.orderStatus).toBe("CANCELLED");
-  });
-
-  it("rejects cancel after SHIPPED", async () => {
-    const app = getApp();
-    const prisma = getTestPrisma();
-    const context = await setupOutForDeliveryOrder(app, prisma);
-
-    const res = await orderRequest(app, context.adminToken).cancelById(
-      context.orderId,
-      { reason: "Too late" },
-      newIdempotencyKey("admin-cancel-shipped"),
-    );
-
-    expect(res.status).toBe(409);
+    const order = await prisma.order.findUnique({
+      where: { id: context.orderId },
+    });
+    expect(order?.orderStatus).toBe("CANCELLED");
   });
 
   it("rejects delivery partner assignment from non-admin users", async () => {

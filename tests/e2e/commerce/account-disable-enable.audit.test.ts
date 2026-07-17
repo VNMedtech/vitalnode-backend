@@ -11,6 +11,7 @@ import { setupMarketplaceProduct } from "../../factories/commerce.factory.js";
 import { productCreationPayload } from "../../fixtures/product.payloads.js";
 import {
   ORDER_PROOF_FILE,
+  resolveSellerPickupAddressId,
   setupAssignedOrder,
   setupOrderTestContext,
   setupOutForDeliveryOrder,
@@ -211,10 +212,17 @@ describe("Account Disable/Enable — QA Audit", () => {
       expect(buyerOrderRes.status).toBe(200);
       expect(buyerOrderRes.body.data.orderStatus).toBe("PLACED");
 
+      const pickupAddressId = await resolveSellerPickupAddressId(
+        app,
+        context.sellerToken,
+      );
       const sellerConfirmRes = await orderRequest(
         app,
         context.sellerToken,
-      ).confirm(context.orderId, { fulfillmentMethod: "INTERNAL_DP" });
+      ).confirm(context.orderId, {
+        fulfillmentMethod: "INTERNAL_DP",
+        pickupAddressId,
+      });
       expect(sellerConfirmRes.status).toBe(200);
       expect(sellerConfirmRes.body.data.orderStatus).toBe("CONFIRMED");
     });
@@ -299,8 +307,13 @@ describe("Account Disable/Enable — QA Audit", () => {
       const context = await setupOrderTestContext(app, prisma);
       const { login: adminLogin } = await createAdminViaApi(app, prisma);
 
+      const pickupAddressId = await resolveSellerPickupAddressId(
+        app,
+        context.sellerToken,
+      );
       await orderRequest(app, context.sellerToken).confirm(context.orderId, {
         fulfillmentMethod: "INTERNAL_DP",
+        pickupAddressId,
       });
 
       const createRes = await deliveryPartnerRequest(

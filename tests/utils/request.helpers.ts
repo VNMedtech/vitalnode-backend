@@ -9,6 +9,7 @@ const CATEGORIES_BASE = "/api/v1/categories";
 const PRODUCTS_BASE = "/api/v1/products";
 const INVENTORY_BASE = "/api/v1/inventory";
 const ADDRESSES_BASE = "/api/v1/addresses";
+const SELLER_ADDRESSES_BASE = "/api/v1/seller/addresses";
 const CART_BASE = "/api/v1/cart";
 const ORDERS_BASE = "/api/v1/orders";
 const PAYMENTS_BASE = "/api/v1/payments";
@@ -130,6 +131,15 @@ export function sellerRequest(app: Express, accessToken: string) {
         .patch(`${SELLERS_BASE}/${id}/enable`)
         .set("Authorization", `Bearer ${accessToken}`)
         .send(body),
+
+    listAddresses: (
+      id: string,
+      query: Record<string, string | number | undefined> = {},
+    ) =>
+      request(app)
+        .get(`${SELLERS_BASE}/${id}/addresses`)
+        .query(query)
+        .set("Authorization", `Bearer ${accessToken}`),
   };
 }
 
@@ -364,6 +374,34 @@ export function addressRequest(app: Express, accessToken: string) {
   };
 }
 
+export function sellerAddressRequest(app: Express, accessToken: string) {
+  const auth = (req: Test) =>
+    req.set("Authorization", `Bearer ${accessToken}`);
+
+  return {
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(SELLER_ADDRESSES_BASE)).query(query),
+
+    create: (body: Record<string, unknown>) =>
+      auth(request(app).post(SELLER_ADDRESSES_BASE)).send(body),
+
+    getById: (id: string) =>
+      auth(request(app).get(`${SELLER_ADDRESSES_BASE}/${id}`)),
+
+    update: (id: string, body: Record<string, unknown>) =>
+      auth(request(app).patch(`${SELLER_ADDRESSES_BASE}/${id}`)).send(body),
+
+    setDefault: (id: string) =>
+      auth(request(app).patch(`${SELLER_ADDRESSES_BASE}/${id}/default`)),
+
+    disable: (id: string) =>
+      auth(request(app).patch(`${SELLER_ADDRESSES_BASE}/${id}/disable`)),
+
+    delete: (id: string) =>
+      auth(request(app).delete(`${SELLER_ADDRESSES_BASE}/${id}`)),
+  };
+}
+
 export function cartRequest(app: Express, accessToken: string) {
   const auth = (req: Test) =>
     req.set("Authorization", `Bearer ${accessToken}`);
@@ -462,13 +500,17 @@ export function orderRequest(app: Express, accessToken = "") {
 
     confirm: (
       id: string,
-      body: { fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY" },
+      body: {
+        fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY";
+        pickupAddressId: string;
+      },
     ) => auth(request(app).post(`${ORDERS_BASE}/${id}/confirm`)).send(body),
 
     process: (
       id: string,
-      body: { fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY" } = {
-        fulfillmentMethod: "INTERNAL_DP",
+      body: {
+        fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY";
+        pickupAddressId: string;
       },
     ) => auth(request(app).post(`${ORDERS_BASE}/${id}/process`)).send(body),
 

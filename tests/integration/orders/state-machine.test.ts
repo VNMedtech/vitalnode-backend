@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ORDER_PROOF_FILE,
+  resolveSellerPickupAddressId,
   setupAssignedOrder,
   setupDeliveredOrder,
   setupOrderTestContext,
@@ -80,10 +81,14 @@ describe("Orders — Section 8: State Machine", () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupOrderTestContext(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
 
     const res = await orderRequest(app, context.sellerToken).confirm(
       context.orderId,
-      { fulfillmentMethod: "INTERNAL_DP" },
+      { fulfillmentMethod: "INTERNAL_DP", pickupAddressId },
     );
 
     expect(res.status).toBe(200);
@@ -149,10 +154,14 @@ describe("Orders — Section 8: State Machine", () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupProcessingOrder(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
 
     const res = await orderRequest(app, context.sellerToken).confirm(
       context.orderId,
-      { fulfillmentMethod: "INTERNAL_DP" },
+      { fulfillmentMethod: "INTERNAL_DP", pickupAddressId },
     );
 
     expect(res.status).toBe(409);

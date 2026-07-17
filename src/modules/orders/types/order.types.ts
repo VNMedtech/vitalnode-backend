@@ -26,6 +26,7 @@ export interface AssignDeliveryPartnerInput {
 
 export interface ConfirmOrderInput {
   fulfillmentMethod: FulfillmentMethod;
+  pickupAddressId: string;
 }
 
 export interface SwitchFulfillmentMethodInput {
@@ -98,6 +99,21 @@ export interface AddressSnapshot {
   postalCode: string;
 }
 
+export interface PickupAddressSnapshot {
+  id: string;
+  label: string;
+  contactPerson: string | null;
+  phone: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+  latitude: string | null;
+  longitude: string | null;
+}
+
 export interface OrderPaymentSummary {
   id: string;
   razorpayOrderId: string;
@@ -149,23 +165,43 @@ export interface OrderDeliveryPartnerContactDto {
   phoneNumber: string | null;
 }
 
-/** Pickup contact fields for the seller (order detail only). */
+/**
+ * Seller identity/contact on order detail.
+ * Address fields below are the registered SellerProfile business address (legacy).
+ * Dispatch pickup origin must use `pickupAddressSnapshot`, not these fields.
+ */
 export interface OrderSellerContactDto {
   id: string;
   businessName: string;
   contactPerson: string;
   phoneNumber: string | null;
+  /**
+   * @deprecated Registered business address only. Do not use for dispatch pickup —
+   * use `OrderDetailDto.pickupAddressSnapshot` instead. Kept for backward compatibility.
+   */
   addressLine1: string;
+  /** @deprecated See addressLine1 — use pickupAddressSnapshot for dispatch. */
   addressLine2: string | null;
+  /** @deprecated See addressLine1 — use pickupAddressSnapshot for dispatch. */
   city: string;
+  /** @deprecated See addressLine1 — use pickupAddressSnapshot for dispatch. */
   state: string;
+  /** @deprecated See addressLine1 — use pickupAddressSnapshot for dispatch. */
   country: string;
+  /** @deprecated See addressLine1 — use pickupAddressSnapshot for dispatch. */
   postalCode: string;
 }
 
 export interface OrderDetailDto extends OrderSummaryDto {
   /** Null for delivery partners until the order is SHIPPED. */
   shippingAddressSnapshot: AddressSnapshot | null;
+  /**
+   * Immutable pickup warehouse snapshotted at confirmation.
+   * Temporary fallback: if missing (pre-warehouse orders), DTO may synthesize
+   * from SellerProfile address via pickupSnapshotFromSellerProfile — do not
+   * treat that as the long-term source of truth.
+   */
+  pickupAddressSnapshot: PickupAddressSnapshot | null;
   seller: OrderSellerContactDto;
   deliveryPartner: OrderDeliveryPartnerContactDto | null;
   shipment: ShipmentDto | null;

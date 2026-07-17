@@ -6,6 +6,7 @@ import { setupMarketplaceProduct } from "../../factories/commerce.factory.js";
 import {
   createDeliveryPartnerDirect,
   ORDER_PROOF_FILE,
+  resolveSellerPickupAddressId,
   setupOrderTestContext,
 } from "../../factories/order.factory.js";
 import {
@@ -153,10 +154,14 @@ export async function fulfillOrderThroughDelivery(
   prisma: PrismaClient,
 ) {
   const partner = await createDeliveryPartnerDirect(app, prisma);
+  const pickupAddressId = await resolveSellerPickupAddressId(
+    app,
+    context.sellerToken,
+  );
 
   const confirmRes = await orderRequest(app, context.sellerToken).confirm(
     context.orderId,
-    { fulfillmentMethod: "INTERNAL_DP" },
+    { fulfillmentMethod: "INTERNAL_DP", pickupAddressId },
   );
   assertOk(confirmRes.status, "Confirm order", confirmRes.body);
 

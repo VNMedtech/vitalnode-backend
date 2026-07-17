@@ -273,8 +273,9 @@ orderRouter.get(
  *     tags: [Orders]
  *     summary: Confirm order and choose fulfillment method
  *     description: |
- *       Seller or admin. Requires `fulfillmentMethod` (`INTERNAL_DP` | `THIRD_PARTY`).
- *       Transitions PLACED → CONFIRMED and creates a Shipment (method unset until this point).
+ *       Seller or admin. Requires `fulfillmentMethod` (`INTERNAL_DP` | `THIRD_PARTY`)
+ *       and `pickupAddressId` (active warehouse owned by the order's seller).
+ *       Transitions PLACED → CONFIRMED, snapshots the pickup address, and creates a Shipment.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -288,11 +289,15 @@ orderRouter.get(
  *         application/json:
  *           schema:
  *             type: object
- *             required: [fulfillmentMethod]
+ *             required: [fulfillmentMethod, pickupAddressId]
  *             properties:
  *               fulfillmentMethod:
  *                 type: string
  *                 enum: [INTERNAL_DP, THIRD_PARTY]
+ *               pickupAddressId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Active SellerAddress warehouse used as the pickup origin
  *     responses:
  *       200:
  *         description: Order confirmed successfully
@@ -329,11 +334,14 @@ orderRouter.post(
  *         application/json:
  *           schema:
  *             type: object
- *             required: [fulfillmentMethod]
+ *             required: [fulfillmentMethod, pickupAddressId]
  *             properties:
  *               fulfillmentMethod:
  *                 type: string
  *                 enum: [INTERNAL_DP, THIRD_PARTY]
+ *               pickupAddressId:
+ *                 type: string
+ *                 format: uuid
  *     responses:
  *       200:
  *         description: Order confirmed successfully

@@ -4,6 +4,7 @@ export * as auth from "./auth/index.js";
 export * as users from "./users/index.js";
 export * as buyers from "./buyers/index.js";
 export * as addresses from "./addresses/index.js";
+export * as sellerAddresses from "./sellerAddresses/index.js";
 export * as sellers from "./sellers/index.js";
 export * as deliveryPartners from "./deliveryPartners/index.js";
 export * as categories from "./categories/index.js";

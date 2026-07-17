@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { UserStatus } from "../../../src/shared/enums/userStatus.enum.js";
 import {
+  resolveSellerPickupAddressId,
   setupAssignedOrder,
   setupOrderTestContext,
 } from "../../factories/order.factory.js";
@@ -71,11 +72,18 @@ describe("Orders — Section 9: Security", () => {
     const prisma = getTestPrisma();
     const context = await setupOrderTestContext(app, prisma);
     const otherSeller = await createApprovedSeller(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      otherSeller.login.auth.accessToken,
+    );
 
     const res = await orderRequest(
       app,
       otherSeller.login.auth.accessToken,
-    ).confirm(context.orderId, { fulfillmentMethod: "INTERNAL_DP" });
+    ).confirm(context.orderId, {
+      fulfillmentMethod: "INTERNAL_DP",
+      pickupAddressId,
+    });
 
     expect(res.status).toBe(404);
   });
@@ -84,11 +92,18 @@ describe("Orders — Section 9: Security", () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupOrderTestContext(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
 
     const res = await orderRequest(
       app,
       context.buyerAuth.accessToken,
-    ).confirm(context.orderId, { fulfillmentMethod: "INTERNAL_DP" });
+    ).confirm(context.orderId, {
+      fulfillmentMethod: "INTERNAL_DP",
+      pickupAddressId,
+    });
 
     expect(res.status).toBe(403);
   });

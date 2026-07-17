@@ -1,0 +1,144 @@
+/**
+ * @openapi
+ * tags:
+ *   - name: SellerAddresses
+ *     description: Seller warehouse / pickup address management
+ */
+import { Router } from "express";
+import {
+  authenticate,
+  authorizePermission,
+  validate,
+} from "../../../middlewares/index.js";
+import { permissions } from "../../../shared/permissions/rbac.permissions.js";
+import * as sellerAddressController from "../controllers/sellerAddress.controller.js";
+import { createSellerAddressBodySchema } from "../validators/createSellerAddress.schema.js";
+import { listSellerAddressesQuerySchema } from "../validators/query.schema.js";
+import { sellerAddressIdParamSchema } from "../validators/sellerAddressParams.schema.js";
+import { updateSellerAddressBodySchema } from "../validators/updateSellerAddress.schema.js";
+
+export const sellerAddressRouter = Router();
+
+/**
+ * @openapi
+ * /api/v1/seller/addresses:
+ *   get:
+ *     tags: [SellerAddresses]
+ *     summary: List seller warehouse addresses
+ *     description: Seller only. Returns paginated warehouse addresses owned by the authenticated seller.
+ *     security:
+ *       - bearerAuth: []
+ *   post:
+ *     tags: [SellerAddresses]
+ *     summary: Create a warehouse address
+ *     description: |
+ *       Seller only. The first address is automatically set as default.
+ *       When `isDefault` is true, all other addresses are unset as default.
+ *     security:
+ *       - bearerAuth: []
+ */
+sellerAddressRouter.get(
+  "/",
+  authenticate,
+  authorizePermission(permissions.sellerAddresses.read),
+  validate({ query: listSellerAddressesQuerySchema }),
+  sellerAddressController.listAddresses,
+);
+
+sellerAddressRouter.post(
+  "/",
+  authenticate,
+  authorizePermission(permissions.sellerAddresses.create),
+  validate({ body: createSellerAddressBodySchema }),
+  sellerAddressController.createAddress,
+);
+
+/**
+ * @openapi
+ * /api/v1/seller/addresses/{id}:
+ *   get:
+ *     tags: [SellerAddresses]
+ *     summary: Get warehouse address details
+ *     security:
+ *       - bearerAuth: []
+ *   patch:
+ *     tags: [SellerAddresses]
+ *     summary: Update a warehouse address
+ *     security:
+ *       - bearerAuth: []
+ *   delete:
+ *     tags: [SellerAddresses]
+ *     summary: Delete or soft-disable a warehouse address
+ *     description: |
+ *       Hard-deletes unused addresses. Addresses referenced by orders are soft-disabled.
+ *       Cannot remove the last active warehouse.
+ *     security:
+ *       - bearerAuth: []
+ */
+sellerAddressRouter.get(
+  "/:id",
+  authenticate,
+  authorizePermission(permissions.sellerAddresses.read),
+  validate({ params: sellerAddressIdParamSchema }),
+  sellerAddressController.getAddress,
+);
+
+sellerAddressRouter.patch(
+  "/:id/default",
+  authenticate,
+  authorizePermission(permissions.sellerAddresses.setDefault),
+  validate({ params: sellerAddressIdParamSchema }),
+  sellerAddressController.setDefaultAddress,
+);
+
+sellerAddressRouter.patch(
+  "/:id/disable",
+  authenticate,
+  authorizePermission(permissions.sellerAddresses.delete),
+  validate({ params: sellerAddressIdParamSchema }),
+  sellerAddressController.disableAddress,
+);
+
+sellerAddressRouter.patch(
+  "/:id",
+  authenticate,
+  authorizePermission(permissions.sellerAddresses.update),
+  validate({
+    params: sellerAddressIdParamSchema,
+    body: updateSellerAddressBodySchema,
+  }),
+  sellerAddressController.updateAddress,
+);
+
+sellerAddressRouter.delete(
+  "/:id",
+  authenticate,
+  authorizePermission(permissions.sellerAddresses.delete),
+  validate({ params: sellerAddressIdParamSchema }),
+  sellerAddressController.deleteAddress,
+);
+
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     SellerAddress:
+ *       type: object
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         label: { type: string, example: Primary warehouse }
+ *         contactPerson: { type: string, nullable: true }
+ *         phone: { type: string, nullable: true }
+ *         addressLine1: { type: string }
+ *         addressLine2: { type: string, nullable: true }
+ *         city: { type: string }
+ *         state: { type: string }
+ *         country: { type: string }
+ *         postalCode: { type: string }
+ *         latitude: { type: string, nullable: true }
+ *         longitude: { type: string, nullable: true }
+ *         isDefault: { type: boolean }
+ *         isActive: { type: boolean }
+ *         createdAt: { type: string, format: date-time }
+ *         updatedAt: { type: string, format: date-time }
+ */

@@ -6,6 +6,7 @@ import { newIdempotencyKey } from "../utils/payment.helpers.js";
 import {
   deliveryPartnerRequest,
   orderRequest,
+  sellerAddressRequest,
 } from "../utils/request.helpers.js";
 import {
   type PaidPaymentOrderContext,
@@ -130,14 +131,40 @@ export async function createDeliveryPartnerDirect(
   };
 }
 
+export async function resolveSellerPickupAddressId(
+  app: Express,
+  sellerToken: string,
+): Promise<string> {
+  const listRes = await sellerAddressRequest(app, sellerToken).list({
+    isActive: "true",
+    limit: 20,
+  });
+  assertOk(listRes.status, "List seller warehouses", listRes.body);
+  const items = (listRes.body.data ?? []) as Array<{
+    id: string;
+    isDefault?: boolean;
+  }>;
+  const defaultWh = items.find((a) => a.isDefault) ?? items[0];
+  if (!defaultWh) {
+    throw new Error("Seller has no active warehouse");
+  }
+  return defaultWh.id;
+}
+
 export async function confirmOrderAsSeller(
   app: Express,
   sellerToken: string,
   orderId: string,
   fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY" = "INTERNAL_DP",
+  pickupAddressId?: string,
 ): Promise<void> {
+  const resolvedPickupAddressId =
+    pickupAddressId ??
+    (await resolveSellerPickupAddressId(app, sellerToken));
+
   const res = await orderRequest(app, sellerToken).confirm(orderId, {
     fulfillmentMethod,
+    pickupAddressId: resolvedPickupAddressId,
   });
   assertOk(res.status, "Confirm order", res.body);
 }

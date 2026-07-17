@@ -129,6 +129,22 @@ export class AuthRepository {
         sellerProfile: {
           create: {
             ...input.seller,
+            addresses: {
+              create: {
+                label: "Primary warehouse",
+                contactPerson: input.seller.contactPerson,
+                addressLine1: input.seller.addressLine1,
+                addressLine2: input.seller.addressLine2 ?? null,
+                city: input.seller.city,
+                state: input.seller.state,
+                country: input.seller.country,
+                postalCode: input.seller.postalCode,
+                latitude: input.seller.latitude ?? null,
+                longitude: input.seller.longitude ?? null,
+                isDefault: true,
+                isActive: true,
+              },
+            },
           },
         },
       },

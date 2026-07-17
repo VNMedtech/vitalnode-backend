@@ -274,6 +274,31 @@ async function seedSeller(passwordHash: string) {
     },
   });
 
+  const sellerProfile = await prisma.sellerProfile.findUniqueOrThrow({
+    where: { userId: sellerUser.id },
+  });
+
+  const existingWarehouse = await prisma.sellerAddress.findFirst({
+    where: { sellerId: sellerProfile.id, isDefault: true },
+  });
+  if (!existingWarehouse) {
+    await prisma.sellerAddress.create({
+      data: {
+        sellerId: sellerProfile.id,
+        label: "Primary warehouse",
+        contactPerson: "Rajesh Mehta",
+        addressLine1: "42 Industrial Estate Road",
+        addressLine2: "Phase 2, Andheri East",
+        city: "Mumbai",
+        state: "Maharashtra",
+        country: "India",
+        postalCode: "400069",
+        isDefault: true,
+        isActive: true,
+      },
+    });
+  }
+
   console.log(`Approved seller seeded: ${sellerUser.email}`);
   return sellerUser;
 }
@@ -505,6 +530,26 @@ async function upsertSeedOrder(params: {
   const unitPrice = Number(params.product.pricing);
   const quantity = 1;
   const totalPrice = unitPrice * quantity;
+  const defaultWarehouse = await prisma.sellerAddress.findFirst({
+    where: { sellerId: params.sellerProfileId, isDefault: true },
+  });
+  const pickupSnapshot = defaultWarehouse
+    ? {
+        id: defaultWarehouse.id,
+        label: defaultWarehouse.label,
+        contactPerson: defaultWarehouse.contactPerson,
+        phone: defaultWarehouse.phone,
+        addressLine1: defaultWarehouse.addressLine1,
+        addressLine2: defaultWarehouse.addressLine2,
+        city: defaultWarehouse.city,
+        state: defaultWarehouse.state,
+        country: defaultWarehouse.country,
+        postalCode: defaultWarehouse.postalCode,
+        latitude: defaultWarehouse.latitude?.toString() ?? null,
+        longitude: defaultWarehouse.longitude?.toString() ?? null,
+      }
+    : undefined;
+
   const existing = await prisma.order.findUnique({
     where: { orderNumber: params.orderNumber },
     include: { shipment: true, items: true, payment: true },
@@ -518,6 +563,12 @@ async function upsertSeedOrder(params: {
         deliveryPartnerId: params.deliveryPartnerProfileId,
         shippingAddressSnapshot: SEED_SHIPPING_ADDRESS,
         placedAt: existing.placedAt ?? new Date(),
+        ...(defaultWarehouse
+          ? {
+              pickupAddressId: defaultWarehouse.id,
+              pickupAddressSnapshot: pickupSnapshot,
+            }
+          : {}),
       },
     });
 
@@ -551,6 +602,12 @@ async function upsertSeedOrder(params: {
       sellerId: params.sellerProfileId,
       deliveryPartnerId: params.deliveryPartnerProfileId,
       shippingAddressSnapshot: SEED_SHIPPING_ADDRESS,
+      ...(defaultWarehouse
+        ? {
+            pickupAddressId: defaultWarehouse.id,
+            pickupAddressSnapshot: pickupSnapshot,
+          }
+        : {}),
       orderStatus: params.orderStatus,
       subtotal: totalPrice,
       totalAmount: totalPrice,

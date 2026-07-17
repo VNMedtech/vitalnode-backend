@@ -221,10 +221,38 @@ model SellerProfile {
 
   user               User               @relation(fields: [userId], references: [id], onDelete: Restrict)
   documents          SellerDocument[]
+  addresses          SellerAddress[]
   products           Product[]
   orders             Order[]
   invoices           Invoice[]
   settlementBatches  SettlementBatch[]
+}
+
+model SellerAddress {
+  id            String   @id @default(uuid())
+  sellerId      String
+  label         String
+  contactPerson String?
+  phone         String?
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  state         String
+  country       String
+  postalCode    String
+  latitude      Decimal? @db.Decimal(10, 7)
+  longitude     Decimal? @db.Decimal(10, 7)
+  isDefault     Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  seller SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([sellerId])
+  @@index([isActive])
+  @@index([isDefault])
 }
 
 model SellerDocument {
@@ -473,6 +501,8 @@ model Order {
   sellerId                     String
   deliveryPartnerId            String?
   shippingAddressSnapshot      Json
+  pickupAddressId              String?
+  pickupAddressSnapshot        Json?
   orderStatus                  OrderStatus
   subtotal                     Decimal      @db.Decimal(12, 2)
   totalAmount                  Decimal      @db.Decimal(12, 2)
@@ -490,6 +520,7 @@ model Order {
   seller          SellerProfile           @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   deliveryPartner DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id], onDelete: Restrict)
   settlementBatch SettlementBatch?        @relation(fields: [settlementBatchId], references: [id], onDelete: Restrict)
+  pickupAddress   SellerAddress?          @relation(fields: [pickupAddressId], references: [id], onDelete: Restrict)
   items           OrderItem[]
   payment         Payment?
   proofs          OrderProof[]
@@ -503,6 +534,7 @@ model Order {
   @@index([placedAt])
   @@index([settlementBatchId])
   @@index([deliveredAt])
+  @@index([pickupAddressId])
 }
 
 model Shipment {

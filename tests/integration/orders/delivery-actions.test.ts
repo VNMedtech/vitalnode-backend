@@ -38,6 +38,7 @@ describe("Orders — Section 5: Delivery Actions", () => {
     const order = await prisma.order.findUniqueOrThrow({
       where: { id: context.orderId },
       select: {
+        pickupAddressSnapshot: true,
         seller: {
           select: {
             id: true,
@@ -53,6 +54,12 @@ describe("Orders — Section 5: Delivery Actions", () => {
       },
     });
     const seller = order.seller;
+    const pickup = order.pickupAddressSnapshot as {
+      id: string;
+      label: string;
+      addressLine1: string;
+      city: string;
+    };
 
     const res = await orderRequest(
       app,
@@ -62,16 +69,20 @@ describe("Orders — Section 5: Delivery Actions", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.orderStatus).toBe("CONFIRMED");
     expect(res.body.data.shippingAddressSnapshot).toBeNull();
+    expect(res.body.data.pickupAddressSnapshot).toEqual(
+      expect.objectContaining({
+        id: pickup.id,
+        label: pickup.label,
+        addressLine1: pickup.addressLine1,
+        city: pickup.city,
+      }),
+    );
     expect(res.body.data.seller).toEqual(
       expect.objectContaining({
         id: seller.id,
         businessName: seller.businessName,
         contactPerson: seller.contactPerson,
         phoneNumber: seller.user.phoneNumber,
-        addressLine1: seller.addressLine1,
-        city: seller.city,
-        state: seller.state,
-        postalCode: seller.postalCode,
       }),
     );
   });

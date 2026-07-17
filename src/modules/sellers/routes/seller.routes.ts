@@ -11,6 +11,8 @@ import {
   validate,
 } from "../../../middlewares/index.js";
 import { permissions } from "../../../shared/permissions/rbac.permissions.js";
+import { listAddressesForSeller } from "../../sellerAddresses/controllers/sellerAddress.controller.js";
+import { listSellerAddressesQuerySchema } from "../../sellerAddresses/validators/query.schema.js";
 import * as sellerController from "../controllers/seller.controller.js";
 import { disableSellerBodySchema } from "../validators/disableSeller.schema.js";
 import { enableSellerBodySchema } from "../validators/enableSeller.schema.js";
@@ -154,6 +156,27 @@ sellerRouter.get(
   authorizePermission(permissions.sellers.read),
   validate({ params: sellerIdParamSchema }),
   sellerController.getSellerById,
+);
+
+/**
+ * @openapi
+ * /api/v1/sellers/{id}/addresses:
+ *   get:
+ *     tags: [Sellers, SellerAddresses]
+ *     summary: List a seller's warehouse addresses (admin)
+ *     description: Admin only. Used when confirming an order on behalf of a seller.
+ *     security:
+ *       - bearerAuth: []
+ */
+sellerRouter.get(
+  "/:id/addresses",
+  authenticate,
+  authorizePermission(permissions.sellers.read),
+  validate({
+    params: sellerIdParamSchema,
+    query: listSellerAddressesQuerySchema,
+  }),
+  listAddressesForSeller,
 );
 
 /**

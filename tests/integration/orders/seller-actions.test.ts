@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ORDER_PROOF_FILE,
+  resolveSellerPickupAddressId,
   setupAssignedOrder,
   setupOrderTestContext,
   setupThirdPartyConfirmedOrder,
@@ -17,14 +18,25 @@ describe("Orders — Section 3: Seller Actions", () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupOrderTestContext(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
 
     const res = await orderRequest(app, context.sellerToken).confirm(
       context.orderId,
-      { fulfillmentMethod: "INTERNAL_DP" },
+      { fulfillmentMethod: "INTERNAL_DP", pickupAddressId },
     );
 
     expect(res.status).toBe(200);
     expect(res.body.data.orderStatus).toBe("CONFIRMED");
+    expect(res.body.data.pickupAddressSnapshot).toEqual(
+      expect.objectContaining({
+        id: pickupAddressId,
+        addressLine1: expect.any(String),
+        city: expect.any(String),
+      }),
+    );
     expect(res.body.data.shipment).toEqual(
       expect.objectContaining({
         method: "INTERNAL_DP",
@@ -44,10 +56,14 @@ describe("Orders — Section 3: Seller Actions", () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupOrderTestContext(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
 
     const res = await orderRequest(app, context.sellerToken).confirm(
       context.orderId,
-      { fulfillmentMethod: "THIRD_PARTY" },
+      { fulfillmentMethod: "THIRD_PARTY", pickupAddressId },
     );
 
     expect(res.status).toBe(200);
@@ -74,6 +90,69 @@ describe("Orders — Section 3: Seller Actions", () => {
     );
 
     expect(res.status).toBe(400);
+  });
+
+  it("rejects confirm without pickupAddressId", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupOrderTestContext(app, prisma);
+
+    const res = await orderRequest(app, context.sellerToken).confirm(
+      context.orderId,
+      // @ts-expect-error intentional invalid body
+      { fulfillmentMethod: "INTERNAL_DP" },
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects confirm with inactive or foreign pickupAddressId", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupOrderTestContext(app, prisma);
+    const other = await setupOrderTestContext(app, prisma);
+    const otherPickup = await resolveSellerPickupAddressId(
+      app,
+      other.sellerToken,
+    );
+
+    const res = await orderRequest(app, context.sellerToken).confirm(
+      context.orderId,
+      { fulfillmentMethod: "INTERNAL_DP", pickupAddressId: otherPickup },
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  it("keeps pickup snapshot after warehouse edit", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupOrderTestContext(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
+
+    const confirmRes = await orderRequest(app, context.sellerToken).confirm(
+      context.orderId,
+      { fulfillmentMethod: "INTERNAL_DP", pickupAddressId },
+    );
+    expect(confirmRes.status).toBe(200);
+    const snapCity = confirmRes.body.data.pickupAddressSnapshot.city;
+
+    await prisma.sellerAddress.update({
+      where: { id: pickupAddressId },
+      data: { city: "EditedCityXYZ" },
+    });
+
+    const detail = await orderRequest(app, context.sellerToken).getById(
+      context.orderId,
+    );
+    expect(detail.status).toBe(200);
+    expect(detail.body.data.pickupAddressSnapshot.city).toBe(snapCity);
+    expect(detail.body.data.pickupAddressSnapshot.city).not.toBe(
+      "EditedCityXYZ",
+    );
   });
 
   it("exposes assigned delivery partner contact on seller order details", async () => {

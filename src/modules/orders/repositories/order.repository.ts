@@ -64,6 +64,8 @@ const orderSummarySelect = {
 const orderDetailSelect = {
   ...orderSummarySelect,
   shippingAddressSnapshot: true,
+  pickupAddressId: true,
+  pickupAddressSnapshot: true,
   seller: {
     select: {
       id: true,
@@ -75,6 +77,8 @@ const orderDetailSelect = {
       state: true,
       country: true,
       postalCode: true,
+      latitude: true,
+      longitude: true,
       user: {
         select: {
           phoneNumber: true,
@@ -405,6 +409,8 @@ export class OrderRepository {
     orderId: string;
     expectedStatus: OrderStatus;
     nextStatus: OrderStatus;
+    pickupAddressId?: string;
+    pickupAddressSnapshot?: Prisma.InputJsonValue;
   }) {
     return this.db.order.updateMany({
       where: {
@@ -413,6 +419,12 @@ export class OrderRepository {
       },
       data: {
         orderStatus: input.nextStatus,
+        ...(input.pickupAddressId !== undefined
+          ? { pickupAddressId: input.pickupAddressId }
+          : {}),
+        ...(input.pickupAddressSnapshot !== undefined
+          ? { pickupAddressSnapshot: input.pickupAddressSnapshot }
+          : {}),
       },
     });
   }

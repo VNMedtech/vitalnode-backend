@@ -16,6 +16,7 @@ import type {
   OrderProofDto,
   OrderSellerContactDto,
   OrderSummaryDto,
+  PickupAddressSnapshot,
   ProductSnapshot,
   ShipmentDto,
 } from "../types/order.types.js";
@@ -76,6 +77,76 @@ function parseAddressSnapshot(snapshot: Prisma.JsonValue): AddressSnapshot {
   };
 }
 
+function parsePickupAddressSnapshot(
+  snapshot: Prisma.JsonValue,
+): PickupAddressSnapshot {
+  const data = snapshot as Record<string, unknown>;
+  return {
+    id: String(data.id ?? ""),
+    label: String(data.label ?? ""),
+    contactPerson:
+      data.contactPerson === null || data.contactPerson === undefined
+        ? null
+        : String(data.contactPerson),
+    phone:
+      data.phone === null || data.phone === undefined
+        ? null
+        : String(data.phone),
+    addressLine1: String(data.addressLine1 ?? ""),
+    addressLine2:
+      data.addressLine2 === null || data.addressLine2 === undefined
+        ? null
+        : String(data.addressLine2),
+    city: String(data.city ?? ""),
+    state: String(data.state ?? ""),
+    country: String(data.country ?? ""),
+    postalCode: String(data.postalCode ?? ""),
+    latitude:
+      data.latitude === null || data.latitude === undefined
+        ? null
+        : String(data.latitude),
+    longitude:
+      data.longitude === null || data.longitude === undefined
+        ? null
+        : String(data.longitude),
+  };
+}
+
+/**
+ * TEMPORARY legacy fallback: build a pickup snapshot from the live SellerProfile
+ * address when `Order.pickupAddressSnapshot` is missing (pre-warehouse orders).
+ * New confirms always persist a warehouse snapshot — do not rely on this path
+ * for current fulfillment. Remove once legacy orders are backfilled or aged out.
+ */
+function pickupSnapshotFromSellerProfile(
+  seller: OrderDetailRecord["seller"],
+): PickupAddressSnapshot {
+  return {
+    id: seller.id,
+    label: "Business address",
+    contactPerson: seller.contactPerson,
+    phone: seller.user.phoneNumber,
+    addressLine1: seller.addressLine1,
+    addressLine2: seller.addressLine2,
+    city: seller.city,
+    state: seller.state,
+    country: seller.country,
+    postalCode: seller.postalCode,
+    latitude: seller.latitude == null ? null : seller.latitude.toString(),
+    longitude: seller.longitude == null ? null : seller.longitude.toString(),
+  };
+}
+
+function resolvePickupAddressSnapshot(
+  record: OrderDetailRecord,
+): PickupAddressSnapshot | null {
+  if (record.pickupAddressSnapshot != null) {
+    return parsePickupAddressSnapshot(record.pickupAddressSnapshot);
+  }
+  // Temporary: pre-warehouse orders only. Prefer Order.pickupAddressSnapshot.
+  return pickupSnapshotFromSellerProfile(record.seller);
+}
+
 function toOrderItemDto(
   item: OrderSummaryRecord["items"][number],
 ): OrderItemDto {
@@ -132,6 +203,7 @@ function toDeliveryPartnerContactDto(
   };
 }
 
+/** Maps SellerProfile contact; address fields are registered business address (not dispatch pickup). */
 function toSellerContactDto(
   seller: OrderDetailRecord["seller"],
 ): OrderSellerContactDto {
@@ -140,6 +212,7 @@ function toSellerContactDto(
     businessName: seller.businessName,
     contactPerson: seller.contactPerson,
     phoneNumber: seller.user.phoneNumber,
+    // Deprecated for dispatch — clients must use pickupAddressSnapshot.
     addressLine1: seller.addressLine1,
     addressLine2: seller.addressLine2,
     city: seller.city,
@@ -209,6 +282,7 @@ export function toOrderDetailDto(
     shippingAddressSnapshot: showCustomerShipping
       ? parseAddressSnapshot(record.shippingAddressSnapshot)
       : null,
+    pickupAddressSnapshot: resolvePickupAddressSnapshot(record),
     seller: toSellerContactDto(record.seller),
     deliveryPartner: toDeliveryPartnerContactDto(record.deliveryPartner),
     shipment: toShipmentDto(record.shipment),
