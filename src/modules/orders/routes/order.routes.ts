@@ -23,9 +23,14 @@ import {
   cancelOrderBodySchema,
   cancelOrderByIdBodySchema,
 } from "../validators/cancelOrder.schema.js";
+import {
+  confirmOrderBodySchema,
+  switchFulfillmentMethodBodySchema,
+} from "../validators/confirmOrder.schema.js";
 import { createOrderBodySchema } from "../validators/createOrder.schema.js";
 import { orderIdParamSchema } from "../validators/orderParams.schema.js";
 import { listOrdersQuerySchema } from "../validators/query.schema.js";
+import { saveTrackingBodySchema } from "../validators/saveTracking.schema.js";
 import { deliveryFailedBodySchema } from "../validators/updateOrderStatus.schema.js";
 
 export const orderRouter = Router();
@@ -106,9 +111,8 @@ orderRouter.post(
  *             - PENDING_PAYMENT
  *             - PAYMENT_FAILED
  *             - PLACED
- *             - ASSIGNED_DELIVERY_PARTNER
- *             - PROCESSING
- *             - OUT_FOR_DELIVERY
+ *             - CONFIRMED
+ *             - SHIPPED
  *             - DELIVERED
  *             - PENDING_SETTLEMENT
  *             - SETTLED
@@ -163,9 +167,8 @@ orderRouter.get(
  *             - PENDING_PAYMENT
  *             - PAYMENT_FAILED
  *             - PLACED
- *             - ASSIGNED_DELIVERY_PARTNER
- *             - PROCESSING
- *             - OUT_FOR_DELIVERY
+ *             - CONFIRMED
+ *             - SHIPPED
  *             - DELIVERED
  *             - PENDING_SETTLEMENT
  *             - SETTLED
@@ -238,9 +241,10 @@ orderRouter.post(
  *       `deliveryPartner` contact when assigned.
  *
  *       Delivery-partner privacy: when the actor is a delivery partner and
- *       status is before OUT_FOR_DELIVERY, `shippingAddressSnapshot` is null.
- *       Customer shipping is returned for OUT_FOR_DELIVERY and later statuses.
+ *       status is before SHIPPED, `shippingAddressSnapshot` is null.
+ *       Customer shipping is returned for SHIPPED and later statuses.
  *       Seller pickup contact is always included on detail.
+ *       Includes nested `shipment` (method, status, trackingUrl, etc.) when present.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -264,11 +268,13 @@ orderRouter.get(
 
 /**
  * @openapi
- * /api/v1/orders/{id}/process:
+ * /api/v1/orders/{id}/confirm:
  *   post:
  *     tags: [Orders]
- *     summary: Mark order as processing
- *     description: Approved seller only.
+ *     summary: Confirm order and choose fulfillment method
+ *     description: |
+ *       Seller or admin. Requires `fulfillmentMethod` (`INTERNAL_DP` | `THIRD_PARTY`).
+ *       Transitions PLACED → CONFIRMED and creates a Shipment (method unset until this point).
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -276,17 +282,148 @@ orderRouter.get(
  *         name: id
  *         required: true
  *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [fulfillmentMethod]
+ *             properties:
+ *               fulfillmentMethod:
+ *                 type: string
+ *                 enum: [INTERNAL_DP, THIRD_PARTY]
  *     responses:
  *       200:
- *         description: Order marked as processing
+ *         description: Order confirmed successfully
+ *       400:
+ *         description: Validation failed
+ *       409:
+ *         description: Invalid status transition
+ */
+orderRouter.post(
+  "/:id/confirm",
+  authenticate,
+  authorizePermission(permissions.orders.updateStatus),
+  validate({ params: orderIdParamSchema, body: confirmOrderBodySchema }),
+  orderController.confirmOrder,
+);
+
+/**
+ * @openapi
+ * /api/v1/orders/{id}/process:
+ *   post:
+ *     tags: [Orders]
+ *     summary: Confirm order (alias of /confirm)
+ *     description: Deprecated alias for POST /confirm. Same body and behavior.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [fulfillmentMethod]
+ *             properties:
+ *               fulfillmentMethod:
+ *                 type: string
+ *                 enum: [INTERNAL_DP, THIRD_PARTY]
+ *     responses:
+ *       200:
+ *         description: Order confirmed successfully
  */
 orderRouter.post(
   "/:id/process",
   authenticate,
-  requireApprovedSeller,
   authorizePermission(permissions.orders.updateStatus),
-  validate({ params: orderIdParamSchema }),
+  validate({ params: orderIdParamSchema, body: confirmOrderBodySchema }),
   orderController.processOrder,
+);
+
+/**
+ * @openapi
+ * /api/v1/orders/{id}/fulfillment-method:
+ *   patch:
+ *     tags: [Orders]
+ *     summary: Switch fulfillment method while CONFIRMED
+ *     description: |
+ *       Seller or admin. Allowed only while order is CONFIRMED (before SHIPPED).
+ *       Clears partner or tracking fields as needed when switching methods.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [fulfillmentMethod]
+ *             properties:
+ *               fulfillmentMethod:
+ *                 type: string
+ *                 enum: [INTERNAL_DP, THIRD_PARTY]
+ *     responses:
+ *       200:
+ *         description: Fulfillment method updated
+ */
+orderRouter.patch(
+  "/:id/fulfillment-method",
+  authenticate,
+  authorizePermission(permissions.orders.updateStatus),
+  validate({
+    params: orderIdParamSchema,
+    body: switchFulfillmentMethodBodySchema,
+  }),
+  orderController.switchFulfillmentMethod,
+);
+
+/**
+ * @openapi
+ * /api/v1/orders/{id}/tracking:
+ *   patch:
+ *     tags: [Orders]
+ *     summary: Save third-party tracking details
+ *     description: |
+ *       Seller or admin. For THIRD_PARTY shipments while CONFIRMED or early SHIPPED.
+ *       `trackingUrl` is required before mark-shipped (may be saved here first).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               carrier: { type: string }
+ *               awbNumber: { type: string }
+ *               trackingUrl: { type: string, format: uri }
+ *     responses:
+ *       200:
+ *         description: Tracking details saved
+ */
+orderRouter.patch(
+  "/:id/tracking",
+  authenticate,
+  authorizePermission(permissions.orders.updateStatus),
+  validate({ params: orderIdParamSchema, body: saveTrackingBodySchema }),
+  orderController.saveTrackingDetails,
 );
 
 /**
@@ -294,8 +431,8 @@ orderRouter.post(
  * /api/v1/orders/{id}/handover-proof:
  *   post:
  *     tags: [Orders]
- *     summary: Upload handover proof
- *     description: Approved seller only. Multipart image upload.
+ *     summary: Upload handover proof (INTERNAL_DP)
+ *     description: Approved seller only. Multipart image upload. Required before mark-shipped for INTERNAL_DP.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -328,11 +465,14 @@ orderRouter.post(
 
 /**
  * @openapi
- * /api/v1/orders/{id}/out-for-delivery:
+ * /api/v1/orders/{id}/mark-shipped:
  *   post:
  *     tags: [Orders]
- *     summary: Mark order out for delivery
- *     description: Approved seller only. Optional multipart proof file.
+ *     summary: Mark order as shipped
+ *     description: |
+ *       Seller or admin.
+ *       INTERNAL_DP: requires assigned partner + handover proof; optional multipart proof.
+ *       THIRD_PARTY: requires trackingUrl on shipment (no proof).
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -349,12 +489,45 @@ orderRouter.post(
  *               file: { type: string, format: binary }
  *     responses:
  *       200:
- *         description: Order marked out for delivery
+ *         description: Order marked shipped
+ */
+orderRouter.post(
+  "/:id/mark-shipped",
+  authenticate,
+  authorizePermission(permissions.orders.updateStatus),
+  optionalSingleFileUpload,
+  validate({ params: orderIdParamSchema }),
+  orderController.markShipped,
+);
+
+/**
+ * @openapi
+ * /api/v1/orders/{id}/out-for-delivery:
+ *   post:
+ *     tags: [Orders]
+ *     summary: Mark order shipped (alias of /mark-shipped)
+ *     description: Deprecated alias for POST /mark-shipped.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file: { type: string, format: binary }
+ *     responses:
+ *       200:
+ *         description: Order marked shipped
  */
 orderRouter.post(
   "/:id/out-for-delivery",
   authenticate,
-  requireApprovedSeller,
   authorizePermission(permissions.orders.updateStatus),
   optionalSingleFileUpload,
   validate({ params: orderIdParamSchema }),
@@ -402,7 +575,9 @@ orderRouter.post(
  *   post:
  *     tags: [Orders]
  *     summary: Mark order as delivered
- *     description: Optional multipart proof file.
+ *     description: |
+ *       INTERNAL_DP: assigned delivery partner; delivery proof required (optional multipart).
+ *       THIRD_PARTY: seller or admin; no proof required.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -436,6 +611,9 @@ orderRouter.post(
  *   post:
  *     tags: [Orders]
  *     summary: Mark delivery as failed
+ *     description: |
+ *       INTERNAL_DP: delivery partner or admin.
+ *       THIRD_PARTY: seller or admin.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -467,7 +645,8 @@ orderRouter.post(
  * /api/v1/orders/{id}/assign-delivery-partner:
  *   post:
  *     tags: [Orders]
- *     summary: Assign a delivery partner to an order
+ *     summary: Assign a delivery partner to an INTERNAL_DP shipment
+ *     description: Admin only. Order must be CONFIRMED with method INTERNAL_DP. Does not change order status.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -504,7 +683,8 @@ orderRouter.post(
  * /api/v1/orders/{id}/reassign-delivery-partner:
  *   post:
  *     tags: [Orders]
- *     summary: Reassign a delivery partner on an order
+ *     summary: Reassign delivery partner on an INTERNAL_DP shipment
+ *     description: Admin only. Allowed while order is CONFIRMED (before SHIPPED).
  *     security:
  *       - bearerAuth: []
  *     parameters:

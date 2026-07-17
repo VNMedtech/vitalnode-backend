@@ -3,7 +3,11 @@
  * @idempotent: yes
  * @external-calls: none
  */
-import { OrderStatus } from "../../../../generated/prisma/client.js";
+import {
+  FulfillmentMethod,
+  OrderStatus,
+  ShipmentStatus,
+} from "../../../../generated/prisma/client.js";
 import { prisma } from "../../../infrastructure/prisma/client.js";
 import {
   ConflictError,
@@ -12,7 +16,6 @@ import {
 } from "../../../shared/errors/app.errors.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
 import { UserStatus } from "../../../shared/enums/userStatus.enum.js";
-import { canTransitionOrderStatus } from "../../../shared/stateMachine/orderStatus.guard.js";
 import { runInTransaction } from "../../../shared/transactions/runInTransaction.js";
 import { recordCommerceAudit } from "../../auditLogs/services/commerceAudit.service.js";
 import { DeliveryPartnerRepository } from "../../deliveryPartners/repositories/deliveryPartner.repository.js";
@@ -27,7 +30,13 @@ import {
   orderNotificationContextService,
 } from "../../notifications/index.js";
 import { OrderRepository } from "../repositories/order.repository.js";
+import { ShipmentRepository } from "../repositories/shipment.repository.js";
 import type { AssignDeliveryPartnerInput, OrderDetailDto } from "../types/order.types.js";
+
+/** Internal DP assign/reassign only while order is CONFIRMED (before SHIPPED). */
+const ASSIGNABLE_ORDER_STATUSES: ReadonlySet<OrderStatus> = new Set([
+  OrderStatus.CONFIRMED,
+]);
 
 export class DeliveryAssignmentService {
   private readonly orderRepo = new OrderRepository(prisma);
@@ -60,6 +69,23 @@ export class DeliveryAssignmentService {
     }
   }
 
+  private assertAssignableInternalDp(
+    orderStatus: OrderStatus,
+    method: FulfillmentMethod | undefined,
+  ): void {
+    if (!ASSIGNABLE_ORDER_STATUSES.has(orderStatus)) {
+      throw new ConflictError(
+        `Delivery partner can only be assigned while order is CONFIRMED (current: ${orderStatus})`,
+      );
+    }
+
+    if (method !== FulfillmentMethod.INTERNAL_DP) {
+      throw new ConflictError(
+        "Delivery partner can only be assigned for INTERNAL_DP fulfillment",
+      );
+    }
+  }
+
   async assignDeliveryPartner(
     actorUserId: string,
     orderId: string,
@@ -70,18 +96,27 @@ export class DeliveryAssignmentService {
       throw new NotFoundError("Order not found");
     }
 
+    if (!order.shipment) {
+      throw new ConflictError(
+        "Confirm the order with INTERNAL_DP before assigning a delivery partner",
+      );
+    }
+
     await this.validateDeliveryPartner(input.deliveryPartnerId);
     await this.validateSeller(order.sellerId);
 
     const from = order.orderStatus;
-    const to = OrderStatus.ASSIGNED_DELIVERY_PARTNER;
+    this.assertAssignableInternalDp(from, order.shipment.method);
 
-    if (!canTransitionOrderStatus(from, to)) {
-      throw new ConflictError(`Invalid order status transition: ${from} -> ${to}`);
+    if (order.deliveryPartnerId || order.shipment.deliveryPartnerId) {
+      throw new ConflictError(
+        "Order already has a delivery partner; use reassign instead",
+      );
     }
 
     return runInTransaction(async (tx) => {
       const orderRepo = new OrderRepository(tx);
+      const shipmentRepo = new ShipmentRepository(tx);
 
       const locked = await orderRepo.lockById(orderId);
       if (!locked) {
@@ -95,13 +130,19 @@ export class DeliveryAssignmentService {
       const updated = await orderRepo.assignDeliveryPartner({
         orderId,
         expectedStatus: from,
-        nextStatus: to,
+        nextStatus: from,
         deliveryPartnerId: input.deliveryPartnerId,
       });
 
       if (updated.count !== 1) {
         throw new ConflictError("Delivery partner assignment failed");
       }
+
+      await shipmentRepo.assignDeliveryPartner({
+        orderId,
+        deliveryPartnerId: input.deliveryPartnerId,
+        status: ShipmentStatus.READY,
+      });
 
       await recordCommerceAudit(tx, {
         actorUserId,
@@ -110,7 +151,7 @@ export class DeliveryAssignmentService {
         entityId: orderId,
         metadata: {
           previousStatus: from,
-          newStatus: to,
+          newStatus: from,
           previousPartnerId: order.deliveryPartnerId,
           newPartnerId: input.deliveryPartnerId,
           assignmentType: "ASSIGNED",
@@ -145,40 +186,47 @@ export class DeliveryAssignmentService {
       throw new NotFoundError("Order not found");
     }
 
-    if (order.orderStatus !== OrderStatus.ASSIGNED_DELIVERY_PARTNER) {
+    if (!order.shipment) {
       throw new ConflictError(
-        "Delivery partner can only be reassigned when order is assigned",
+        "Confirm the order with INTERNAL_DP before reassigning a delivery partner",
       );
     }
 
-    if (!order.deliveryPartnerId) {
+    this.assertAssignableInternalDp(order.orderStatus, order.shipment.method);
+
+    const currentPartnerId =
+      order.shipment.deliveryPartnerId ?? order.deliveryPartnerId;
+
+    if (!currentPartnerId) {
       throw new ConflictError("Order has no delivery partner to reassign");
     }
 
-    if (order.deliveryPartnerId === input.deliveryPartnerId) {
+    if (currentPartnerId === input.deliveryPartnerId) {
       return toOrderDetailDto(order);
     }
 
     await this.validateDeliveryPartner(input.deliveryPartnerId);
     await this.validateSeller(order.sellerId);
 
-    const previousPartnerId = order.deliveryPartnerId;
+    const previousPartnerId = currentPartnerId;
+    const expectedStatus = order.orderStatus;
 
     return runInTransaction(async (tx) => {
       const orderRepo = new OrderRepository(tx);
+      const shipmentRepo = new ShipmentRepository(tx);
 
       const locked = await orderRepo.lockById(orderId);
       if (!locked) {
         throw new NotFoundError("Order not found");
       }
 
-      if (locked.orderStatus !== OrderStatus.ASSIGNED_DELIVERY_PARTNER) {
+      if (locked.orderStatus !== expectedStatus) {
         throw new ConflictError("Order status has changed");
       }
 
       const updated = await orderRepo.reassignDeliveryPartner({
         orderId,
-        expectedStatus: OrderStatus.ASSIGNED_DELIVERY_PARTNER,
+        expectedStatus,
         deliveryPartnerId: input.deliveryPartnerId,
       });
 
@@ -186,14 +234,20 @@ export class DeliveryAssignmentService {
         throw new ConflictError("Delivery partner reassignment failed");
       }
 
+      await shipmentRepo.assignDeliveryPartner({
+        orderId,
+        deliveryPartnerId: input.deliveryPartnerId,
+        status: ShipmentStatus.READY,
+      });
+
       await recordCommerceAudit(tx, {
         actorUserId,
         action: ORDER_ACTIONS.DELIVERY_PARTNER_REASSIGNED,
         entityType: ORDER_AUDIT_ENTITY_TYPE,
         entityId: orderId,
         metadata: {
-          previousStatus: OrderStatus.ASSIGNED_DELIVERY_PARTNER,
-          newStatus: OrderStatus.ASSIGNED_DELIVERY_PARTNER,
+          previousStatus: expectedStatus,
+          newStatus: expectedStatus,
           previousPartnerId,
           newPartnerId: input.deliveryPartnerId,
           assignmentType: "REASSIGNED",

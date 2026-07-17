@@ -17,12 +17,13 @@ import type {
   OrderSellerContactDto,
   OrderSummaryDto,
   ProductSnapshot,
+  ShipmentDto,
 } from "../types/order.types.js";
 
 /** Statuses where the delivery partner may see the customer shipping address. */
 const DELIVERY_PARTNER_CUSTOMER_VISIBLE_STATUSES: ReadonlySet<OrderStatus> =
   new Set([
-    OrderStatus.OUT_FOR_DELIVERY,
+    OrderStatus.SHIPPED,
     OrderStatus.DELIVERED,
     OrderStatus.PENDING_SETTLEMENT,
     OrderStatus.DELIVERY_FAILED,
@@ -148,6 +149,31 @@ function toSellerContactDto(
   };
 }
 
+function toShipmentDto(
+  shipment: OrderDetailRecord["shipment"],
+): ShipmentDto | null {
+  if (!shipment) {
+    return null;
+  }
+
+  return {
+    id: shipment.id,
+    method: shipment.method,
+    bookingSource: shipment.bookingSource,
+    status: shipment.status,
+    deliveryPartnerId: shipment.deliveryPartnerId,
+    carrier: shipment.carrier,
+    awbNumber: shipment.awbNumber,
+    trackingUrl: shipment.trackingUrl,
+    labelUrl: shipment.labelUrl,
+    externalShipmentId: shipment.externalShipmentId,
+    bookedAt: shipment.bookedAt,
+    shippedAt: shipment.shippedAt,
+    deliveredAt: shipment.deliveredAt,
+    failureReason: shipment.failureReason,
+  };
+}
+
 export function toOrderSummaryDto(record: OrderSummaryRecord): OrderSummaryDto {
   return {
     id: record.id,
@@ -161,11 +187,12 @@ export function toOrderSummaryDto(record: OrderSummaryRecord): OrderSummaryDto {
     buyerId: record.buyerId,
     sellerId: record.sellerId,
     deliveryPartnerId: record.deliveryPartnerId,
+    shipment: toShipmentDto(record.shipment),
   };
 }
 
 export type ToOrderDetailDtoOptions = {
-  /** When true, omit buyer shipping until the order is out for delivery. */
+  /** When true, omit buyer shipping until the order is SHIPPED. */
   redactBuyerShippingForDeliveryPartner?: boolean;
 };
 
@@ -184,6 +211,7 @@ export function toOrderDetailDto(
       : null,
     seller: toSellerContactDto(record.seller),
     deliveryPartner: toDeliveryPartnerContactDto(record.deliveryPartner),
+    shipment: toShipmentDto(record.shipment),
     items: record.items.map(toOrderItemDto),
     payment: toPaymentSummary(record.payment),
     proofs: record.proofs.map(toProofDto),

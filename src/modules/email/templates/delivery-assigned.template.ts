@@ -21,7 +21,7 @@ export function renderDeliveryAssignedEmail(
     preheader: `Delivery partner assigned for order ${data.orderNumber}.`,
     bodyHtml: `<p>${escapeHtml(greeting(data.recipientName))}</p>
       <p>${roleMessage(data)}</p>
-      <p>You will receive further updates as the order moves through processing and delivery.</p>`,
+      <p>You will receive further updates as the order is shipped and delivered.</p>`,
     ctaLabel: data.deliveryUrl ? "View delivery" : undefined,
     ctaUrl: data.deliveryUrl,
   });

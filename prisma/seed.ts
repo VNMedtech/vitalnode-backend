@@ -5,8 +5,11 @@
  * For production admin + system actor setup, use: npm run db:bootstrap
  *
  * Idempotent: safe to run multiple times. Uses upsert on unique fields
- * (email, category name, profile userId) so existing records are updated
- * rather than duplicated.
+ * (email, category name, profile userId, orderNumber) so existing records
+ * are updated rather than duplicated.
+ *
+ * Also seeds one APPROVED demo product and sample orders at PLACED /
+ * CONFIRMED (INTERNAL_DP) / SHIPPED (INTERNAL_DP) for portal smoke tests.
  *
  * Run: npm run db:seed
  */
@@ -17,8 +20,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcrypt";
 import {
   BuyerType,
+  FulfillmentMethod,
+  OrderStatus,
+  PaymentStatus,
   PrismaClient,
+  ProductStatus,
   SellerApprovalStatus,
+  ShipmentStatus,
   UserRole,
   UserStatus,
 } from "../generated/prisma/client.js";
@@ -408,6 +416,244 @@ async function seedSystemActorUser() {
 }
 
 // -----------------------------------------------------------------------------
+// 7. Sample catalog product (for demo orders + marketplace smoke)
+// -----------------------------------------------------------------------------
+
+const SEED_PRODUCT_NAME = "VitalNode Seed Pulse Oximeter";
+
+const SEED_SHIPPING_ADDRESS = {
+  name: "Dr. Ananya Sharma",
+  phone: "+919000000003",
+  addressLine1: "12 Clinic Road",
+  addressLine2: "Near City Hospital",
+  city: "Pune",
+  state: "Maharashtra",
+  country: "India",
+  postalCode: "411001",
+};
+
+async function seedSampleProduct(sellerUserId: string) {
+  const sellerProfile = await prisma.sellerProfile.findUniqueOrThrow({
+    where: { userId: sellerUserId },
+  });
+  const category = await prisma.category.findFirstOrThrow({
+    where: { name: "Patient Monitoring Systems", deletedAt: null },
+  });
+
+  const existing = await prisma.product.findFirst({
+    where: {
+      sellerId: sellerProfile.id,
+      productName: SEED_PRODUCT_NAME,
+      deletedAt: null,
+    },
+  });
+
+  if (existing) {
+    await prisma.inventory.upsert({
+      where: { productId: existing.id },
+      update: { availableQuantity: 25 },
+      create: { productId: existing.id, availableQuantity: 25 },
+    });
+    if (existing.status !== ProductStatus.APPROVED) {
+      await prisma.product.update({
+        where: { id: existing.id },
+        data: { status: ProductStatus.APPROVED },
+      });
+    }
+    console.log(`Sample product ready: ${existing.productName}`);
+    return existing;
+  }
+
+  const product = await prisma.product.create({
+    data: {
+      sellerId: sellerProfile.id,
+      categoryId: category.id,
+      productName: SEED_PRODUCT_NAME,
+      brand: "VitalNode Demo",
+      model: "VN-POX-SEED",
+      productType: "Monitoring Device",
+      pricing: 8999,
+      moq: 1,
+      description:
+        "Seeded fingertip pulse oximeter for local fulfillment demos (INTERNAL_DP sample orders).",
+      status: ProductStatus.APPROVED,
+      inventory: { create: { availableQuantity: 25 } },
+    },
+  });
+
+  console.log(`Sample product seeded: ${product.productName}`);
+  return product;
+}
+
+// -----------------------------------------------------------------------------
+// 8. Sample orders — new commerce statuses + INTERNAL_DP shipments (§15.8)
+// -----------------------------------------------------------------------------
+
+async function upsertSeedOrder(params: {
+  orderNumber: string;
+  orderStatus: OrderStatus;
+  buyerProfileId: string;
+  sellerProfileId: string;
+  deliveryPartnerProfileId: string | null;
+  product: { id: string; productName: string; brand: string; model: string; productType: string; pricing: unknown };
+  shipment?: {
+    status: ShipmentStatus;
+    deliveryPartnerId: string;
+    shippedAt?: Date | null;
+  };
+}) {
+  const unitPrice = Number(params.product.pricing);
+  const quantity = 1;
+  const totalPrice = unitPrice * quantity;
+  const existing = await prisma.order.findUnique({
+    where: { orderNumber: params.orderNumber },
+    include: { shipment: true, items: true, payment: true },
+  });
+
+  if (existing) {
+    await prisma.order.update({
+      where: { id: existing.id },
+      data: {
+        orderStatus: params.orderStatus,
+        deliveryPartnerId: params.deliveryPartnerProfileId,
+        shippingAddressSnapshot: SEED_SHIPPING_ADDRESS,
+        placedAt: existing.placedAt ?? new Date(),
+      },
+    });
+
+    if (params.shipment) {
+      await prisma.shipment.upsert({
+        where: { orderId: existing.id },
+        update: {
+          method: FulfillmentMethod.INTERNAL_DP,
+          status: params.shipment.status,
+          deliveryPartnerId: params.shipment.deliveryPartnerId,
+          shippedAt: params.shipment.shippedAt ?? null,
+        },
+        create: {
+          orderId: existing.id,
+          method: FulfillmentMethod.INTERNAL_DP,
+          status: params.shipment.status,
+          deliveryPartnerId: params.shipment.deliveryPartnerId,
+          shippedAt: params.shipment.shippedAt ?? null,
+        },
+      });
+    }
+
+    console.log(`Sample order ready: ${params.orderNumber} (${params.orderStatus})`);
+    return existing;
+  }
+
+  const order = await prisma.order.create({
+    data: {
+      orderNumber: params.orderNumber,
+      buyerId: params.buyerProfileId,
+      sellerId: params.sellerProfileId,
+      deliveryPartnerId: params.deliveryPartnerProfileId,
+      shippingAddressSnapshot: SEED_SHIPPING_ADDRESS,
+      orderStatus: params.orderStatus,
+      subtotal: totalPrice,
+      totalAmount: totalPrice,
+      placedAt: new Date(),
+      items: {
+        create: {
+          productId: params.product.id,
+          quantity,
+          unitPrice,
+          totalPrice,
+          productSnapshot: {
+            productName: params.product.productName,
+            brand: params.product.brand,
+            model: params.product.model,
+            productType: params.product.productType,
+            primaryImageUrl: null,
+          },
+        },
+      },
+      payment: {
+        create: {
+          razorpayOrderId: `seed_rzp_${params.orderNumber}`,
+          razorpayPaymentId: `seed_pay_${params.orderNumber}`,
+          amount: totalPrice,
+          paymentStatus: PaymentStatus.SUCCESS,
+        },
+      },
+      ...(params.shipment
+        ? {
+            shipment: {
+              create: {
+                method: FulfillmentMethod.INTERNAL_DP,
+                status: params.shipment.status,
+                deliveryPartnerId: params.shipment.deliveryPartnerId,
+                shippedAt: params.shipment.shippedAt ?? null,
+              },
+            },
+          }
+        : {}),
+    },
+  });
+
+  console.log(`Sample order seeded: ${params.orderNumber} (${params.orderStatus})`);
+  return order;
+}
+
+async function seedSampleOrders(params: {
+  sellerUserId: string;
+  buyerUserId: string;
+  deliveryPartnerUserId: string;
+  product: { id: string; productName: string; brand: string; model: string; productType: string; pricing: unknown };
+}) {
+  const sellerProfile = await prisma.sellerProfile.findUniqueOrThrow({
+    where: { userId: params.sellerUserId },
+  });
+  const buyerProfile = await prisma.buyerProfile.findUniqueOrThrow({
+    where: { userId: params.buyerUserId },
+  });
+  const deliveryPartnerProfile = await prisma.deliveryPartnerProfile.findUniqueOrThrow({
+    where: { userId: params.deliveryPartnerUserId },
+  });
+
+  // PLACED — no fulfillment method / shipment yet (D7)
+  await upsertSeedOrder({
+    orderNumber: "SEED-PLACED-001",
+    orderStatus: OrderStatus.PLACED,
+    buyerProfileId: buyerProfile.id,
+    sellerProfileId: sellerProfile.id,
+    deliveryPartnerProfileId: null,
+    product: params.product,
+  });
+
+  // CONFIRMED + INTERNAL_DP READY — DP active assignment (seller pickup phase)
+  await upsertSeedOrder({
+    orderNumber: "SEED-CONFIRMED-DP-001",
+    orderStatus: OrderStatus.CONFIRMED,
+    buyerProfileId: buyerProfile.id,
+    sellerProfileId: sellerProfile.id,
+    deliveryPartnerProfileId: deliveryPartnerProfile.id,
+    product: params.product,
+    shipment: {
+      status: ShipmentStatus.READY,
+      deliveryPartnerId: deliveryPartnerProfile.id,
+    },
+  });
+
+  // SHIPPED + INTERNAL_DP OUT_FOR_DELIVERY — customer address visible to DP
+  await upsertSeedOrder({
+    orderNumber: "SEED-SHIPPED-DP-001",
+    orderStatus: OrderStatus.SHIPPED,
+    buyerProfileId: buyerProfile.id,
+    sellerProfileId: sellerProfile.id,
+    deliveryPartnerProfileId: deliveryPartnerProfile.id,
+    product: params.product,
+    shipment: {
+      status: ShipmentStatus.OUT_FOR_DELIVERY,
+      deliveryPartnerId: deliveryPartnerProfile.id,
+      shippedAt: new Date(),
+    },
+  });
+}
+
+// -----------------------------------------------------------------------------
 // Main
 // -----------------------------------------------------------------------------
 
@@ -418,13 +664,22 @@ async function main() {
 
   await seedAdminUser(passwordHash);
   await seedCategories();
-  await seedSeller(passwordHash);
-  await seedBuyer(passwordHash);
-  await seedDeliveryPartner(passwordHash);
+  const seller = await seedSeller(passwordHash);
+  const buyer = await seedBuyer(passwordHash);
+  const deliveryPartner = await seedDeliveryPartner(passwordHash);
   const systemActor = await seedSystemActorUser();
+  const product = await seedSampleProduct(seller.id);
+  await seedSampleOrders({
+    sellerUserId: seller.id,
+    buyerUserId: buyer.id,
+    deliveryPartnerUserId: deliveryPartner.id,
+    product,
+  });
 
   console.log("Database seed completed successfully.");
   console.log(`Default password for all seeded users: ${DEFAULT_PASSWORD}`);
+  console.log("");
+  console.log("Sample orders: SEED-PLACED-001, SEED-CONFIRMED-DP-001, SEED-SHIPPED-DP-001");
   console.log("");
   console.log("Add to server/.env (required for Razorpay webhooks):");
   console.log(`SYSTEM_ACTOR_USER_ID=${systemActor.id}`);

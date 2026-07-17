@@ -11,7 +11,8 @@
  *   BOOTSTRAP_ADMIN_EMAIL
  *   BOOTSTRAP_ADMIN_PASSWORD
  *
- * Dev/demo data (categories, sample users) — use npm run db:seed instead.
+ * Dev/demo data (categories, sample users, sample orders) — use npm run db:seed instead.
+ * Bootstrap intentionally does not create sample orders or shipments.
  */
 
 import "dotenv/config";

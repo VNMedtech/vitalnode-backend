@@ -147,6 +147,32 @@ export class EmailChannelService {
         );
         return;
 
+      case "ORDER_CONFIRMED":
+        await Promise.all(
+          event.emails.map((email) =>
+            withRetry(
+              () =>
+                emailService.sendOrderConfirmedEmail(email.to, {
+                  recipientName: email.recipientName,
+                  orderNumber: email.orderNumber,
+                  fulfillmentMethodLabel: email.fulfillmentMethodLabel,
+                  orderUrl: email.orderUrl,
+                  role: email.role,
+                }),
+              {
+                operation: "email.order_confirmed",
+                context: {
+                  eventType: event.eventType,
+                  correlationId: event.correlationId,
+                  to: email.to,
+                  role: email.role,
+                },
+              },
+            ),
+          ),
+        );
+        return;
+
       case "DELIVERY_ASSIGNED":
         await Promise.all(
           event.emails.map((email) =>
@@ -172,6 +198,34 @@ export class EmailChannelService {
         );
         return;
 
+      case "ORDER_SHIPPED":
+        await Promise.all(
+          event.emails.map((email) =>
+            withRetry(
+              () =>
+                emailService.sendOrderShippedEmail(email.to, {
+                  recipientName: email.recipientName,
+                  orderNumber: email.orderNumber,
+                  trackingUrl: email.trackingUrl,
+                  carrier: email.carrier,
+                  awbNumber: email.awbNumber,
+                  orderUrl: email.orderUrl,
+                  role: email.role,
+                }),
+              {
+                operation: "email.order_shipped",
+                context: {
+                  eventType: event.eventType,
+                  correlationId: event.correlationId,
+                  to: email.to,
+                  role: email.role,
+                },
+              },
+            ),
+          ),
+        );
+        return;
+
       case "ORDER_DELIVERED":
         await Promise.all(
           event.emails.map((email) =>
@@ -185,6 +239,32 @@ export class EmailChannelService {
                 }),
               {
                 operation: "email.order_delivered",
+                context: {
+                  eventType: event.eventType,
+                  correlationId: event.correlationId,
+                  to: email.to,
+                  role: email.role,
+                },
+              },
+            ),
+          ),
+        );
+        return;
+
+      case "DELIVERY_FAILED":
+        await Promise.all(
+          event.emails.map((email) =>
+            withRetry(
+              () =>
+                emailService.sendDeliveryFailedEmail(email.to, {
+                  recipientName: email.recipientName,
+                  orderNumber: email.orderNumber,
+                  reason: email.reason,
+                  orderUrl: email.orderUrl,
+                  role: email.role,
+                }),
+              {
+                operation: "email.delivery_failed",
                 context: {
                   eventType: event.eventType,
                   correlationId: event.correlationId,

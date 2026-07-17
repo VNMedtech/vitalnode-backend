@@ -184,7 +184,7 @@ describe("E2E Commerce — Scenario 1: Complete Purchase Flow", () => {
       (a) => (a.metadata as Record<string, unknown>)?.newStatus,
     );
     expect(statuses).toEqual(
-      expect.arrayContaining(["PROCESSING", "OUT_FOR_DELIVERY", "PENDING_SETTLEMENT"]),
+      expect.arrayContaining(["CONFIRMED", "SHIPPED", "PENDING_SETTLEMENT"]),
     );
 
     const inventoryAudit = await prisma.auditLog.findFirst({

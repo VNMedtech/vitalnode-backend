@@ -85,6 +85,20 @@ export interface OrderCancelledEvent {
   }>;
 }
 
+export interface OrderConfirmedEvent {
+  eventType: typeof NOTIFICATION_EVENTS.ORDER_CONFIRMED;
+  correlationId: string;
+  inApp: InAppNotificationPayload[];
+  emails: Array<{
+    to: string;
+    recipientName?: string;
+    orderNumber: string;
+    fulfillmentMethodLabel: string;
+    orderUrl?: string;
+    role: "BUYER" | "SELLER";
+  }>;
+}
+
 export interface DeliveryAssignedEvent {
   eventType: typeof NOTIFICATION_EVENTS.DELIVERY_ASSIGNED;
   correlationId: string;
@@ -98,6 +112,22 @@ export interface DeliveryAssignedEvent {
   }>;
 }
 
+export interface OrderShippedEvent {
+  eventType: typeof NOTIFICATION_EVENTS.ORDER_SHIPPED;
+  correlationId: string;
+  inApp: InAppNotificationPayload[];
+  emails: Array<{
+    to: string;
+    recipientName?: string;
+    orderNumber: string;
+    trackingUrl: string;
+    carrier?: string;
+    awbNumber?: string;
+    orderUrl?: string;
+    role: "BUYER" | "SELLER";
+  }>;
+}
+
 export interface OrderDeliveredEvent {
   eventType: typeof NOTIFICATION_EVENTS.ORDER_DELIVERED;
   correlationId: string;
@@ -106,6 +136,20 @@ export interface OrderDeliveredEvent {
     to: string;
     recipientName?: string;
     orderNumber: string;
+    orderUrl?: string;
+    role: "BUYER" | "SELLER";
+  }>;
+}
+
+export interface DeliveryFailedEvent {
+  eventType: typeof NOTIFICATION_EVENTS.DELIVERY_FAILED;
+  correlationId: string;
+  inApp: InAppNotificationPayload[];
+  emails: Array<{
+    to: string;
+    recipientName?: string;
+    orderNumber: string;
+    reason?: string;
     orderUrl?: string;
     role: "BUYER" | "SELLER";
   }>;
@@ -130,7 +174,10 @@ export type NotificationEvent =
   | ProductRejectedEvent
   | OrderPlacedEvent
   | OrderCancelledEvent
+  | OrderConfirmedEvent
   | DeliveryAssignedEvent
+  | OrderShippedEvent
   | OrderDeliveredEvent
+  | DeliveryFailedEvent
   | SettlementBatchCreatedEvent
   | SettlementBatchDisbursedEvent;

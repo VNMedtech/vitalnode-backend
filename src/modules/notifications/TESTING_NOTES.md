@@ -25,8 +25,11 @@ Domain services emit events through `notificationDispatcher.emit()`. Handlers ar
 | `PRODUCT_REJECTED` | Admin rejects product | Seller |
 | `ORDER_PLACED` | Payment fulfillment succeeds | Buyer + Seller |
 | `ORDER_CANCELLED` | Order cancelled | Buyer + Seller |
-| `DELIVERY_ASSIGNED` | Delivery partner assigned/reassigned | Partner + Buyer + Seller |
-| `ORDER_DELIVERED` | Delivery partner marks delivered | Buyer + Seller |
+| `ORDER_CONFIRMED` | Seller/admin confirms order | Buyer + Seller |
+| `DELIVERY_ASSIGNED` | Delivery partner assigned/reassigned (INTERNAL_DP) | Partner + Buyer + Seller |
+| `ORDER_SHIPPED` | Third-party mark shipped | Buyer + Seller |
+| `ORDER_DELIVERED` | Mark delivered (DP or seller/admin) | Buyer + Seller |
+| `DELIVERY_FAILED` | Mark delivery failed | Buyer + Seller |
 
 ---
 
@@ -42,8 +45,11 @@ See `constants/templateMapping.constants.ts`:
 | `PRODUCT_REJECTED` | `product-rejected` |
 | `ORDER_PLACED` | `order-placed` |
 | `ORDER_CANCELLED` | `order-cancelled` |
+| `ORDER_CONFIRMED` | `order-confirmed` |
 | `DELIVERY_ASSIGNED` | `delivery-assigned` |
+| `ORDER_SHIPPED` | `order-shipped` |
 | `ORDER_DELIVERED` | `order-delivered` |
+| `DELIVERY_FAILED` | `delivery-failed` |
 
 ---
 
@@ -108,5 +114,8 @@ Requires AWS SES configuration (see `modules/email/TESTING_NOTES.md`). In sandbo
 | Product approved/rejected | `PATCH /api/v1/products/:id/approve` or `/reject` |
 | Order placed | Complete checkout + payment verify/webhook |
 | Order cancelled | `POST /api/v1/orders/cancel` or admin cancel |
-| Delivery assigned | `PATCH /api/v1/orders/:id/assign-delivery-partner` |
-| Order delivered | `PATCH /api/v1/orders/:id/delivered` (delivery partner) |
+| Order confirmed | `POST /api/v1/orders/:id/confirm` |
+| Delivery assigned | `POST /api/v1/orders/:id/assign-delivery-partner` (INTERNAL_DP) |
+| Order shipped | `POST /api/v1/orders/:id/mark-shipped` (THIRD_PARTY) |
+| Order delivered | `POST /api/v1/orders/:id/delivered` (delivery partner or seller/admin) |
+| Delivery failed | `POST /api/v1/orders/:id/delivery-failed` |

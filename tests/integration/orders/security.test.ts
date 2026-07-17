@@ -66,16 +66,16 @@ describe("Orders — Section 9: Security", () => {
     expect(res.status).toBe(404);
   });
 
-  it("enforces seller ownership on process endpoint", async () => {
+  it("enforces seller ownership on confirm endpoint", async () => {
     const app = getApp();
     const prisma = getTestPrisma();
-    const context = await setupAssignedOrder(app, prisma);
+    const context = await setupOrderTestContext(app, prisma);
     const otherSeller = await createApprovedSeller(app, prisma);
 
     const res = await orderRequest(
       app,
       otherSeller.login.auth.accessToken,
-    ).process(context.orderId);
+    ).confirm(context.orderId, { fulfillmentMethod: "INTERNAL_DP" });
 
     expect(res.status).toBe(404);
   });
@@ -83,12 +83,12 @@ describe("Orders — Section 9: Security", () => {
   it("rejects buyer from seller-only endpoints (RBAC)", async () => {
     const app = getApp();
     const prisma = getTestPrisma();
-    const context = await setupAssignedOrder(app, prisma);
+    const context = await setupOrderTestContext(app, prisma);
 
     const res = await orderRequest(
       app,
       context.buyerAuth.accessToken,
-    ).process(context.orderId);
+    ).confirm(context.orderId, { fulfillmentMethod: "INTERNAL_DP" });
 
     expect(res.status).toBe(403);
   });

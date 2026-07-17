@@ -59,4 +59,44 @@ describe("Email — TemplateService", () => {
     expect(rendered.html).toContain("Missing regulatory certification");
     expect(rendered.text).toContain("Missing regulatory certification");
   });
+
+  it("renders order confirmed email with fulfillment method", () => {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_CONFIRMED, {
+      orderNumber: "ORD-1001",
+      fulfillmentMethodLabel: "Third-party courier",
+      role: "BUYER",
+    });
+
+    expect(rendered.subject).toBe("Order confirmed");
+    expect(rendered.html).toContain("Third-party courier");
+    expect(rendered.text).toContain("Third-party courier");
+  });
+
+  it("renders order shipped email with tracking link", () => {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_SHIPPED, {
+      orderNumber: "ORD-1001",
+      trackingUrl: "https://track.example.com/abc",
+      carrier: "BlueDart",
+      awbNumber: "AWB123",
+      role: "BUYER",
+    });
+
+    expect(rendered.subject).toBe("Order shipped");
+    expect(rendered.html).toContain("https://track.example.com/abc");
+    expect(rendered.html).toContain("BlueDart");
+    expect(rendered.html).toContain("AWB123");
+    expect(rendered.text).toContain("Track shipment: https://track.example.com/abc");
+  });
+
+  it("renders delivery failed email with reason", () => {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.DELIVERY_FAILED, {
+      orderNumber: "ORD-1001",
+      reason: "Recipient unavailable",
+      role: "SELLER",
+    });
+
+    expect(rendered.subject).toBe("Delivery failed");
+    expect(rendered.html).toContain("Recipient unavailable");
+    expect(rendered.text).toContain("Recipient unavailable");
+  });
 });

@@ -1,9 +1,12 @@
 import { EMAIL_TEMPLATE_IDS } from "../constants/email.constants.js";
 import {
   renderDeliveryAssignedEmail,
+  renderDeliveryFailedEmail,
   renderOrderCancelledEmail,
+  renderOrderConfirmedEmail,
   renderOrderDeliveredEmail,
   renderOrderPlacedEmail,
+  renderOrderShippedEmail,
   renderPasswordResetEmail,
   renderProductApprovedEmail,
   renderProductRejectedEmail,
@@ -32,10 +35,16 @@ export class TemplateService {
         return renderOrderPlacedEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_PLACED]);
       case EMAIL_TEMPLATE_IDS.ORDER_CANCELLED:
         return renderOrderCancelledEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_CANCELLED]);
+      case EMAIL_TEMPLATE_IDS.ORDER_CONFIRMED:
+        return renderOrderConfirmedEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_CONFIRMED]);
       case EMAIL_TEMPLATE_IDS.DELIVERY_ASSIGNED:
         return renderDeliveryAssignedEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.DELIVERY_ASSIGNED]);
+      case EMAIL_TEMPLATE_IDS.ORDER_SHIPPED:
+        return renderOrderShippedEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_SHIPPED]);
       case EMAIL_TEMPLATE_IDS.ORDER_DELIVERED:
         return renderOrderDeliveredEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_DELIVERED]);
+      case EMAIL_TEMPLATE_IDS.DELIVERY_FAILED:
+        return renderDeliveryFailedEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.DELIVERY_FAILED]);
       default: {
         const exhaustiveCheck: never = templateId;
         throw new Error(`Unsupported email template: ${exhaustiveCheck}`);

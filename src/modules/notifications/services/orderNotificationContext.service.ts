@@ -1,3 +1,4 @@
+import { FulfillmentMethod } from "../../../../generated/prisma/client.js";
 import { prisma } from "../../../infrastructure/prisma/client.js";
 import { buildRecipientName } from "../../email/services/email.service.js";
 import { buildPortalUrl } from "../../email/utils/portalUrl.util.js";
@@ -5,9 +6,12 @@ import { AuthPortal } from "../../../shared/enums/authPortal.enum.js";
 import { NOTIFICATION_EVENTS, NOTIFICATION_TYPES } from "../constants/notification.constants.js";
 import type {
   DeliveryAssignedEvent,
+  DeliveryFailedEvent,
   OrderCancelledEvent,
+  OrderConfirmedEvent,
   OrderDeliveredEvent,
   OrderPlacedEvent,
+  OrderShippedEvent,
 } from "../types/notificationEvent.types.js";
 
 const orderPartySelect = {
@@ -52,6 +56,19 @@ const orderPartySelect = {
     },
   },
 } as const;
+
+function fulfillmentMethodLabel(method: FulfillmentMethod): string {
+  switch (method) {
+    case FulfillmentMethod.INTERNAL_DP:
+      return "VitalNode delivery partner";
+    case FulfillmentMethod.THIRD_PARTY:
+      return "Third-party courier";
+    default: {
+      const exhaustiveCheck: never = method;
+      return exhaustiveCheck;
+    }
+  }
+}
 
 export class OrderNotificationContextService {
   async buildOrderPlacedEvent(orderId: string): Promise<OrderPlacedEvent | null> {
@@ -171,6 +188,65 @@ export class OrderNotificationContextService {
     };
   }
 
+  async buildOrderConfirmedEvent(
+    orderId: string,
+    method: FulfillmentMethod,
+  ): Promise<OrderConfirmedEvent | null> {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: orderPartySelect,
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    const methodLabel = fulfillmentMethodLabel(method);
+
+    return {
+      eventType: NOTIFICATION_EVENTS.ORDER_CONFIRMED,
+      correlationId: orderId,
+      inApp: [
+        {
+          userId: order.buyer.userId,
+          type: NOTIFICATION_TYPES.ORDER_CONFIRMED,
+          title: "Order confirmed",
+          message: `Your order ${order.orderNumber} has been confirmed (${methodLabel}).`,
+        },
+        {
+          userId: order.seller.userId,
+          type: NOTIFICATION_TYPES.ORDER_CONFIRMED,
+          title: "Order confirmed",
+          message: `Order ${order.orderNumber} is confirmed for fulfillment via ${methodLabel}.`,
+        },
+      ],
+      emails: [
+        {
+          to: order.buyer.user.email,
+          recipientName: buildRecipientName(
+            order.buyer.user.firstName,
+            order.buyer.user.lastName,
+          ),
+          orderNumber: order.orderNumber,
+          fulfillmentMethodLabel: methodLabel,
+          orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
+          role: "BUYER",
+        },
+        {
+          to: order.seller.user.email,
+          recipientName: buildRecipientName(
+            order.seller.user.firstName,
+            order.seller.user.lastName,
+          ),
+          orderNumber: order.orderNumber,
+          fulfillmentMethodLabel: methodLabel,
+          orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
+          role: "SELLER",
+        },
+      ],
+    };
+  }
+
   async buildDeliveryAssignedEvent(
     orderId: string,
     deliveryPartnerId: string,
@@ -270,6 +346,75 @@ export class OrderNotificationContextService {
     };
   }
 
+  async buildOrderShippedEvent(
+    orderId: string,
+    tracking: {
+      trackingUrl: string;
+      carrier?: string | null;
+      awbNumber?: string | null;
+    },
+  ): Promise<OrderShippedEvent | null> {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: orderPartySelect,
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    const carrier = tracking.carrier ?? undefined;
+    const awbNumber = tracking.awbNumber ?? undefined;
+    const trackingSuffix = carrier ? ` via ${carrier}` : "";
+
+    return {
+      eventType: NOTIFICATION_EVENTS.ORDER_SHIPPED,
+      correlationId: orderId,
+      inApp: [
+        {
+          userId: order.buyer.userId,
+          type: NOTIFICATION_TYPES.ORDER_SHIPPED,
+          title: "Order shipped",
+          message: `Your order ${order.orderNumber} has been shipped${trackingSuffix}. Track: ${tracking.trackingUrl}`,
+        },
+        {
+          userId: order.seller.userId,
+          type: NOTIFICATION_TYPES.ORDER_SHIPPED,
+          title: "Order shipped",
+          message: `Order ${order.orderNumber} has been marked as shipped.`,
+        },
+      ],
+      emails: [
+        {
+          to: order.buyer.user.email,
+          recipientName: buildRecipientName(
+            order.buyer.user.firstName,
+            order.buyer.user.lastName,
+          ),
+          orderNumber: order.orderNumber,
+          trackingUrl: tracking.trackingUrl,
+          carrier,
+          awbNumber,
+          orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
+          role: "BUYER",
+        },
+        {
+          to: order.seller.user.email,
+          recipientName: buildRecipientName(
+            order.seller.user.firstName,
+            order.seller.user.lastName,
+          ),
+          orderNumber: order.orderNumber,
+          trackingUrl: tracking.trackingUrl,
+          carrier,
+          awbNumber,
+          orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
+          role: "SELLER",
+        },
+      ],
+    };
+  }
+
   async buildOrderDeliveredEvent(
     orderId: string,
   ): Promise<OrderDeliveredEvent | null> {
@@ -317,6 +462,66 @@ export class OrderNotificationContextService {
             order.seller.user.lastName,
           ),
           orderNumber: order.orderNumber,
+          orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
+          role: "SELLER",
+        },
+      ],
+    };
+  }
+
+  async buildDeliveryFailedEvent(
+    orderId: string,
+    reason?: string | null,
+  ): Promise<DeliveryFailedEvent | null> {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: orderPartySelect,
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    const reasonSuffix = reason ? ` Reason: ${reason}` : "";
+    const reasonForEmail = reason ?? undefined;
+
+    return {
+      eventType: NOTIFICATION_EVENTS.DELIVERY_FAILED,
+      correlationId: orderId,
+      inApp: [
+        {
+          userId: order.buyer.userId,
+          type: NOTIFICATION_TYPES.DELIVERY_FAILED,
+          title: "Delivery failed",
+          message: `Delivery of your order ${order.orderNumber} could not be completed.${reasonSuffix}`,
+        },
+        {
+          userId: order.seller.userId,
+          type: NOTIFICATION_TYPES.DELIVERY_FAILED,
+          title: "Delivery failed",
+          message: `Delivery of order ${order.orderNumber} has failed.${reasonSuffix}`,
+        },
+      ],
+      emails: [
+        {
+          to: order.buyer.user.email,
+          recipientName: buildRecipientName(
+            order.buyer.user.firstName,
+            order.buyer.user.lastName,
+          ),
+          orderNumber: order.orderNumber,
+          reason: reasonForEmail,
+          orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
+          role: "BUYER",
+        },
+        {
+          to: order.seller.user.email,
+          recipientName: buildRecipientName(
+            order.seller.user.firstName,
+            order.seller.user.lastName,
+          ),
+          orderNumber: order.orderNumber,
+          reason: reasonForEmail,
           orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
           role: "SELLER",
         },

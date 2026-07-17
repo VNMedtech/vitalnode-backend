@@ -154,16 +154,17 @@ export async function fulfillOrderThroughDelivery(
 ) {
   const partner = await createDeliveryPartnerDirect(app, prisma);
 
+  const confirmRes = await orderRequest(app, context.sellerToken).confirm(
+    context.orderId,
+    { fulfillmentMethod: "INTERNAL_DP" },
+  );
+  assertOk(confirmRes.status, "Confirm order", confirmRes.body);
+
   const assignRes = await orderRequest(app, context.adminToken).assignDeliveryPartner(
     context.orderId,
     { deliveryPartnerId: partner.deliveryPartnerId },
   );
   assertOk(assignRes.status, "Assign delivery partner", assignRes.body);
-
-  const processRes = await orderRequest(app, context.sellerToken).process(
-    context.orderId,
-  );
-  assertOk(processRes.status, "Process order", processRes.body);
 
   const handoverRes = await orderRequest(
     app,
@@ -171,11 +172,10 @@ export async function fulfillOrderThroughDelivery(
   ).uploadHandoverProof(context.orderId, ORDER_PROOF_FILE);
   assertOk(handoverRes.status, "Upload handover proof", handoverRes.body);
 
-  const outRes = await orderRequest(
-    app,
-    context.sellerToken,
-  ).markOutForDelivery(context.orderId);
-  assertOk(outRes.status, "Mark out for delivery", outRes.body);
+  const outRes = await orderRequest(app, context.sellerToken).markShipped(
+    context.orderId,
+  );
+  assertOk(outRes.status, "Mark shipped", outRes.body);
 
   const deliveryProofRes = await orderRequest(
     app,

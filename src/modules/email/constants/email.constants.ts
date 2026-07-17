@@ -6,8 +6,11 @@ export const EMAIL_TEMPLATE_IDS = {
   PRODUCT_REJECTED: "product-rejected",
   ORDER_PLACED: "order-placed",
   ORDER_CANCELLED: "order-cancelled",
+  ORDER_CONFIRMED: "order-confirmed",
   DELIVERY_ASSIGNED: "delivery-assigned",
+  ORDER_SHIPPED: "order-shipped",
   ORDER_DELIVERED: "order-delivered",
+  DELIVERY_FAILED: "delivery-failed",
 } as const;
 
 export const EMAIL_SUBJECTS = {
@@ -18,8 +21,11 @@ export const EMAIL_SUBJECTS = {
   PRODUCT_REJECTED: "Your product was not approved",
   ORDER_PLACED: "Order placed successfully",
   ORDER_CANCELLED: "Order cancelled",
+  ORDER_CONFIRMED: "Order confirmed",
   DELIVERY_ASSIGNED: "Delivery partner assigned",
+  ORDER_SHIPPED: "Order shipped",
   ORDER_DELIVERED: "Order delivered",
+  DELIVERY_FAILED: "Delivery failed",
 } as const;
 
 export const EMAIL_BRAND = {

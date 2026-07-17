@@ -30,7 +30,7 @@ describe("Orders — Section 5: Delivery Actions", () => {
     );
   });
 
-  it("shows seller pickup contact and hides customer shipping before out for delivery", async () => {
+  it("shows seller pickup contact and hides customer shipping before SHIPPED", async () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupAssignedOrder(app, prisma);
@@ -60,6 +60,7 @@ describe("Orders — Section 5: Delivery Actions", () => {
     ).getById(context.orderId);
 
     expect(res.status).toBe(200);
+    expect(res.body.data.orderStatus).toBe("CONFIRMED");
     expect(res.body.data.shippingAddressSnapshot).toBeNull();
     expect(res.body.data.seller).toEqual(
       expect.objectContaining({
@@ -75,7 +76,7 @@ describe("Orders — Section 5: Delivery Actions", () => {
     );
   });
 
-  it("reveals customer shipping to delivery partner once out for delivery", async () => {
+  it("reveals customer shipping to delivery partner once SHIPPED", async () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupOutForDeliveryOrder(app, prisma);
@@ -113,7 +114,7 @@ describe("Orders — Section 5: Delivery Actions", () => {
     expect(res.body.data.seller).toHaveProperty("phoneNumber");
   });
 
-  it("uploads delivery proof while order is out for delivery", async () => {
+  it("uploads delivery proof while order is SHIPPED", async () => {
     const app = getApp();
     const prisma = getTestPrisma();
     const context = await setupOutForDeliveryOrder(app, prisma);

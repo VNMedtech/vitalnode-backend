@@ -11,9 +11,11 @@ import type {
   CancelOrderBody,
   CancelOrderByIdBody,
 } from "../validators/cancelOrder.schema.js";
+import type { ConfirmOrderBody } from "../validators/confirmOrder.schema.js";
 import type { CreateOrderBody } from "../validators/createOrder.schema.js";
 import type { OrderIdParam } from "../validators/orderParams.schema.js";
 import type { ListOrdersQueryInput } from "../validators/query.schema.js";
+import type { SaveTrackingBody } from "../validators/saveTracking.schema.js";
 import type { DeliveryFailedBody } from "../validators/updateOrderStatus.schema.js";
 import { CheckoutService } from "../services/checkout.service.js";
 import { DeliveryAssignmentService } from "../services/deliveryAssignment.service.js";
@@ -142,14 +144,61 @@ export const cancelOrderById: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const processOrder: RequestHandler = async (req, res, next) => {
+export const confirmOrder: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
-    const order = await orderStatusService.processOrder(actor.id, id);
+    const body = req.body as ConfirmOrderBody;
+    const order = await orderStatusService.confirmOrder(
+      actor.id,
+      actor.role,
+      id,
+      body,
+    );
     res
       .status(200)
-      .json(successResponse(order, "Order processing started successfully"));
+      .json(successResponse(order, "Order confirmed successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** @deprecated Alias for confirmOrder — prefer POST /:id/confirm. */
+export const processOrder = confirmOrder;
+
+export const switchFulfillmentMethod: RequestHandler = async (req, res, next) => {
+  try {
+    const actor = requireAuthenticatedUser(req);
+    const { id } = req.params as OrderIdParam;
+    const body = req.body as ConfirmOrderBody;
+    const order = await orderStatusService.switchFulfillmentMethod(
+      actor.id,
+      actor.role,
+      id,
+      body,
+    );
+    res
+      .status(200)
+      .json(successResponse(order, "Fulfillment method updated successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const saveTrackingDetails: RequestHandler = async (req, res, next) => {
+  try {
+    const actor = requireAuthenticatedUser(req);
+    const { id } = req.params as OrderIdParam;
+    const body = req.body as SaveTrackingBody;
+    const order = await orderStatusService.saveTrackingDetails(
+      actor.id,
+      actor.role,
+      id,
+      body,
+    );
+    res
+      .status(200)
+      .json(successResponse(order, "Tracking details saved successfully"));
   } catch (err) {
     next(err);
   }
@@ -172,22 +221,26 @@ export const uploadHandoverProof: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const markOutForDelivery: RequestHandler = async (req, res, next) => {
+export const markShipped: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
-    const order = await orderStatusService.markOutForDelivery(
+    const order = await orderStatusService.markShipped(
       actor.id,
+      actor.role,
       id,
       req.file,
     );
     res
       .status(200)
-      .json(successResponse(order, "Order marked out for delivery successfully"));
+      .json(successResponse(order, "Order marked shipped successfully"));
   } catch (err) {
     next(err);
   }
 };
+
+/** @deprecated Alias for markShipped. */
+export const markOutForDelivery = markShipped;
 
 export const uploadDeliveryProof: RequestHandler = async (req, res, next) => {
   try {
@@ -210,7 +263,12 @@ export const markDelivered: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
-    const order = await orderStatusService.markDelivered(actor.id, id, req.file);
+    const order = await orderStatusService.markDelivered(
+      actor.id,
+      actor.role,
+      id,
+      req.file,
+    );
     res
       .status(200)
       .json(successResponse(order, "Order marked delivered successfully"));
@@ -224,7 +282,12 @@ export const markDeliveryFailed: RequestHandler = async (req, res, next) => {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
     const body = req.body as DeliveryFailedBody;
-    const order = await orderStatusService.markDeliveryFailed(actor.id, id, body);
+    const order = await orderStatusService.markDeliveryFailed(
+      actor.id,
+      actor.role,
+      id,
+      body,
+    );
     res
       .status(200)
       .json(successResponse(order, "Order marked delivery failed successfully"));

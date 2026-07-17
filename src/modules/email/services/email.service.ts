@@ -8,9 +8,12 @@ import { AppError } from "../../../shared/errors/app.errors.js";
 import { EMAIL_TEMPLATE_IDS } from "../constants/email.constants.js";
 import type {
   DeliveryAssignedEmailData,
+  DeliveryFailedEmailData,
   OrderCancelledEmailData,
+  OrderConfirmedEmailData,
   OrderDeliveredEmailData,
   OrderPlacedEmailData,
+  OrderShippedEmailData,
   PasswordResetEmailData,
   ProductApprovedEmailData,
   ProductRejectedEmailData,
@@ -131,6 +134,19 @@ export class EmailService {
     });
   }
 
+  async sendOrderConfirmedEmail(
+    to: string,
+    data: OrderConfirmedEmailData,
+  ): Promise<{ messageId: string }> {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_CONFIRMED, data);
+    return this.sendEmail({
+      to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+    });
+  }
+
   async sendDeliveryAssignedEmail(
     to: string,
     data: DeliveryAssignedEmailData,
@@ -144,11 +160,37 @@ export class EmailService {
     });
   }
 
+  async sendOrderShippedEmail(
+    to: string,
+    data: OrderShippedEmailData,
+  ): Promise<{ messageId: string }> {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_SHIPPED, data);
+    return this.sendEmail({
+      to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+    });
+  }
+
   async sendOrderDeliveredEmail(
     to: string,
     data: OrderDeliveredEmailData,
   ): Promise<{ messageId: string }> {
     const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_DELIVERED, data);
+    return this.sendEmail({
+      to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+    });
+  }
+
+  async sendDeliveryFailedEmail(
+    to: string,
+    data: DeliveryFailedEmailData,
+  ): Promise<{ messageId: string }> {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.DELIVERY_FAILED, data);
     return this.sendEmail({
       to,
       subject: rendered.subject,

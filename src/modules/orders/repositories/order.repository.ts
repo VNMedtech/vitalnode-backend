@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  FulfillmentMethod,
   OrderStatus,
   PaymentStatus,
   type Prisma,
@@ -20,6 +21,23 @@ const orderItemSelect = {
   productSnapshot: true,
 } satisfies Prisma.OrderItemSelect;
 
+const shipmentSelect = {
+  id: true,
+  method: true,
+  bookingSource: true,
+  status: true,
+  deliveryPartnerId: true,
+  carrier: true,
+  awbNumber: true,
+  trackingUrl: true,
+  labelUrl: true,
+  externalShipmentId: true,
+  bookedAt: true,
+  shippedAt: true,
+  deliveredAt: true,
+  failureReason: true,
+} satisfies Prisma.ShipmentSelect;
+
 const orderSummarySelect = {
   id: true,
   orderNumber: true,
@@ -32,6 +50,9 @@ const orderSummarySelect = {
   placedAt: true,
   createdAt: true,
   updatedAt: true,
+  shipment: {
+    select: shipmentSelect,
+  },
   items: {
     select: orderItemSelect,
     orderBy: {
@@ -72,6 +93,9 @@ const orderDetailSelect = {
         },
       },
     },
+  },
+  shipment: {
+    select: shipmentSelect,
   },
   payment: {
     select: {
@@ -177,7 +201,14 @@ function buildOrderWhere(
   return {
     ...(buyerId ? { buyerId } : {}),
     ...(sellerId ? { sellerId } : {}),
-    ...(deliveryPartnerId ? { deliveryPartnerId } : {}),
+    ...(deliveryPartnerId
+      ? {
+          shipment: {
+            method: FulfillmentMethod.INTERNAL_DP,
+            deliveryPartnerId,
+          },
+        }
+      : {}),
     ...(status ? { orderStatus: status } : {}),
     ...(search
       ? {
@@ -305,7 +336,13 @@ export class OrderRepository {
     deliveryPartnerId: string,
   ) {
     return this.db.order.findFirst({
-      where: { id: orderId, deliveryPartnerId },
+      where: {
+        id: orderId,
+        shipment: {
+          method: FulfillmentMethod.INTERNAL_DP,
+          deliveryPartnerId,
+        },
+      },
       select: orderDetailSelect,
     });
   }
@@ -390,6 +427,7 @@ export class OrderRepository {
       where: {
         id: input.orderId,
         orderStatus: input.expectedStatus,
+        deliveryPartnerId: null,
       },
       data: {
         orderStatus: input.nextStatus,
@@ -410,6 +448,21 @@ export class OrderRepository {
       },
       data: {
         deliveryPartnerId: input.deliveryPartnerId,
+      },
+    });
+  }
+
+  clearDeliveryPartner(input: {
+    orderId: string;
+    expectedStatus: OrderStatus;
+  }) {
+    return this.db.order.updateMany({
+      where: {
+        id: input.orderId,
+        orderStatus: input.expectedStatus,
+      },
+      data: {
+        deliveryPartnerId: null,
       },
     });
   }

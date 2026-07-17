@@ -460,8 +460,34 @@ export function orderRequest(app: Express, accessToken = "") {
         .set(IDEMPOTENCY_HEADER, idempotencyKey)
         .send(body),
 
-    process: (id: string) =>
-      auth(request(app).post(`${ORDERS_BASE}/${id}/process`)),
+    confirm: (
+      id: string,
+      body: { fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY" },
+    ) => auth(request(app).post(`${ORDERS_BASE}/${id}/confirm`)).send(body),
+
+    process: (
+      id: string,
+      body: { fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY" } = {
+        fulfillmentMethod: "INTERNAL_DP",
+      },
+    ) => auth(request(app).post(`${ORDERS_BASE}/${id}/process`)).send(body),
+
+    switchFulfillmentMethod: (
+      id: string,
+      body: { fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY" },
+    ) =>
+      auth(request(app).patch(`${ORDERS_BASE}/${id}/fulfillment-method`)).send(
+        body,
+      ),
+
+    saveTracking: (
+      id: string,
+      body: {
+        carrier?: string | null;
+        awbNumber?: string | null;
+        trackingUrl?: string | null;
+      },
+    ) => auth(request(app).patch(`${ORDERS_BASE}/${id}/tracking`)).send(body),
 
     uploadHandoverProof: (
       id: string,
@@ -472,6 +498,17 @@ export function orderRequest(app: Express, accessToken = "") {
         file.buffer,
         file.filename,
       ),
+
+    markShipped: (
+      id: string,
+      file?: { buffer: Buffer; filename: string },
+    ) => {
+      let req = auth(request(app).post(`${ORDERS_BASE}/${id}/mark-shipped`));
+      if (file) {
+        req = req.attach("file", file.buffer, file.filename);
+      }
+      return req;
+    },
 
     markOutForDelivery: (
       id: string,

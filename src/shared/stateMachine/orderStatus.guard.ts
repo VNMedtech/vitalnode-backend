@@ -7,16 +7,9 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
     OrderStatus.CANCELLED,
   ],
   [OrderStatus.PAYMENT_FAILED]: [],
-  [OrderStatus.PLACED]: [
-    OrderStatus.ASSIGNED_DELIVERY_PARTNER,
-    OrderStatus.CANCELLED,
-  ],
-  [OrderStatus.ASSIGNED_DELIVERY_PARTNER]: [
-    OrderStatus.PROCESSING,
-    OrderStatus.CANCELLED,
-  ],
-  [OrderStatus.PROCESSING]: [OrderStatus.OUT_FOR_DELIVERY],
-  [OrderStatus.OUT_FOR_DELIVERY]: [
+  [OrderStatus.PLACED]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+  [OrderStatus.CONFIRMED]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+  [OrderStatus.SHIPPED]: [
     OrderStatus.DELIVERED,
     OrderStatus.PENDING_SETTLEMENT,
     OrderStatus.DELIVERY_FAILED,

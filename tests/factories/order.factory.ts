@@ -46,10 +46,16 @@ export interface OutForDeliveryOrderContext extends AssignedOrderContext {}
 
 export interface DeliveredOrderContext extends AssignedOrderContext {}
 
+export interface ThirdPartyConfirmedOrderContext extends OrderTestContext {}
+
+export interface ThirdPartyShippedOrderContext extends OrderTestContext {}
+
 export const ORDER_PROOF_FILE = {
   buffer: TEST_PNG_BUFFER,
   filename: "proof.png",
 } as const;
+
+export const TEST_TRACKING_URL = "https://tracking.example.com/abc123";
 
 export async function enrichPaidOrderContext(
   app: Express,
@@ -124,6 +130,18 @@ export async function createDeliveryPartnerDirect(
   };
 }
 
+export async function confirmOrderAsSeller(
+  app: Express,
+  sellerToken: string,
+  orderId: string,
+  fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY" = "INTERNAL_DP",
+): Promise<void> {
+  const res = await orderRequest(app, sellerToken).confirm(orderId, {
+    fulfillmentMethod,
+  });
+  assertOk(res.status, "Confirm order", res.body);
+}
+
 export async function assignDeliveryPartnerToOrder(
   app: Express,
   adminToken: string,
@@ -136,12 +154,20 @@ export async function assignDeliveryPartnerToOrder(
   assertOk(res.status, "Assign delivery partner", res.body);
 }
 
+/** Confirm INTERNAL_DP then admin-assign partner (order stays CONFIRMED). */
 export async function setupAssignedOrder(
   app: Express,
   prisma: PrismaClient,
 ): Promise<AssignedOrderContext> {
   const context = await setupOrderTestContext(app, prisma);
   const deliveryPartner = await createDeliveryPartnerDirect(app, prisma);
+
+  await confirmOrderAsSeller(
+    app,
+    context.sellerToken,
+    context.orderId,
+    "INTERNAL_DP",
+  );
 
   await assignDeliveryPartnerToOrder(
     app,
@@ -153,18 +179,12 @@ export async function setupAssignedOrder(
   return { ...context, deliveryPartner };
 }
 
+/** Alias — assigned INTERNAL_DP orders are already CONFIRMED. */
 export async function setupProcessingOrder(
   app: Express,
   prisma: PrismaClient,
 ): Promise<ProcessingOrderContext> {
-  const context = await setupAssignedOrder(app, prisma);
-
-  const processRes = await orderRequest(app, context.sellerToken).process(
-    context.orderId,
-  );
-  assertOk(processRes.status, "Process order", processRes.body);
-
-  return context;
+  return setupAssignedOrder(app, prisma);
 }
 
 export async function setupOutForDeliveryOrder(
@@ -179,11 +199,10 @@ export async function setupOutForDeliveryOrder(
   ).uploadHandoverProof(context.orderId, ORDER_PROOF_FILE);
   assertOk(handoverRes.status, "Upload handover proof", handoverRes.body);
 
-  const outRes = await orderRequest(
-    app,
-    context.sellerToken,
-  ).markOutForDelivery(context.orderId);
-  assertOk(outRes.status, "Mark out for delivery", outRes.body);
+  const outRes = await orderRequest(app, context.sellerToken).markShipped(
+    context.orderId,
+  );
+  assertOk(outRes.status, "Mark shipped", outRes.body);
 
   return context;
 }
@@ -205,6 +224,40 @@ export async function setupDeliveredOrder(
     context.deliveryPartner.deliveryPartnerToken,
   ).markDelivered(context.orderId);
   assertOk(deliveredRes.status, "Mark delivered", deliveredRes.body);
+
+  return context;
+}
+
+export async function setupThirdPartyConfirmedOrder(
+  app: Express,
+  prisma: PrismaClient,
+): Promise<ThirdPartyConfirmedOrderContext> {
+  const context = await setupOrderTestContext(app, prisma);
+  await confirmOrderAsSeller(
+    app,
+    context.sellerToken,
+    context.orderId,
+    "THIRD_PARTY",
+  );
+  return context;
+}
+
+export async function setupThirdPartyShippedOrder(
+  app: Express,
+  prisma: PrismaClient,
+): Promise<ThirdPartyShippedOrderContext> {
+  const context = await setupThirdPartyConfirmedOrder(app, prisma);
+
+  const trackingRes = await orderRequest(app, context.sellerToken).saveTracking(
+    context.orderId,
+    { trackingUrl: TEST_TRACKING_URL, carrier: "TestCourier" },
+  );
+  assertOk(trackingRes.status, "Save tracking", trackingRes.body);
+
+  const shipRes = await orderRequest(app, context.sellerToken).markShipped(
+    context.orderId,
+  );
+  assertOk(shipRes.status, "Mark shipped", shipRes.body);
 
   return context;
 }

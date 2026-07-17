@@ -194,7 +194,7 @@ describe("Account Disable/Enable — QA Audit", () => {
     it("preserves existing order access for buyer and allows seller order fulfillment", async () => {
       const app = getApp();
       const prisma = getTestPrisma();
-      const context = await setupAssignedOrder(app, prisma);
+      const context = await setupOrderTestContext(app, prisma);
       const sellerProfileId = await getSellerProfileId(
         prisma,
         context.sellerUserId,
@@ -209,14 +209,14 @@ describe("Account Disable/Enable — QA Audit", () => {
         context.buyerAuth.accessToken,
       ).getById(context.orderId);
       expect(buyerOrderRes.status).toBe(200);
-      expect(buyerOrderRes.body.data.orderStatus).toBe("ASSIGNED_DELIVERY_PARTNER");
+      expect(buyerOrderRes.body.data.orderStatus).toBe("PLACED");
 
-      const sellerProcessRes = await orderRequest(
+      const sellerConfirmRes = await orderRequest(
         app,
         context.sellerToken,
-      ).process(context.orderId);
-      expect(sellerProcessRes.status).toBe(200);
-      expect(sellerProcessRes.body.data.orderStatus).toBe("PROCESSING");
+      ).confirm(context.orderId, { fulfillmentMethod: "INTERNAL_DP" });
+      expect(sellerConfirmRes.status).toBe(200);
+      expect(sellerConfirmRes.body.data.orderStatus).toBe("CONFIRMED");
     });
 
     it("allows admin settlement for orders delivered before seller disable", async () => {
@@ -298,6 +298,10 @@ describe("Account Disable/Enable — QA Audit", () => {
       const prisma = getTestPrisma();
       const context = await setupOrderTestContext(app, prisma);
       const { login: adminLogin } = await createAdminViaApi(app, prisma);
+
+      await orderRequest(app, context.sellerToken).confirm(context.orderId, {
+        fulfillmentMethod: "INTERNAL_DP",
+      });
 
       const createRes = await deliveryPartnerRequest(
         app,

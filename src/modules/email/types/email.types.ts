@@ -66,6 +66,14 @@ export interface OrderCancelledEmailData {
   role: "BUYER" | "SELLER";
 }
 
+export interface OrderConfirmedEmailData {
+  recipientName?: string;
+  orderNumber: string;
+  fulfillmentMethodLabel: string;
+  orderUrl?: string;
+  role: "BUYER" | "SELLER";
+}
+
 export interface DeliveryAssignedEmailData {
   recipientName?: string;
   orderNumber: string;
@@ -73,9 +81,27 @@ export interface DeliveryAssignedEmailData {
   role: "DELIVERY_PARTNER" | "BUYER" | "SELLER";
 }
 
+export interface OrderShippedEmailData {
+  recipientName?: string;
+  orderNumber: string;
+  trackingUrl: string;
+  carrier?: string;
+  awbNumber?: string;
+  orderUrl?: string;
+  role: "BUYER" | "SELLER";
+}
+
 export interface OrderDeliveredEmailData {
   recipientName?: string;
   orderNumber: string;
+  orderUrl?: string;
+  role: "BUYER" | "SELLER";
+}
+
+export interface DeliveryFailedEmailData {
+  recipientName?: string;
+  orderNumber: string;
+  reason?: string;
   orderUrl?: string;
   role: "BUYER" | "SELLER";
 }
@@ -88,6 +114,9 @@ export type TemplateDataMap = {
   [EMAIL_TEMPLATE_IDS.PRODUCT_REJECTED]: ProductRejectedEmailData;
   [EMAIL_TEMPLATE_IDS.ORDER_PLACED]: OrderPlacedEmailData;
   [EMAIL_TEMPLATE_IDS.ORDER_CANCELLED]: OrderCancelledEmailData;
+  [EMAIL_TEMPLATE_IDS.ORDER_CONFIRMED]: OrderConfirmedEmailData;
   [EMAIL_TEMPLATE_IDS.DELIVERY_ASSIGNED]: DeliveryAssignedEmailData;
+  [EMAIL_TEMPLATE_IDS.ORDER_SHIPPED]: OrderShippedEmailData;
   [EMAIL_TEMPLATE_IDS.ORDER_DELIVERED]: OrderDeliveredEmailData;
+  [EMAIL_TEMPLATE_IDS.DELIVERY_FAILED]: DeliveryFailedEmailData;
 };

@@ -1,4 +1,10 @@
-import type { OrderStatus, ProofType } from "../../../../generated/prisma/client.js";
+import type {
+  FulfillmentMethod,
+  OrderStatus,
+  ProofType,
+  ShipmentBookingSource,
+  ShipmentStatus,
+} from "../../../../generated/prisma/client.js";
 import type { OrderSortField } from "../constants/order.constants.js";
 
 export interface CreateOrderInput {
@@ -18,6 +24,20 @@ export interface AssignDeliveryPartnerInput {
   deliveryPartnerId: string;
 }
 
+export interface ConfirmOrderInput {
+  fulfillmentMethod: FulfillmentMethod;
+}
+
+export interface SwitchFulfillmentMethodInput {
+  fulfillmentMethod: FulfillmentMethod;
+}
+
+export interface SaveTrackingInput {
+  carrier?: string | null;
+  awbNumber?: string | null;
+  trackingUrl?: string | null;
+}
+
 export interface OrderProofInput {
   fileUploadId: string;
   fileUrl: string;
@@ -25,6 +45,23 @@ export interface OrderProofInput {
 
 export interface DeliveryFailedInput {
   reason?: string;
+}
+
+export interface ShipmentDto {
+  id: string;
+  method: FulfillmentMethod;
+  bookingSource: ShipmentBookingSource | null;
+  status: ShipmentStatus;
+  deliveryPartnerId: string | null;
+  carrier: string | null;
+  awbNumber: string | null;
+  trackingUrl: string | null;
+  labelUrl: string | null;
+  externalShipmentId: string | null;
+  bookedAt: Date | null;
+  shippedAt: Date | null;
+  deliveredAt: Date | null;
+  failureReason: string | null;
 }
 
 export interface ListOrdersQuery {
@@ -100,6 +137,8 @@ export interface OrderSummaryDto {
   buyerId: string;
   sellerId: string;
   deliveryPartnerId: string | null;
+  /** Present after seller/admin confirm; null while PLACED / unpaid. */
+  shipment: ShipmentDto | null;
 }
 
 /** Contact fields for the assigned delivery partner (order detail only). */
@@ -125,10 +164,11 @@ export interface OrderSellerContactDto {
 }
 
 export interface OrderDetailDto extends OrderSummaryDto {
-  /** Null for delivery partners until the order is out for delivery. */
+  /** Null for delivery partners until the order is SHIPPED. */
   shippingAddressSnapshot: AddressSnapshot | null;
   seller: OrderSellerContactDto;
   deliveryPartner: OrderDeliveryPartnerContactDto | null;
+  shipment: ShipmentDto | null;
   items: OrderItemDto[];
   payment: OrderPaymentSummary | null;
   proofs: OrderProofDto[];
