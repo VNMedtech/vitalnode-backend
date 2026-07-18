@@ -98,7 +98,7 @@ export class DeliveryAssignmentService {
 
     if (!order.shipment) {
       throw new ConflictError(
-        "Confirm the order with INTERNAL_DP before assigning a delivery partner",
+        "Set fulfillment method to INTERNAL_DP before assigning a delivery partner",
       );
     }
 
@@ -188,7 +188,7 @@ export class DeliveryAssignmentService {
 
     if (!order.shipment) {
       throw new ConflictError(
-        "Confirm the order with INTERNAL_DP before reassigning a delivery partner",
+        "Set fulfillment method to INTERNAL_DP before reassigning a delivery partner",
       );
     }
 

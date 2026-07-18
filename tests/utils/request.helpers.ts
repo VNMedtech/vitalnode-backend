@@ -501,7 +501,6 @@ export function orderRequest(app: Express, accessToken = "") {
     confirm: (
       id: string,
       body: {
-        fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY";
         pickupAddressId: string;
       },
     ) => auth(request(app).post(`${ORDERS_BASE}/${id}/confirm`)).send(body),
@@ -509,7 +508,6 @@ export function orderRequest(app: Express, accessToken = "") {
     process: (
       id: string,
       body: {
-        fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY";
         pickupAddressId: string;
       },
     ) => auth(request(app).post(`${ORDERS_BASE}/${id}/process`)).send(body),

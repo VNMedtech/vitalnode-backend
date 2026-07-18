@@ -155,7 +155,6 @@ export async function confirmOrderAsSeller(
   app: Express,
   sellerToken: string,
   orderId: string,
-  fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY" = "INTERNAL_DP",
   pickupAddressId?: string,
 ): Promise<void> {
   const resolvedPickupAddressId =
@@ -163,10 +162,22 @@ export async function confirmOrderAsSeller(
     (await resolveSellerPickupAddressId(app, sellerToken));
 
   const res = await orderRequest(app, sellerToken).confirm(orderId, {
-    fulfillmentMethod,
     pickupAddressId: resolvedPickupAddressId,
   });
   assertOk(res.status, "Confirm order", res.body);
+}
+
+export async function setFulfillmentMethodAsAdmin(
+  app: Express,
+  adminToken: string,
+  orderId: string,
+  fulfillmentMethod: "INTERNAL_DP" | "THIRD_PARTY",
+): Promise<void> {
+  const res = await orderRequest(app, adminToken).switchFulfillmentMethod(
+    orderId,
+    { fulfillmentMethod },
+  );
+  assertOk(res.status, "Set fulfillment method", res.body);
 }
 
 export async function assignDeliveryPartnerToOrder(
@@ -189,9 +200,11 @@ export async function setupAssignedOrder(
   const context = await setupOrderTestContext(app, prisma);
   const deliveryPartner = await createDeliveryPartnerDirect(app, prisma);
 
-  await confirmOrderAsSeller(
+  await confirmOrderAsSeller(app, context.sellerToken, context.orderId);
+
+  await setFulfillmentMethodAsAdmin(
     app,
-    context.sellerToken,
+    context.adminToken,
     context.orderId,
     "INTERNAL_DP",
   );
@@ -260,9 +273,10 @@ export async function setupThirdPartyConfirmedOrder(
   prisma: PrismaClient,
 ): Promise<ThirdPartyConfirmedOrderContext> {
   const context = await setupOrderTestContext(app, prisma);
-  await confirmOrderAsSeller(
+  await confirmOrderAsSeller(app, context.sellerToken, context.orderId);
+  await setFulfillmentMethodAsAdmin(
     app,
-    context.sellerToken,
+    context.adminToken,
     context.orderId,
     "THIRD_PARTY",
   );
@@ -275,11 +289,17 @@ export async function setupThirdPartyShippedOrder(
 ): Promise<ThirdPartyShippedOrderContext> {
   const context = await setupThirdPartyConfirmedOrder(app, prisma);
 
-  const trackingRes = await orderRequest(app, context.sellerToken).saveTracking(
+  const trackingRes = await orderRequest(app, context.adminToken).saveTracking(
     context.orderId,
     { trackingUrl: TEST_TRACKING_URL, carrier: "TestCourier" },
   );
   assertOk(trackingRes.status, "Save tracking", trackingRes.body);
+
+  const handoverRes = await orderRequest(
+    app,
+    context.sellerToken,
+  ).uploadHandoverProof(context.orderId, ORDER_PROOF_FILE);
+  assertOk(handoverRes.status, "Upload handover proof", handoverRes.body);
 
   const shipRes = await orderRequest(app, context.sellerToken).markShipped(
     context.orderId,

@@ -271,11 +271,11 @@ orderRouter.get(
  * /api/v1/orders/{id}/confirm:
  *   post:
  *     tags: [Orders]
- *     summary: Confirm order and choose fulfillment method
+ *     summary: Confirm order with pickup warehouse
  *     description: |
- *       Seller or admin. Requires `fulfillmentMethod` (`INTERNAL_DP` | `THIRD_PARTY`)
- *       and `pickupAddressId` (active warehouse owned by the order's seller).
- *       Transitions PLACED → CONFIRMED, snapshots the pickup address, and creates a Shipment.
+ *       Seller or admin. Requires `pickupAddressId` (active warehouse owned by the order's seller).
+ *       Transitions PLACED → CONFIRMED and snapshots the pickup address. Does not create a Shipment;
+ *       admin sets fulfillment method afterward via PATCH /fulfillment-method.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -289,11 +289,8 @@ orderRouter.get(
  *         application/json:
  *           schema:
  *             type: object
- *             required: [fulfillmentMethod, pickupAddressId]
+ *             required: [pickupAddressId]
  *             properties:
- *               fulfillmentMethod:
- *                 type: string
- *                 enum: [INTERNAL_DP, THIRD_PARTY]
  *               pickupAddressId:
  *                 type: string
  *                 format: uuid
@@ -334,11 +331,8 @@ orderRouter.post(
  *         application/json:
  *           schema:
  *             type: object
- *             required: [fulfillmentMethod, pickupAddressId]
+ *             required: [pickupAddressId]
  *             properties:
- *               fulfillmentMethod:
- *                 type: string
- *                 enum: [INTERNAL_DP, THIRD_PARTY]
  *               pickupAddressId:
  *                 type: string
  *                 format: uuid
@@ -359,10 +353,11 @@ orderRouter.post(
  * /api/v1/orders/{id}/fulfillment-method:
  *   patch:
  *     tags: [Orders]
- *     summary: Switch fulfillment method while CONFIRMED
+ *     summary: Set or switch fulfillment method while CONFIRMED
  *     description: |
- *       Seller or admin. Allowed only while order is CONFIRMED (before SHIPPED).
- *       Clears partner or tracking fields as needed when switching methods.
+ *       Admin only. Allowed only while order is CONFIRMED (before SHIPPED).
+ *       First call creates the Shipment with the chosen method; subsequent calls switch methods
+ *       (clears partner or tracking fields as needed).
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -388,7 +383,7 @@ orderRouter.post(
 orderRouter.patch(
   "/:id/fulfillment-method",
   authenticate,
-  authorizePermission(permissions.orders.updateStatus),
+  authorizePermission(permissions.orders.assignDelivery),
   validate({
     params: orderIdParamSchema,
     body: switchFulfillmentMethodBodySchema,
@@ -403,8 +398,8 @@ orderRouter.patch(
  *     tags: [Orders]
  *     summary: Save third-party tracking details
  *     description: |
- *       Seller or admin. For THIRD_PARTY shipments while CONFIRMED or early SHIPPED.
- *       `trackingUrl` is required before mark-shipped (may be saved here first).
+ *       Admin only. For THIRD_PARTY shipments while CONFIRMED or early SHIPPED.
+ *       `trackingUrl` is required before seller can mark-shipped (admin must save it first).
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -425,11 +420,13 @@ orderRouter.patch(
  *     responses:
  *       200:
  *         description: Tracking details saved
+ *       403:
+ *         description: Seller or non-admin actor forbidden
  */
 orderRouter.patch(
   "/:id/tracking",
   authenticate,
-  authorizePermission(permissions.orders.updateStatus),
+  authorizePermission(permissions.orders.assignDelivery),
   validate({ params: orderIdParamSchema, body: saveTrackingBodySchema }),
   orderController.saveTrackingDetails,
 );
@@ -439,8 +436,11 @@ orderRouter.patch(
  * /api/v1/orders/{id}/handover-proof:
  *   post:
  *     tags: [Orders]
- *     summary: Upload handover proof (INTERNAL_DP)
- *     description: Approved seller only. Multipart image upload. Required before mark-shipped for INTERNAL_DP.
+ *     summary: Upload handover proof
+ *     description: |
+ *       Approved seller only. Multipart image upload.
+ *       Allowed for INTERNAL_DP and THIRD_PARTY while CONFIRMED.
+ *       Required before mark-shipped for both methods.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -480,7 +480,7 @@ orderRouter.post(
  *     description: |
  *       Seller or admin.
  *       INTERNAL_DP: requires assigned partner + handover proof; optional multipart proof.
- *       THIRD_PARTY: requires trackingUrl on shipment (no proof).
+ *       THIRD_PARTY: requires admin-saved trackingUrl + handover proof; optional multipart proof.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -585,7 +585,7 @@ orderRouter.post(
  *     summary: Mark order as delivered
  *     description: |
  *       INTERNAL_DP: assigned delivery partner; delivery proof required (optional multipart).
- *       THIRD_PARTY: seller or admin; no proof required.
+ *       THIRD_PARTY: admin only; no proof required. Sellers receive 403.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -603,6 +603,8 @@ orderRouter.post(
  *     responses:
  *       200:
  *         description: Order marked as delivered
+ *       403:
+ *         description: Seller forbidden on THIRD_PARTY; admin forbidden on INTERNAL_DP
  */
 orderRouter.post(
   "/:id/delivered",
@@ -621,7 +623,7 @@ orderRouter.post(
  *     summary: Mark delivery as failed
  *     description: |
  *       INTERNAL_DP: delivery partner or admin.
- *       THIRD_PARTY: seller or admin.
+ *       THIRD_PARTY: admin only. Sellers receive 403.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -639,6 +641,8 @@ orderRouter.post(
  *     responses:
  *       200:
  *         description: Delivery marked as failed
+ *       403:
+ *         description: Seller forbidden on THIRD_PARTY
  */
 orderRouter.post(
   "/:id/delivery-failed",

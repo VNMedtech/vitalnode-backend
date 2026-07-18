@@ -161,9 +161,17 @@ export async function fulfillOrderThroughDelivery(
 
   const confirmRes = await orderRequest(app, context.sellerToken).confirm(
     context.orderId,
-    { fulfillmentMethod: "INTERNAL_DP", pickupAddressId },
+    { pickupAddressId },
   );
   assertOk(confirmRes.status, "Confirm order", confirmRes.body);
+
+  const methodRes = await orderRequest(
+    app,
+    context.adminToken,
+  ).switchFulfillmentMethod(context.orderId, {
+    fulfillmentMethod: "INTERNAL_DP",
+  });
+  assertOk(methodRes.status, "Set fulfillment method", methodRes.body);
 
   const assignRes = await orderRequest(app, context.adminToken).assignDeliveryPartner(
     context.orderId,

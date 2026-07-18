@@ -11,7 +11,7 @@ import type {
   CancelOrderBody,
   CancelOrderByIdBody,
 } from "../validators/cancelOrder.schema.js";
-import type { ConfirmOrderBody } from "../validators/confirmOrder.schema.js";
+import type { ConfirmOrderBody, SwitchFulfillmentMethodBody } from "../validators/confirmOrder.schema.js";
 import type { CreateOrderBody } from "../validators/createOrder.schema.js";
 import type { OrderIdParam } from "../validators/orderParams.schema.js";
 import type { ListOrdersQueryInput } from "../validators/query.schema.js";
@@ -170,7 +170,7 @@ export const switchFulfillmentMethod: RequestHandler = async (req, res, next) =>
   try {
     const actor = requireAuthenticatedUser(req);
     const { id } = req.params as OrderIdParam;
-    const body = req.body as ConfirmOrderBody;
+    const body = req.body as SwitchFulfillmentMethodBody;
     const order = await orderStatusService.switchFulfillmentMethod(
       actor.id,
       actor.role,

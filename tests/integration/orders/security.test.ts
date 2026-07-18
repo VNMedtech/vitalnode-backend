@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { UserStatus } from "../../../src/shared/enums/userStatus.enum.js";
 import {
   resolveSellerPickupAddressId,
+  setFulfillmentMethodAsAdmin,
   setupAssignedOrder,
   setupOrderTestContext,
+  TEST_TRACKING_URL,
 } from "../../factories/order.factory.js";
 import { invalidOrderUuid } from "../../fixtures/order.payloads.js";
 import {
@@ -81,7 +83,6 @@ describe("Orders — Section 9: Security", () => {
       app,
       otherSeller.login.auth.accessToken,
     ).confirm(context.orderId, {
-      fulfillmentMethod: "INTERNAL_DP",
       pickupAddressId,
     });
 
@@ -101,9 +102,58 @@ describe("Orders — Section 9: Security", () => {
       app,
       context.buyerAuth.accessToken,
     ).confirm(context.orderId, {
-      fulfillmentMethod: "INTERNAL_DP",
       pickupAddressId,
     });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects seller from setting fulfillment method (RBAC)", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupOrderTestContext(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
+
+    await orderRequest(app, context.sellerToken).confirm(context.orderId, {
+      pickupAddressId,
+    });
+
+    const res = await orderRequest(
+      app,
+      context.sellerToken,
+    ).switchFulfillmentMethod(context.orderId, {
+      fulfillmentMethod: "INTERNAL_DP",
+    });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects seller from saving tracking on THIRD_PARTY order (RBAC)", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupOrderTestContext(app, prisma);
+    const pickupAddressId = await resolveSellerPickupAddressId(
+      app,
+      context.sellerToken,
+    );
+
+    await orderRequest(app, context.sellerToken).confirm(context.orderId, {
+      pickupAddressId,
+    });
+    await setFulfillmentMethodAsAdmin(
+      app,
+      context.adminToken,
+      context.orderId,
+      "THIRD_PARTY",
+    );
+
+    const res = await orderRequest(app, context.sellerToken).saveTracking(
+      context.orderId,
+      { trackingUrl: TEST_TRACKING_URL },
+    );
 
     expect(res.status).toBe(403);
   });

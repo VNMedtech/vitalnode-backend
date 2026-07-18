@@ -155,7 +155,6 @@ export class EmailChannelService {
                 emailService.sendOrderConfirmedEmail(email.to, {
                   recipientName: email.recipientName,
                   orderNumber: email.orderNumber,
-                  fulfillmentMethodLabel: email.fulfillmentMethodLabel,
                   orderUrl: email.orderUrl,
                   role: email.role,
                 }),

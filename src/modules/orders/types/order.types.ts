@@ -25,7 +25,6 @@ export interface AssignDeliveryPartnerInput {
 }
 
 export interface ConfirmOrderInput {
-  fulfillmentMethod: FulfillmentMethod;
   pickupAddressId: string;
 }
 

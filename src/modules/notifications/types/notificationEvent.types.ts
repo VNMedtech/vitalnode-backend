@@ -93,7 +93,6 @@ export interface OrderConfirmedEvent {
     to: string;
     recipientName?: string;
     orderNumber: string;
-    fulfillmentMethodLabel: string;
     orderUrl?: string;
     role: "BUYER" | "SELLER";
   }>;

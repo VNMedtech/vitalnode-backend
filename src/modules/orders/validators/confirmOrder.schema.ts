@@ -3,7 +3,6 @@ import { FulfillmentMethod } from "../../../../generated/prisma/client.js";
 
 export const confirmOrderBodySchema = z
   .object({
-    fulfillmentMethod: z.nativeEnum(FulfillmentMethod),
     pickupAddressId: z.string().uuid("Invalid pickup address ID"),
   })
   .strict();

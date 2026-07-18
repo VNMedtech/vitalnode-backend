@@ -69,7 +69,6 @@ export interface OrderCancelledEmailData {
 export interface OrderConfirmedEmailData {
   recipientName?: string;
   orderNumber: string;
-  fulfillmentMethodLabel: string;
   orderUrl?: string;
   role: "BUYER" | "SELLER";
 }

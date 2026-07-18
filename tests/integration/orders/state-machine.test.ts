@@ -40,11 +40,15 @@ describe("Orders — Section 8: State Machine", () => {
     const prisma = getTestPrisma();
     const context = await setupThirdPartyConfirmedOrder(app, prisma);
 
-    await orderRequest(app, context.sellerToken).saveTracking(context.orderId, {
+    await orderRequest(app, context.adminToken).saveTracking(context.orderId, {
       trackingUrl: TEST_TRACKING_URL,
     });
+    await orderRequest(app, context.sellerToken).uploadHandoverProof(
+      context.orderId,
+      ORDER_PROOF_FILE,
+    );
     await orderRequest(app, context.sellerToken).markShipped(context.orderId);
-    const res = await orderRequest(app, context.sellerToken).markDelivered(
+    const res = await orderRequest(app, context.adminToken).markDelivered(
       context.orderId,
     );
 
@@ -88,12 +92,13 @@ describe("Orders — Section 8: State Machine", () => {
 
     const res = await orderRequest(app, context.sellerToken).confirm(
       context.orderId,
-      { fulfillmentMethod: "INTERNAL_DP", pickupAddressId },
+      { pickupAddressId },
     );
 
     expect(res.status).toBe(200);
     expect(res.body.data.orderStatus).toBe("CONFIRMED");
     expect(res.body.data.deliveryPartnerId).toBeNull();
+    expect(res.body.data.shipment).toBeNull();
   });
 
   it("rejects SHIPPED from CONFIRMED without handover proof (INTERNAL_DP)", async () => {
@@ -161,7 +166,7 @@ describe("Orders — Section 8: State Machine", () => {
 
     const res = await orderRequest(app, context.sellerToken).confirm(
       context.orderId,
-      { fulfillmentMethod: "INTERNAL_DP", pickupAddressId },
+      { pickupAddressId },
     );
 
     expect(res.status).toBe(409);
@@ -187,7 +192,7 @@ describe("Orders — Section 8: State Machine", () => {
 
     const res = await orderRequest(
       app,
-      context.sellerToken,
+      context.adminToken,
     ).switchFulfillmentMethod(context.orderId, {
       fulfillmentMethod: "THIRD_PARTY",
     });

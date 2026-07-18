@@ -1,4 +1,3 @@
-import { FulfillmentMethod } from "../../../../generated/prisma/client.js";
 import { prisma } from "../../../infrastructure/prisma/client.js";
 import { buildRecipientName } from "../../email/services/email.service.js";
 import { buildPortalUrl } from "../../email/utils/portalUrl.util.js";
@@ -56,19 +55,6 @@ const orderPartySelect = {
     },
   },
 } as const;
-
-function fulfillmentMethodLabel(method: FulfillmentMethod): string {
-  switch (method) {
-    case FulfillmentMethod.INTERNAL_DP:
-      return "VitalNode delivery partner";
-    case FulfillmentMethod.THIRD_PARTY:
-      return "Third-party courier";
-    default: {
-      const exhaustiveCheck: never = method;
-      return exhaustiveCheck;
-    }
-  }
-}
 
 export class OrderNotificationContextService {
   async buildOrderPlacedEvent(orderId: string): Promise<OrderPlacedEvent | null> {
@@ -190,7 +176,6 @@ export class OrderNotificationContextService {
 
   async buildOrderConfirmedEvent(
     orderId: string,
-    method: FulfillmentMethod,
   ): Promise<OrderConfirmedEvent | null> {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -201,8 +186,6 @@ export class OrderNotificationContextService {
       return null;
     }
 
-    const methodLabel = fulfillmentMethodLabel(method);
-
     return {
       eventType: NOTIFICATION_EVENTS.ORDER_CONFIRMED,
       correlationId: orderId,
@@ -211,13 +194,13 @@ export class OrderNotificationContextService {
           userId: order.buyer.userId,
           type: NOTIFICATION_TYPES.ORDER_CONFIRMED,
           title: "Order confirmed",
-          message: `Your order ${order.orderNumber} has been confirmed (${methodLabel}).`,
+          message: `Your order ${order.orderNumber} has been confirmed. Fulfillment routing will follow shortly.`,
         },
         {
           userId: order.seller.userId,
           type: NOTIFICATION_TYPES.ORDER_CONFIRMED,
           title: "Order confirmed",
-          message: `Order ${order.orderNumber} is confirmed for fulfillment via ${methodLabel}.`,
+          message: `Order ${order.orderNumber} is confirmed. Awaiting platform fulfillment setup.`,
         },
       ],
       emails: [
@@ -228,7 +211,6 @@ export class OrderNotificationContextService {
             order.buyer.user.lastName,
           ),
           orderNumber: order.orderNumber,
-          fulfillmentMethodLabel: methodLabel,
           orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
           role: "BUYER",
         },
@@ -239,7 +221,6 @@ export class OrderNotificationContextService {
             order.seller.user.lastName,
           ),
           orderNumber: order.orderNumber,
-          fulfillmentMethodLabel: methodLabel,
           orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
           role: "SELLER",
         },

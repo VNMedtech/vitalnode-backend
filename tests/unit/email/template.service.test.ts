@@ -60,16 +60,16 @@ describe("Email — TemplateService", () => {
     expect(rendered.text).toContain("Missing regulatory certification");
   });
 
-  it("renders order confirmed email with fulfillment method", () => {
+  it("renders order confirmed email without fulfillment method", () => {
     const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_CONFIRMED, {
       orderNumber: "ORD-1001",
-      fulfillmentMethodLabel: "Third-party courier",
       role: "BUYER",
     });
 
     expect(rendered.subject).toBe("Order confirmed");
-    expect(rendered.html).toContain("Third-party courier");
-    expect(rendered.text).toContain("Third-party courier");
+    expect(rendered.html).toContain("ORD-1001");
+    expect(rendered.html).not.toContain("Third-party courier");
+    expect(rendered.text).toContain("ORD-1001");
   });
 
   it("renders order shipped email with tracking link", () => {

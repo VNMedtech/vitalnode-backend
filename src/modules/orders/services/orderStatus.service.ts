@@ -80,7 +80,9 @@ function assertTransition(from: OrderStatus, to: OrderStatus): void {
 
 function requireShipment(order: OrderDetailRecord) {
   if (!order.shipment) {
-    throw new ConflictError("Order has no shipment; confirm the order first");
+    throw new ConflictError(
+      "Fulfillment method must be set before this action",
+    );
   }
   return order.shipment;
 }
@@ -230,14 +232,8 @@ export class OrderStatusService {
 
     const pickupAddressSnapshot = buildPickupAddressSnapshot(pickupAddress);
 
-    const bookingSource =
-      input.fulfillmentMethod === FulfillmentMethod.THIRD_PARTY
-        ? ShipmentBookingSource.MANUAL
-        : null;
-
     return runInTransaction(async (tx) => {
       const orderRepo = new OrderRepository(tx);
-      const shipmentRepo = new ShipmentRepository(tx);
 
       const locked = await orderRepo.lockById(orderId);
       if (!locked) {
@@ -270,13 +266,6 @@ export class OrderStatusService {
         throw new ConflictError("Order status update failed");
       }
 
-      await shipmentRepo.create({
-        orderId,
-        method: input.fulfillmentMethod,
-        bookingSource,
-        status: ShipmentStatus.CREATED,
-      });
-
       await recordCommerceAudit(tx, {
         actorUserId,
         action: ORDER_ACTIONS.STATUS_CHANGED,
@@ -285,21 +274,8 @@ export class OrderStatusService {
         metadata: {
           previousStatus: from,
           newStatus: to,
-          fulfillmentMethod: input.fulfillmentMethod,
           pickupAddressId: pickupAddress.id,
           processedByRole: role,
-        },
-      });
-
-      await recordCommerceAudit(tx, {
-        actorUserId,
-        action: ORDER_ACTIONS.FULFILLMENT_METHOD_SET,
-        entityType: ORDER_AUDIT_ENTITY_TYPE,
-        entityId: orderId,
-        metadata: {
-          fulfillmentMethod: input.fulfillmentMethod,
-          bookingSource,
-          pickupAddressId: pickupAddress.id,
         },
       });
 
@@ -309,10 +285,7 @@ export class OrderStatusService {
       }
 
       const orderConfirmedEvent =
-        await orderNotificationContextService.buildOrderConfirmedEvent(
-          orderId,
-          input.fulfillmentMethod,
-        );
+        await orderNotificationContextService.buildOrderConfirmedEvent(orderId);
       if (orderConfirmedEvent) {
         notificationDispatcher.emit(orderConfirmedEvent);
       }
@@ -327,7 +300,14 @@ export class OrderStatusService {
     orderId: string,
     input: SwitchFulfillmentMethodInput,
   ): Promise<OrderDetailDto> {
-    const order = await this.getOrderForSellerOrAdmin(actorUserId, role, orderId);
+    if (role !== UserRole.ADMIN) {
+      throw new ForbiddenError("Only admin can set or switch fulfillment method");
+    }
+
+    const order = await this.orderRepo.findDetailById(orderId);
+    if (!order) {
+      throw new NotFoundError("Order not found");
+    }
 
     if (order.orderStatus !== OrderStatus.CONFIRMED) {
       throw new ConflictError(
@@ -335,16 +315,58 @@ export class OrderStatusService {
       );
     }
 
-    const shipment = requireShipment(order);
+    const bookingSource =
+      input.fulfillmentMethod === FulfillmentMethod.THIRD_PARTY
+        ? ShipmentBookingSource.MANUAL
+        : null;
+
+    if (!order.shipment) {
+      return runInTransaction(async (tx) => {
+        const orderRepo = new OrderRepository(tx);
+        const shipmentRepo = new ShipmentRepository(tx);
+
+        const locked = await orderRepo.lockById(orderId);
+        if (!locked) {
+          throw new NotFoundError("Order not found");
+        }
+
+        if (locked.orderStatus !== OrderStatus.CONFIRMED) {
+          throw new ConflictError("Order status has changed");
+        }
+
+        await shipmentRepo.create({
+          orderId,
+          method: input.fulfillmentMethod,
+          bookingSource,
+          status: ShipmentStatus.CREATED,
+        });
+
+        await recordCommerceAudit(tx, {
+          actorUserId,
+          action: ORDER_ACTIONS.FULFILLMENT_METHOD_SET,
+          entityType: ORDER_AUDIT_ENTITY_TYPE,
+          entityId: orderId,
+          metadata: {
+            fulfillmentMethod: input.fulfillmentMethod,
+            bookingSource,
+            processedByRole: role,
+          },
+        });
+
+        const detail = await orderRepo.findDetailById(orderId);
+        if (!detail) {
+          throw new NotFoundError("Order not found");
+        }
+        return toOrderDetailDto(detail);
+      });
+    }
+
+    const shipment = order.shipment;
 
     if (shipment.method === input.fulfillmentMethod) {
       return toOrderDetailDto(order);
     }
 
-    const bookingSource =
-      input.fulfillmentMethod === FulfillmentMethod.THIRD_PARTY
-        ? ShipmentBookingSource.MANUAL
-        : null;
     const clearPartner =
       input.fulfillmentMethod === FulfillmentMethod.THIRD_PARTY;
     const clearTracking =
@@ -405,7 +427,14 @@ export class OrderStatusService {
     orderId: string,
     input: SaveTrackingInput,
   ): Promise<OrderDetailDto> {
-    const order = await this.getOrderForSellerOrAdmin(actorUserId, role, orderId);
+    if (role !== UserRole.ADMIN) {
+      throw new ForbiddenError("Only admin can save or update tracking details");
+    }
+
+    const order = await this.orderRepo.findDetailById(orderId);
+    if (!order) {
+      throw new NotFoundError("Order not found");
+    }
     const shipment = requireShipment(order);
 
     if (shipment.method !== FulfillmentMethod.THIRD_PARTY) {
@@ -483,9 +512,12 @@ export class OrderStatusService {
     const order = await this.getSellerOrderOrThrow(orderId, sellerId);
     const shipment = requireShipment(order);
 
-    if (shipment.method !== FulfillmentMethod.INTERNAL_DP) {
+    if (
+      shipment.method !== FulfillmentMethod.INTERNAL_DP &&
+      shipment.method !== FulfillmentMethod.THIRD_PARTY
+    ) {
       throw new ConflictError(
-        "Handover proof applies only to internal delivery partner fulfillment",
+        "Handover proof applies only to INTERNAL_DP or THIRD_PARTY fulfillment",
       );
     }
 
@@ -571,7 +603,7 @@ export class OrderStatusService {
       return this.markShippedInternalDp(actorUserId, role, order, file);
     }
 
-    return this.markShippedThirdParty(actorUserId, role, order);
+    return this.markShippedThirdParty(actorUserId, role, order, file);
   }
 
   /** @deprecated Prefer markShipped — kept as alias for INTERNAL_DP OFD path. */
@@ -714,6 +746,7 @@ export class OrderStatusService {
     actorUserId: string,
     role: UserRole,
     order: OrderDetailRecord,
+    file?: Express.Multer.File,
   ): Promise<OrderDetailDto> {
     const orderId = order.id;
     const from = order.orderStatus;
@@ -723,12 +756,33 @@ export class OrderStatusService {
     const trackingUrl = shipment.trackingUrl;
     if (!trackingUrl) {
       throw new ValidationError(
-        "trackingUrl is required before marking shipped",
+        "Admin must save tracking details before marking shipped",
       );
     }
 
+    const hasHandoverProof = order.proofs.some(
+      (proof) => proof.proofType === ProofType.HANDOVER,
+    );
+    if (!hasHandoverProof && !file) {
+      throw new ValidationError(
+        "Handover proof must be uploaded before marking shipped",
+      );
+    }
+
+    if (file && role === UserRole.ADMIN && !hasHandoverProof) {
+      throw new ValidationError(
+        "Handover proof must be uploaded by the seller before marking shipped",
+      );
+    }
+
+    const proofInput =
+      file && role === UserRole.SELLER
+        ? await this.storeHandoverProofFile(actorUserId, file)
+        : undefined;
+
     return runInTransaction(async (tx) => {
       const orderRepo = new OrderRepository(tx);
+      const proofRepo = new OrderProofRepository(tx);
       const shipmentRepo = new ShipmentRepository(tx);
 
       const locked = await orderRepo.lockById(orderId);
@@ -748,6 +802,32 @@ export class OrderStatusService {
       }
 
       assertOrderStatusTransition(from, to);
+
+      if (proofInput) {
+        const duplicate = await proofRepo.existsByOrderIdAndType(
+          orderId,
+          ProofType.HANDOVER,
+        );
+        if (!duplicate) {
+          await proofRepo.create({
+            orderId,
+            proofType: ProofType.HANDOVER,
+            fileUploadId: proofInput.fileUploadId,
+            fileUrl: proofInput.fileUrl,
+            uploadedBy: actorUserId,
+          });
+        }
+      } else {
+        const handoverProof = await proofRepo.existsByOrderIdAndType(
+          orderId,
+          ProofType.HANDOVER,
+        );
+        if (!handoverProof) {
+          throw new ValidationError(
+            "Handover proof must be uploaded before marking shipped",
+          );
+        }
+      }
 
       const updated = await orderRepo.updateStatus({
         orderId,
@@ -773,6 +853,7 @@ export class OrderStatusService {
         metadata: {
           previousStatus: from,
           newStatus: to,
+          proofType: ProofType.HANDOVER,
           fulfillmentMethod: FulfillmentMethod.THIRD_PARTY,
           trackingUrl: shipment.trackingUrl,
           processedByRole: role,
@@ -902,26 +983,25 @@ export class OrderStatusService {
       return this.markDeliveredInternalDp(actorUserId, orderId, file);
     }
 
-    if (role === UserRole.SELLER || role === UserRole.ADMIN) {
-      const order = await this.getOrderForSellerOrAdmin(
-        actorUserId,
-        role,
-        orderId,
-      );
+    if (role === UserRole.ADMIN) {
+      const order = await this.orderRepo.findDetailById(orderId);
+      if (!order) {
+        throw new NotFoundError("Order not found");
+      }
       const shipment = requireShipment(order);
 
       if (shipment.method === FulfillmentMethod.THIRD_PARTY) {
         return this.markDeliveredThirdParty(actorUserId, role, order);
       }
 
-      if (role === UserRole.ADMIN && shipment.method === FulfillmentMethod.INTERNAL_DP) {
-        throw new ForbiddenError(
-          "Internal DP delivery must be marked by the assigned delivery partner",
-        );
-      }
+      throw new ForbiddenError(
+        "Internal DP delivery must be marked by the assigned delivery partner",
+      );
+    }
 
-      throw new ConflictError(
-        "Seller can only mark delivered for third-party fulfillment",
+    if (role === UserRole.SELLER) {
+      throw new ForbiddenError(
+        "Only admin can mark third-party orders as delivered; sellers cannot mark delivery",
       );
     }
 
@@ -1165,36 +1245,25 @@ export class OrderStatusService {
       );
     }
 
-    if (role === UserRole.SELLER || role === UserRole.ADMIN) {
-      const order = await this.getOrderForSellerOrAdmin(
+    if (role === UserRole.ADMIN) {
+      const order = await this.orderRepo.findDetailById(orderId);
+      if (!order) {
+        throw new NotFoundError("Order not found");
+      }
+      requireShipment(order);
+
+      return this.transitionToDeliveryFailed(
         actorUserId,
         role,
         orderId,
+        order.orderStatus,
+        input.reason ?? null,
       );
-      const shipment = requireShipment(order);
+    }
 
-      if (shipment.method === FulfillmentMethod.THIRD_PARTY) {
-        return this.transitionToDeliveryFailed(
-          actorUserId,
-          role,
-          orderId,
-          order.orderStatus,
-          input.reason ?? null,
-        );
-      }
-
-      if (role === UserRole.ADMIN) {
-        return this.transitionToDeliveryFailed(
-          actorUserId,
-          role,
-          orderId,
-          order.orderStatus,
-          input.reason ?? null,
-        );
-      }
-
-      throw new ConflictError(
-        "Seller can only mark delivery failed for third-party fulfillment",
+    if (role === UserRole.SELLER) {
+      throw new ForbiddenError(
+        "Only admin can mark third-party orders as delivery failed; sellers cannot mark delivery failed",
       );
     }
 

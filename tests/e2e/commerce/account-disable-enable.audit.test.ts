@@ -200,6 +200,10 @@ describe("Account Disable/Enable — QA Audit", () => {
         prisma,
         context.sellerUserId,
       );
+      const pickupAddressId = await resolveSellerPickupAddressId(
+        app,
+        context.sellerToken,
+      );
 
       await sellerRequest(app, context.adminToken).disable(sellerProfileId, {
         reason: "Mid-fulfillment audit",
@@ -212,19 +216,15 @@ describe("Account Disable/Enable — QA Audit", () => {
       expect(buyerOrderRes.status).toBe(200);
       expect(buyerOrderRes.body.data.orderStatus).toBe("PLACED");
 
-      const pickupAddressId = await resolveSellerPickupAddressId(
-        app,
-        context.sellerToken,
-      );
       const sellerConfirmRes = await orderRequest(
         app,
-        context.sellerToken,
+        context.adminToken,
       ).confirm(context.orderId, {
-        fulfillmentMethod: "INTERNAL_DP",
         pickupAddressId,
       });
       expect(sellerConfirmRes.status).toBe(200);
       expect(sellerConfirmRes.body.data.orderStatus).toBe("CONFIRMED");
+      expect(sellerConfirmRes.body.data.shipment).toBeNull();
     });
 
     it("allows admin settlement for orders delivered before seller disable", async () => {
@@ -312,8 +312,13 @@ describe("Account Disable/Enable — QA Audit", () => {
         context.sellerToken,
       );
       await orderRequest(app, context.sellerToken).confirm(context.orderId, {
-        fulfillmentMethod: "INTERNAL_DP",
         pickupAddressId,
+      });
+      await orderRequest(
+        app,
+        adminLogin.auth.accessToken,
+      ).switchFulfillmentMethod(context.orderId, {
+        fulfillmentMethod: "INTERNAL_DP",
       });
 
       const createRes = await deliveryPartnerRequest(

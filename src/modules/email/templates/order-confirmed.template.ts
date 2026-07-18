@@ -4,9 +4,9 @@ import { escapeHtml, greeting, renderEmailLayout } from "./layout.template.js";
 
 function roleMessage(data: OrderConfirmedEmailData): string {
   if (data.role === "SELLER") {
-    return `Order <strong>${escapeHtml(data.orderNumber)}</strong> is confirmed for fulfillment via <strong>${escapeHtml(data.fulfillmentMethodLabel)}</strong>.`;
+    return `Order <strong>${escapeHtml(data.orderNumber)}</strong> is confirmed. Awaiting platform fulfillment setup.`;
   }
-  return `Your order <strong>${escapeHtml(data.orderNumber)}</strong> has been confirmed. Fulfillment: <strong>${escapeHtml(data.fulfillmentMethodLabel)}</strong>.`;
+  return `Your order <strong>${escapeHtml(data.orderNumber)}</strong> has been confirmed. We will notify you when fulfillment routing is complete and the order ships.`;
 }
 
 export function renderOrderConfirmedEmail(
@@ -26,8 +26,8 @@ export function renderOrderConfirmedEmail(
     greeting(data.recipientName),
     "",
     data.role === "SELLER"
-      ? `Order ${data.orderNumber} is confirmed for fulfillment via ${data.fulfillmentMethodLabel}.`
-      : `Your order ${data.orderNumber} has been confirmed. Fulfillment: ${data.fulfillmentMethodLabel}.`,
+      ? `Order ${data.orderNumber} is confirmed. Awaiting platform fulfillment setup.`
+      : `Your order ${data.orderNumber} has been confirmed. We will notify you when fulfillment routing is complete and the order ships.`,
     data.orderUrl ? `View order: ${data.orderUrl}` : "",
   ]
     .filter(Boolean)
