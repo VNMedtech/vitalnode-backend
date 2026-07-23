@@ -30,7 +30,10 @@ function isProductAvailable(
     return false;
   }
 
-  if (product.category.deletedAt !== null || !product.category.isActive) {
+  const hasActiveCategory = product.categories.some(
+    (link) => link.category.deletedAt === null && link.category.isActive,
+  );
+  if (!hasActiveCategory) {
     return false;
   }
 
@@ -60,7 +63,6 @@ function toCartProductSummaryDto(
     productName: product.productName,
     brand: product.brand,
     model: product.model,
-    productType: product.productType,
     description: product.description,
     pricing: decimalToString(product.pricing),
     moq: product.moq,

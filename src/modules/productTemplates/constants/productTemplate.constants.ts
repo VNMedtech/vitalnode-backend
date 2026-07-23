@@ -1,0 +1,40 @@
+import type { ProductTemplateFieldType } from "../../../../generated/prisma/client.js";
+
+export const PRODUCT_TEMPLATE_AUDIT_ENTITY_TYPE = "PRODUCT_TEMPLATE" as const;
+
+export const PRODUCT_TEMPLATE_ACTIONS = {
+  CREATE: "PRODUCT_TEMPLATE_CREATE",
+  UPDATE: "PRODUCT_TEMPLATE_UPDATE",
+  DISABLE: "PRODUCT_TEMPLATE_DISABLE",
+  ATTACH: "PRODUCT_TEMPLATE_ATTACH",
+  REPLACE_FIELDS: "PRODUCT_TEMPLATE_REPLACE_FIELDS",
+  REPLACE_CATEGORIES: "PRODUCT_TEMPLATE_REPLACE_CATEGORIES",
+} as const;
+
+export const PRODUCT_TEMPLATE_SORT_FIELDS = [
+  "name",
+  "createdAt",
+  "updatedAt",
+] as const;
+
+export type ProductTemplateSortField =
+  (typeof PRODUCT_TEMPLATE_SORT_FIELDS)[number];
+
+export const PRODUCT_TEMPLATE_DEFAULT_PAGE = 1;
+export const PRODUCT_TEMPLATE_DEFAULT_LIMIT = 20;
+export const PRODUCT_TEMPLATE_MAX_LIMIT = 100;
+export const PRODUCT_TEMPLATE_SEARCH_MAX_LENGTH = 120;
+export const PRODUCT_TEMPLATE_NAME_MAX_LENGTH = 120;
+export const PRODUCT_TEMPLATE_DESCRIPTION_MAX_LENGTH = 2000;
+export const PRODUCT_TEMPLATE_FIELD_KEY_MAX_LENGTH = 80;
+export const PRODUCT_TEMPLATE_FIELD_LABEL_MAX_LENGTH = 120;
+export const PRODUCT_TEMPLATE_FIELD_UNIT_MAX_LENGTH = 40;
+
+export const PRODUCT_TEMPLATE_FIELD_TYPES = [
+  "TEXT",
+  "NUMBER",
+  "BOOLEAN",
+  "SELECT",
+  "MULTISELECT",
+  "DATE",
+] as const satisfies readonly ProductTemplateFieldType[];

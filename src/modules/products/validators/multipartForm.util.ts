@@ -59,7 +59,55 @@ export const nullableStringFromForm = z.preprocess(
   z.string().nullable().optional(),
 );
 
-export const specificationsFromForm = z.preprocess(
+export const categoryIdsFromForm = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null || value === "") {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    const asString = String(value).trim();
+    if (asString.startsWith("[")) {
+      return JSON.parse(asString);
+    }
+
+    return asString
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+  },
+  z
+    .array(z.string().uuid("Invalid category ID"))
+    .min(1, "At least one category is required"),
+);
+
+export const optionalCategoryIdsFromForm = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null || value === "") {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    const asString = String(value).trim();
+    if (asString.startsWith("[")) {
+      return JSON.parse(asString);
+    }
+
+    return asString
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+  },
+  z.array(z.string().uuid("Invalid category ID")).optional(),
+);
+
+export const attributesFromForm = z.preprocess(
   (value) => {
     const parsed = parseJsonValue(value);
     return parsed === undefined ? undefined : parsed;
@@ -67,7 +115,7 @@ export const specificationsFromForm = z.preprocess(
   z.record(z.string(), z.unknown()).optional(),
 );
 
-export const nullableSpecificationsFromForm = z.preprocess(
+export const nullableAttributesFromForm = z.preprocess(
   (value) => {
     if (value === undefined) {
       return undefined;

@@ -48,15 +48,16 @@ describe("InventoryMovement deduplication", () => {
     const product = await prisma.product.create({
       data: {
         sellerId: sellerUser.sellerProfile!.id,
-        categoryId: category.id,
         productName: "Dedupe Product",
         brand: "Brand",
         model: "M1",
-        productType: "Type",
         pricing: 100,
         moq: 1,
         description: "Test",
         status: "APPROVED",
+        categories: {
+          create: [{ categoryId: category.id, isPrimary: true }],
+        },
         inventory: { create: { availableQuantity: 10 } },
       },
     });

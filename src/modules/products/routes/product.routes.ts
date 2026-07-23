@@ -25,6 +25,7 @@ import {
 } from "../validators/query.schema.js";
 import { rejectProductBodySchema } from "../validators/rejectProduct.schema.js";
 import { compareProductsQuerySchema } from "../validators/compareProducts.schema.js";
+import { attachTemplateBodySchema } from "../validators/attachTemplate.schema.js";
 import * as reviewController from "../../reviews/controllers/review.controller.js";
 import {
   listProductReviewsQuerySchema,
@@ -42,8 +43,7 @@ export const productRouter = Router();
  *     description: |
  *       Public endpoint. Returns paginated approved products from active sellers
  *       in active categories. Supports search, filters, and sorting.
- *       Default sort (when sortBy and sortOrder are omitted): deliveryTime ascending,
- *       then pricing ascending per SOW business rule.
+ *       Default sort (when sortBy and sortOrder are omitted): pricing ascending.
  *     parameters:
  *       - in: query
  *         name: page
@@ -55,8 +55,8 @@ export const productRouter = Router();
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [price, newest, deliveryTime]
- *         description: Optional. Omit with sortOrder for SOW default (deliveryTime asc, pricing asc)
+ *           enum: [price, newest]
+ *         description: Optional. Omit with sortOrder for default pricing ascending
  *       - in: query
  *         name: sortOrder
  *         schema:
@@ -70,6 +70,7 @@ export const productRouter = Router();
  *       - in: query
  *         name: categoryId
  *         schema: { type: string, format: uuid }
+ *         description: Filter products linked to this category (any of product categories)
  *       - in: query
  *         name: brand
  *         schema: { type: string, maxLength: 120 }
@@ -172,7 +173,7 @@ productRouter.get(
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [price, newest, deliveryTime]
+ *           enum: [price, newest]
  *           default: newest
  *       - in: query
  *         name: sortOrder
@@ -186,6 +187,7 @@ productRouter.get(
  *       - in: query
  *         name: categoryId
  *         schema: { type: string, format: uuid }
+ *         description: Filter by any linked ProductCategory
  *       - in: query
  *         name: brand
  *         schema: { type: string, maxLength: 120 }
@@ -223,16 +225,38 @@ productRouter.get(
  *     tags: [Products]
  *     summary: Create a product
  *     description: |
- *       Seller only. Creates a product in `PENDING_APPROVAL` status.
- *       Only approved sellers may create products. Category must exist and be active.
+ *       Seller only. Creates a product in `PENDING_APPROVAL` status (multipart/form-data).
+ *       Only approved sellers may create products. Requires `categoryIds` (min 1).
+ *       Template is optional on create; admin must attach a template before approval.
+ *       Physical/spec values belong in optional `attributes` JSON when a template is used.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
- *             $ref: '#/components/schemas/CreateProductRequest'
+ *             allOf:
+ *               - $ref: '#/components/schemas/CreateProductRequest'
+ *               - type: object
+ *                 properties:
+ *                   images:
+ *                     type: array
+ *                     items: { type: string, format: binary }
+ *                   documents:
+ *                     type: array
+ *                     items: { type: string, format: binary }
+ *                   documentTypes:
+ *                     type: string
+ *                     description: JSON array of document type strings matching documents order
+ *                     example: '["manual"]'
+ *                   categoryIds:
+ *                     type: string
+ *                     description: JSON array of category UUIDs
+ *                     example: '["550e8400-e29b-41d4-a716-446655440000"]'
+ *                   attributes:
+ *                     type: string
+ *                     description: JSON object of template-driven attribute values
  *     responses:
  *       201:
  *         description: Product created successfully
@@ -252,7 +276,7 @@ productRouter.get(
  *       403:
  *         description: Forbidden — approved seller only
  *       404:
- *         description: Category not found
+ *         description: Category or template not found
  */
 productRouter.post(
   "/",
@@ -326,7 +350,7 @@ productRouter.get(
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [price, newest, deliveryTime]
+ *           enum: [price, newest]
  *           default: newest
  *       - in: query
  *         name: sortOrder
@@ -373,7 +397,7 @@ productRouter.get(
  *     summary: Get pending product details
  *     description: |
  *       Admin only. Returns full product details for a product awaiting approval
- *       (`PENDING_APPROVAL`), including media, documents, specifications, and inventory.
+ *       (`PENDING_APPROVAL`), including media, documents, attributes, and inventory.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -415,8 +439,9 @@ productRouter.get(
  *     tags: [Products]
  *     summary: Update a product
  *     description: |
- *       Seller only. Updates a product owned by the authenticated seller.
- *       Edits after approval do not require re-approval.
+ *       Seller only. Updates a product owned by the authenticated seller (multipart/form-data).
+ *       Core commerce/copy/media/docs changes on APPROVED products set status back to PENDING_APPROVAL.
+ *       Attributes-only edits on APPROVED products stay APPROVED. Orphan attribute keys are kept.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -427,9 +452,27 @@ productRouter.get(
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
- *             $ref: '#/components/schemas/UpdateProductRequest'
+ *             allOf:
+ *               - $ref: '#/components/schemas/UpdateProductRequest'
+ *               - type: object
+ *                 properties:
+ *                   images:
+ *                     type: array
+ *                     items: { type: string, format: binary }
+ *                   documents:
+ *                     type: array
+ *                     items: { type: string, format: binary }
+ *                   documentTypes:
+ *                     type: string
+ *                     description: JSON array of document type strings
+ *                   categoryIds:
+ *                     type: string
+ *                     description: JSON array of category UUIDs
+ *                   attributes:
+ *                     type: string
+ *                     description: JSON object of template-driven attribute values
  *     responses:
  *       200:
  *         description: Product updated successfully
@@ -500,7 +543,7 @@ productRouter.delete(
  *     summary: Approve a product
  *     description: |
  *       Admin only. Transitions product from `PENDING_APPROVAL` to `APPROVED`.
- *       Invalid transitions return 409.
+ *       Requires an attached `templateId`. Returns 400 if template is missing.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -517,6 +560,8 @@ productRouter.delete(
  *     responses:
  *       200:
  *         description: Product approved successfully
+ *       400:
+ *         description: Template not attached
  *       401:
  *         description: Unauthorized
  *       403:
@@ -532,6 +577,57 @@ productRouter.post(
   authorizePermission(permissions.products.approve),
   validate({ params: productIdParamSchema }),
   productController.approveProduct,
+);
+
+/**
+ * @openapi
+ * /api/v1/products/{id}/attach-template:
+ *   post:
+ *     tags: [Products]
+ *     summary: Attach a product template
+ *     description: |
+ *       Admin only. Attaches a template to a product, merging template field
+ *       defaults with optional attribute overrides. Required before approval.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [templateId]
+ *             properties:
+ *               templateId: { type: string, format: uuid }
+ *               attributes:
+ *                 type: object
+ *                 additionalProperties: true
+ *     responses:
+ *       200:
+ *         description: Template attached successfully
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden — admin only
+ *       404:
+ *         description: Product or template not found
+ */
+productRouter.post(
+  "/:id/attach-template",
+  authenticate,
+  authorizePermission(permissions.products.approve),
+  validate({
+    params: productIdParamSchema,
+    body: attachTemplateBodySchema,
+  }),
+  productController.attachTemplate,
 );
 
 /**
@@ -671,6 +767,12 @@ productRouter.get(
  *       properties:
  *         id: { type: string, format: uuid }
  *         name: { type: string, example: Diagnostic Imaging }
+ *         isPrimary: { type: boolean, example: true }
+ *     ProductTemplateSummary:
+ *       type: object
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         name: { type: string, example: Portable Ultrasound Template }
  *     ProductSellerSummary:
  *       type: object
  *       properties:
@@ -694,24 +796,41 @@ productRouter.get(
  *       type: object
  *       properties:
  *         availableQuantity: { type: integer, example: 25 }
+ *     ProductAttributeField:
+ *       type: object
+ *       properties:
+ *         key: { type: string, example: color }
+ *         label: { type: string, example: Color }
+ *         fieldType:
+ *           type: string
+ *           enum: [TEXT, NUMBER, BOOLEAN, SELECT, MULTISELECT, DATE]
+ *         unit: { type: string, nullable: true }
+ *         value: {}
+ *         isOrphan: { type: boolean }
  *     ProductListItem:
  *       type: object
  *       properties:
  *         id: { type: string, format: uuid }
  *         sellerId: { type: string, format: uuid }
- *         categoryId: { type: string, format: uuid }
+ *         templateId: { type: string, format: uuid, nullable: true }
  *         productName: { type: string, example: Portable Ultrasound Scanner }
  *         brand: { type: string, example: Siemens }
  *         model: { type: string, example: ACUSON P500 }
- *         productType: { type: string, example: Diagnostic Device }
  *         pricing: { type: string, example: "125000.00" }
  *         moq: { type: integer, example: 1 }
- *         deliveryTime: { type: integer, nullable: true, example: 7 }
  *         status:
  *           type: string
  *           enum: [PENDING_APPROVAL, APPROVED, REJECTED, DISABLED, OUT_OF_STOCK]
- *         category:
+ *         categories:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ProductCategorySummary'
+ *         primaryCategory:
  *           $ref: '#/components/schemas/ProductCategorySummary'
+ *         template:
+ *           allOf:
+ *             - $ref: '#/components/schemas/ProductTemplateSummary'
+ *             - nullable: true
  *         seller:
  *           $ref: '#/components/schemas/ProductSellerSummary'
  *         primaryImageUrl: { type: string, nullable: true }
@@ -724,17 +843,16 @@ productRouter.get(
  *         - $ref: '#/components/schemas/ProductListItem'
  *         - type: object
  *           properties:
- *             color: { type: string, nullable: true }
- *             weight: { type: string, nullable: true, example: "12.50" }
- *             length: { type: string, nullable: true, example: "45.00" }
- *             warrantyPeriod: { type: integer, nullable: true, example: 24 }
- *             returnTime: { type: integer, nullable: true, example: 14 }
  *             description: { type: string }
  *             details: { type: string, nullable: true }
- *             specifications:
+ *             attributes:
  *               type: object
  *               nullable: true
  *               additionalProperties: true
+ *             attributeFields:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ProductAttributeField'
  *             media:
  *               type: array
  *               items:
@@ -749,20 +867,19 @@ productRouter.get(
  *       type: object
  *       properties:
  *         id: { type: string, format: uuid }
- *         productName: { type: string, example: Portable Ultrasound Scanner }
- *         category:
- *           $ref: '#/components/schemas/ProductCategorySummary'
- *         brand: { type: string, example: Siemens }
- *         model: { type: string, example: ACUSON P500 }
- *         productType: { type: string, example: Diagnostic Device }
- *         color: { type: string, nullable: true, example: White }
- *         weight: { type: string, nullable: true, example: "12.50" }
- *         length: { type: string, nullable: true, example: "45.00" }
- *         warrantyPeriod: { type: integer, nullable: true, example: 24 }
- *         returnTime: { type: integer, nullable: true, example: 14 }
- *         deliveryTime: { type: integer, nullable: true, example: 7 }
- *         pricing: { type: string, example: "125000.00" }
- *         moq: { type: integer, example: 1 }
+ *         productName: { type: string }
+ *         categories:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ProductCategorySummary'
+ *         brand: { type: string }
+ *         model: { type: string }
+ *         pricing: { type: string }
+ *         moq: { type: integer }
+ *         attributes:
+ *           type: object
+ *           nullable: true
+ *           additionalProperties: true
  *         primaryImageUrl: { type: string, nullable: true }
  *     ProductCompareAttribute:
  *       type: object
@@ -795,86 +912,47 @@ productRouter.get(
  *     CreateProductRequest:
  *       type: object
  *       required:
- *         - categoryId
+ *         - categoryIds
  *         - productName
  *         - brand
  *         - model
- *         - productType
  *         - pricing
  *         - moq
  *         - description
  *       properties:
- *         categoryId: { type: string, format: uuid }
+ *         categoryIds:
+ *           type: array
+ *           minItems: 1
+ *           items: { type: string, format: uuid }
+ *         templateId: { type: string, format: uuid }
  *         productName: { type: string, maxLength: 200 }
  *         brand: { type: string, maxLength: 120 }
  *         model: { type: string, maxLength: 120 }
- *         productType: { type: string, maxLength: 120 }
- *         color: { type: string, maxLength: 60 }
- *         weight: { type: string, example: "12.50" }
- *         length: { type: string, example: "45.00" }
- *         warrantyPeriod: { type: integer, minimum: 0 }
- *         returnTime: { type: integer, minimum: 0 }
- *         deliveryTime: { type: integer, minimum: 0 }
  *         pricing: { type: string, example: "125000.00" }
  *         moq: { type: integer, minimum: 1 }
  *         description: { type: string, maxLength: 5000 }
  *         details: { type: string, maxLength: 10000 }
- *         specifications:
+ *         attributes:
  *           type: object
  *           additionalProperties: true
- *         media:
- *           type: array
- *           items:
- *             type: object
- *             required: [fileUrl]
- *             properties:
- *               fileUrl: { type: string, format: uri }
- *               displayOrder: { type: integer, minimum: 0 }
- *         documents:
- *           type: array
- *           items:
- *             type: object
- *             required: [fileUrl, documentType]
- *             properties:
- *               fileUrl: { type: string, format: uri }
- *               documentType: { type: string, maxLength: 120 }
  *     UpdateProductRequest:
  *       type: object
  *       minProperties: 1
  *       properties:
- *         categoryId: { type: string, format: uuid }
+ *         categoryIds:
+ *           type: array
+ *           minItems: 1
+ *           items: { type: string, format: uuid }
+ *         templateId: { type: string, format: uuid, nullable: true }
  *         productName: { type: string, maxLength: 200 }
  *         brand: { type: string, maxLength: 120 }
  *         model: { type: string, maxLength: 120 }
- *         productType: { type: string, maxLength: 120 }
- *         color: { type: string, nullable: true, maxLength: 60 }
- *         weight: { type: string, nullable: true }
- *         length: { type: string, nullable: true }
- *         warrantyPeriod: { type: integer, nullable: true, minimum: 0 }
- *         returnTime: { type: integer, nullable: true, minimum: 0 }
- *         deliveryTime: { type: integer, nullable: true, minimum: 0 }
  *         pricing: { type: string, example: "125000.00" }
  *         moq: { type: integer, minimum: 1 }
  *         description: { type: string, maxLength: 5000 }
  *         details: { type: string, nullable: true, maxLength: 10000 }
- *         specifications:
+ *         attributes:
  *           type: object
  *           nullable: true
  *           additionalProperties: true
- *         media:
- *           type: array
- *           items:
- *             type: object
- *             required: [fileUrl]
- *             properties:
- *               fileUrl: { type: string, format: uri }
- *               displayOrder: { type: integer, minimum: 0 }
- *         documents:
- *           type: array
- *           items:
- *             type: object
- *             required: [fileUrl, documentType]
- *             properties:
- *               fileUrl: { type: string, format: uri }
- *               documentType: { type: string, maxLength: 120 }
  */

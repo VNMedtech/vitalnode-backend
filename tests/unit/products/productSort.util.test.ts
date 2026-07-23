@@ -24,13 +24,10 @@ describe("productSort.util", () => {
   });
 
   describe("buildProductOrderBy", () => {
-    it("uses deliveryTime then pricing for marketplace default sort", () => {
+    it("uses pricing ascending for marketplace default sort", () => {
       expect(
         buildProductOrderBy({ useMarketplaceDefaultSort: true }),
-      ).toEqual([
-        { deliveryTime: { sort: "asc", nulls: "last" } },
-        { pricing: "asc" },
-      ]);
+      ).toEqual([{ pricing: "asc" }]);
     });
 
     it("maps explicit price ascending sort", () => {
@@ -48,12 +45,6 @@ describe("productSort.util", () => {
     it("defaults newest to createdAt descending when sortOrder is omitted", () => {
       expect(buildProductOrderBy({ sortBy: "newest" })).toEqual({
         createdAt: "desc",
-      });
-    });
-
-    it("defaults deliveryTime to ascending when sortOrder is omitted", () => {
-      expect(buildProductOrderBy({ sortBy: "deliveryTime" })).toEqual({
-        deliveryTime: "asc",
       });
     });
 

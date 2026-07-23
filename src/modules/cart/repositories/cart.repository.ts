@@ -5,7 +5,6 @@ const cartItemProductSelect = {
   productName: true,
   brand: true,
   model: true,
-  productType: true,
   description: true,
   pricing: true,
   moq: true,
@@ -25,10 +24,14 @@ const cartItemProductSelect = {
       },
     },
   },
-  category: {
+  categories: {
     select: {
-      isActive: true,
-      deletedAt: true,
+      category: {
+        select: {
+          isActive: true,
+          deletedAt: true,
+        },
+      },
     },
   },
   inventory: {

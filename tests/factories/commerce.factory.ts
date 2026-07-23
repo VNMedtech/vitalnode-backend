@@ -2,10 +2,12 @@ import type { Express } from "express";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import { categoryCreationPayload } from "../fixtures/category.payloads.js";
 import { productCreationPayload } from "../fixtures/product.payloads.js";
+import { productTemplateCreationPayload } from "../fixtures/productTemplate.payloads.js";
 import {
   categoryRequest,
   inventoryRequest,
   productRequest,
+  productTemplateRequest,
 } from "../utils/request.helpers.js";
 import {
   createAdminViaApi,
@@ -18,6 +20,7 @@ export interface MarketplaceProductSetup {
   sellerToken: string;
   sellerUserId: string;
   productId: string;
+  templateId: string;
 }
 
 export async function createCategoryViaApi(
@@ -30,12 +33,24 @@ export async function createCategoryViaApi(
   return { response: res, payload, category: res.body.data };
 }
 
+export async function createTemplateViaApi(
+  app: Express,
+  adminToken: string,
+  categoryIds: string[],
+  overrides: Record<string, unknown> = {},
+) {
+  const payload = productTemplateCreationPayload(categoryIds, overrides);
+  const res = await productTemplateRequest(app, adminToken).create(payload);
+  return { response: res, payload, template: res.body.data };
+}
+
 export async function setupMarketplaceProduct(
   app: Express,
   prisma: PrismaClient,
   overrides: {
     product?: Record<string, unknown>;
     category?: Record<string, unknown>;
+    template?: Record<string, unknown>;
     inventoryQuantity?: number;
   } = {},
 ): Promise<MarketplaceProductSetup> {
@@ -45,12 +60,17 @@ export async function setupMarketplaceProduct(
     adminLogin.auth.accessToken,
     overrides.category,
   );
+  const { template } = await createTemplateViaApi(
+    app,
+    adminLogin.auth.accessToken,
+    [category.id],
+    overrides.template,
+  );
   const seller = await createApprovedSeller(app, prisma);
 
-  const productPayload = productCreationPayload(
-    category.id,
-    overrides.product,
-  );
+  const productPayload = productCreationPayload(category.id, {
+    ...overrides.product,
+  });
   const createRes = await productRequest(
     app,
     seller.login.auth.accessToken,
@@ -58,6 +78,10 @@ export async function setupMarketplaceProduct(
 
   const productId = createRes.body.data.id as string;
 
+  await productRequest(app, adminLogin.auth.accessToken).attachTemplate(
+    productId,
+    { templateId: template.id },
+  );
   await productRequest(app, adminLogin.auth.accessToken).approve(productId);
 
   const quantity = overrides.inventoryQuantity ?? 50;
@@ -73,5 +97,6 @@ export async function setupMarketplaceProduct(
     sellerToken: seller.login.auth.accessToken,
     sellerUserId: seller.auth.user.id,
     productId,
+    templateId: template.id,
   };
 }

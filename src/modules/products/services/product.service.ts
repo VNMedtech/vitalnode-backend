@@ -11,6 +11,7 @@ import { UserRole } from "../../../shared/enums/userRole.enum.js";
 import { buildPaginationMeta } from "../../../shared/responses/api.response.js";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
 import { CategoryRepository } from "../../categories/repositories/category.repository.js";
+import { ProductTemplateRepository } from "../../productTemplates/repositories/productTemplate.repository.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
 import { UPLOAD_TYPES } from "../../uploads/constants/upload.constants.js";
 import { UploadAssociationService } from "../../uploads/services/uploadAssociation.service.js";
@@ -18,6 +19,7 @@ import {
   PRODUCT_ACTIONS,
   PRODUCT_APPROVAL_TRANSITIONS,
   PRODUCT_AUDIT_ENTITY_TYPE,
+  PRODUCT_CORE_REAPPROVAL_FIELDS,
   PRODUCT_EDITABLE_STATUSES,
 } from "../constants/product.constants.js";
 import {
@@ -31,6 +33,7 @@ import { ProductRepository } from "../repositories/product.repository.js";
 import { ReviewRepository } from "../../reviews/repositories/review.repository.js";
 import { toProductReviewStats } from "../../reviews/dto/review.dto.js";
 import type {
+  AttachTemplateInput,
   CreateProductInput,
   ListMarketplaceProductsQuery,
   ListProductsQuery,
@@ -47,19 +50,16 @@ import {
   validateProductImageCount,
 } from "../utils/productUpload.util.js";
 import { usesMarketplaceDefaultSort } from "../utils/productSort.util.js";
+import {
+  applyDefaultsForMissingKeys,
+  asAttributeMap,
+  extractTemplateDefaults,
+  mergeAttributes,
+  validateAttributesAgainstTemplate,
+} from "../utils/productAttributes.util.js";
 
 function toDecimal(value: string): Prisma.Decimal {
   return new Prisma.Decimal(value);
-}
-
-function optionalDecimal(value?: string | null): Prisma.Decimal | null | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (value === null) {
-    return null;
-  }
-  return toDecimal(value);
 }
 
 function assertTransitionAllowed(
@@ -97,10 +97,17 @@ function normalizeMediaInput(media: ProductMediaInput[]) {
   }));
 }
 
+function requiresReapproval(input: UpdateProductInput): boolean {
+  return PRODUCT_CORE_REAPPROVAL_FIELDS.some(
+    (field) => input[field as keyof UpdateProductInput] !== undefined,
+  );
+}
+
 export class ProductService {
   private readonly repo = new ProductRepository(prisma);
   private readonly reviewRepo = new ReviewRepository(prisma);
   private readonly categoryRepo = new CategoryRepository(prisma);
+  private readonly templateRepo = new ProductTemplateRepository(prisma);
   private readonly sellerRepo = new SellerRepository(prisma);
   private readonly mediaRepo = new ProductMediaRepository(prisma);
   private readonly documentRepo = new ProductDocumentRepository(prisma);
@@ -121,10 +128,13 @@ export class ProductService {
     return seller.id;
   }
 
-  private async assertCategoryExists(categoryId: string): Promise<void> {
-    const category = await this.categoryRepo.findActiveById(categoryId);
-    if (!category) {
-      throw new NotFoundError("Category not found");
+  private async assertCategoriesExist(categoryIds: string[]): Promise<void> {
+    const uniqueIds = [...new Set(categoryIds)];
+    for (const categoryId of uniqueIds) {
+      const category = await this.categoryRepo.findActiveById(categoryId);
+      if (!category) {
+        throw new NotFoundError(`Category not found: ${categoryId}`);
+      }
     }
   }
 
@@ -192,7 +202,22 @@ export class ProductService {
     files?: ProductUploadFiles,
   ): Promise<ProductDetailDto> {
     const sellerId = await this.requireApprovedSeller(actorUserId);
-    await this.assertCategoryExists(input.categoryId);
+    const categoryIds = [...new Set(input.categoryIds)];
+    await this.assertCategoriesExist(categoryIds);
+
+    let attributes = asAttributeMap(input.attributes);
+    let templateId: string | null = null;
+
+    if (input.templateId) {
+      const template = await this.templateRepo.findActiveById(input.templateId);
+      if (!template) {
+        throw new NotFoundError("Product template not found");
+      }
+      templateId = template.id;
+      const defaults = extractTemplateDefaults(template.fields);
+      attributes = mergeAttributes({}, defaults, attributes);
+      validateAttributesAgainstTemplate(attributes, template.fields);
+    }
 
     let media = input.media ?? [];
     let documents = input.documents ?? [];
@@ -210,22 +235,20 @@ export class ProductService {
     const created = await this.repo.createWithInventory(
       {
         sellerId,
-        categoryId: input.categoryId,
+        categoryIds,
+        primaryCategoryId: categoryIds[0]!,
+        templateId,
         productName: input.productName,
         brand: input.brand,
         model: input.model,
-        productType: input.productType,
-        color: input.color ?? null,
-        weight: optionalDecimal(input.weight) ?? null,
-        length: optionalDecimal(input.length) ?? null,
-        warrantyPeriod: input.warrantyPeriod ?? null,
-        returnTime: input.returnTime ?? null,
-        deliveryTime: input.deliveryTime ?? null,
         pricing: toDecimal(input.pricing),
         moq: input.moq,
         description: input.description,
         details: input.details ?? null,
-        specifications: input.specifications as Prisma.InputJsonValue | undefined,
+        attributes:
+          Object.keys(attributes).length > 0
+            ? (attributes as Prisma.InputJsonValue)
+            : undefined,
         status: ProductStatus.PENDING_APPROVAL,
       },
       media.map((item, index) => ({
@@ -243,7 +266,8 @@ export class ProductService {
       entityId: created.id,
       metadata: {
         sellerId,
-        categoryId: input.categoryId,
+        categoryIds,
+        templateId,
         productName: input.productName,
         status: ProductStatus.PENDING_APPROVAL,
       },
@@ -268,36 +292,54 @@ export class ProductService {
       );
     }
 
-    if (input.categoryId) {
-      await this.assertCategoryExists(input.categoryId);
+    let categoryIds: string[] | undefined;
+    if (input.categoryIds) {
+      categoryIds = [...new Set(input.categoryIds)];
+      await this.assertCategoriesExist(categoryIds);
+    }
+
+    let nextTemplateId =
+      input.templateId !== undefined ? input.templateId : existing.templateId;
+    let attributes = asAttributeMap(existing.attributes);
+
+    if (input.attributes !== undefined) {
+      attributes =
+        input.attributes === null
+          ? {}
+          : mergeAttributes(attributes, {}, asAttributeMap(input.attributes));
+    }
+
+    if (input.templateId !== undefined && input.templateId !== null) {
+      const template = await this.templateRepo.findActiveById(input.templateId);
+      if (!template) {
+        throw new NotFoundError("Product template not found");
+      }
+      nextTemplateId = template.id;
+      const defaults = extractTemplateDefaults(template.fields);
+      attributes = applyDefaultsForMissingKeys(
+        attributes,
+        defaults,
+        input.attributes ? asAttributeMap(input.attributes) : undefined,
+      );
+      validateAttributesAgainstTemplate(attributes, template.fields);
+    } else if (input.templateId === null) {
+      nextTemplateId = null;
+    } else if (existing.templateId && input.attributes !== undefined) {
+      const template = await this.templateRepo.findById(existing.templateId);
+      if (template) {
+        validateAttributesAgainstTemplate(attributes, template.fields);
+      }
     }
 
     const updateData: Parameters<ProductRepository["update"]>[1] = {
-      ...(input.categoryId !== undefined ? { categoryId: input.categoryId } : {}),
+      ...(input.templateId !== undefined
+        ? { templateId: nextTemplateId }
+        : {}),
       ...(input.productName !== undefined
         ? { productName: input.productName }
         : {}),
       ...(input.brand !== undefined ? { brand: input.brand } : {}),
       ...(input.model !== undefined ? { model: input.model } : {}),
-      ...(input.productType !== undefined
-        ? { productType: input.productType }
-        : {}),
-      ...(input.color !== undefined ? { color: input.color } : {}),
-      ...(input.weight !== undefined
-        ? { weight: optionalDecimal(input.weight) }
-        : {}),
-      ...(input.length !== undefined
-        ? { length: optionalDecimal(input.length) }
-        : {}),
-      ...(input.warrantyPeriod !== undefined
-        ? { warrantyPeriod: input.warrantyPeriod }
-        : {}),
-      ...(input.returnTime !== undefined
-        ? { returnTime: input.returnTime }
-        : {}),
-      ...(input.deliveryTime !== undefined
-        ? { deliveryTime: input.deliveryTime }
-        : {}),
       ...(input.pricing !== undefined
         ? { pricing: toDecimal(input.pricing) }
         : {}),
@@ -306,12 +348,13 @@ export class ProductService {
         ? { description: input.description }
         : {}),
       ...(input.details !== undefined ? { details: input.details } : {}),
-      ...(input.specifications !== undefined
+      ...(input.attributes !== undefined ||
+      (input.templateId !== undefined && input.templateId !== null)
         ? {
-            specifications:
-              input.specifications === null
-                ? Prisma.JsonNull
-                : (input.specifications as Prisma.InputJsonValue),
+            attributes:
+              Object.keys(attributes).length > 0
+                ? (attributes as Prisma.InputJsonValue)
+                : Prisma.JsonNull,
           }
         : {}),
     };
@@ -340,12 +383,30 @@ export class ProductService {
       documentsToReplace = input.documents;
     }
 
+    const shouldReapprove =
+      currentStatus === ProductStatus.APPROVED &&
+      (requiresReapproval(input) ||
+        mediaToReplace !== undefined ||
+        documentsToReplace !== undefined);
+
+    if (shouldReapprove) {
+      updateData.status = ProductStatus.PENDING_APPROVAL;
+    }
+
     await prisma.$transaction(async (tx) => {
       const productRepo = new ProductRepository(tx);
       const mediaRepo = new ProductMediaRepository(tx);
       const documentRepo = new ProductDocumentRepository(tx);
 
       await productRepo.update(productId, updateData);
+
+      if (categoryIds) {
+        await productRepo.replaceCategories(
+          productId,
+          categoryIds,
+          categoryIds[0]!,
+        );
+      }
 
       if (mediaToReplace !== undefined) {
         await mediaRepo.replaceForProduct(
@@ -369,10 +430,57 @@ export class ProductService {
       action: PRODUCT_ACTIONS.UPDATE,
       entityType: PRODUCT_AUDIT_ENTITY_TYPE,
       entityId: productId,
-      metadata: buildUpdateMetadata(
-        { status: currentStatus },
-        input,
-      ),
+      metadata: {
+        ...buildUpdateMetadata({ status: currentStatus }, input),
+        ...(shouldReapprove
+          ? { newStatus: ProductStatus.PENDING_APPROVAL }
+          : {}),
+      },
+    });
+
+    return toProductDetailDto(updated);
+  }
+
+  async attachTemplate(
+    actorUserId: string,
+    productId: string,
+    input: AttachTemplateInput,
+  ): Promise<ProductDetailDto> {
+    const product = await this.repo.findDetailById(productId);
+    if (!product) {
+      throw new NotFoundError("Product not found");
+    }
+
+    const template = await this.templateRepo.findActiveById(input.templateId);
+    if (!template) {
+      throw new NotFoundError("Product template not found");
+    }
+
+    const defaults = extractTemplateDefaults(template.fields);
+    const existingAttributes = asAttributeMap(product.attributes);
+    const overrides = asAttributeMap(input.attributes);
+    const attributes = mergeAttributes(
+      existingAttributes,
+      defaults,
+      overrides,
+    );
+    validateAttributesAgainstTemplate(attributes, template.fields);
+
+    const updated = await this.repo.update(productId, {
+      templateId: template.id,
+      attributes: attributes as Prisma.InputJsonValue,
+    });
+
+    auditLogger.log({
+      actorUserId,
+      action: PRODUCT_ACTIONS.ATTACH_TEMPLATE,
+      entityType: PRODUCT_AUDIT_ENTITY_TYPE,
+      entityId: productId,
+      metadata: {
+        templateId: template.id,
+        templateName: template.name,
+        previousTemplateId: product.templateId,
+      },
     });
 
     return toProductDetailDto(updated);

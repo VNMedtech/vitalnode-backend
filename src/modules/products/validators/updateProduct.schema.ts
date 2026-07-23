@@ -1,12 +1,11 @@
 import { z } from "zod";
 import {
   PRODUCT_BRAND_MAX_LENGTH,
-  PRODUCT_COLOR_MAX_LENGTH,
   PRODUCT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_DETAILS_MAX_LENGTH,
+  PRODUCT_MIN_CATEGORIES,
   PRODUCT_MODEL_MAX_LENGTH,
   PRODUCT_NAME_MAX_LENGTH,
-  PRODUCT_TYPE_MAX_LENGTH,
 } from "../constants/product.constants.js";
 
 const decimalInputSchema = z
@@ -26,7 +25,11 @@ const positiveDecimalInputSchema = decimalInputSchema.refine(
 
 export const updateProductBodySchema = z
   .object({
-    categoryId: z.string().uuid("Invalid category ID").optional(),
+    categoryIds: z
+      .array(z.string().uuid("Invalid category ID"))
+      .min(PRODUCT_MIN_CATEGORIES)
+      .optional(),
+    templateId: z.string().uuid("Invalid template ID").nullable().optional(),
     productName: z
       .string()
       .trim()
@@ -35,18 +38,6 @@ export const updateProductBodySchema = z
       .optional(),
     brand: z.string().trim().min(1).max(PRODUCT_BRAND_MAX_LENGTH).optional(),
     model: z.string().trim().min(1).max(PRODUCT_MODEL_MAX_LENGTH).optional(),
-    productType: z
-      .string()
-      .trim()
-      .min(1)
-      .max(PRODUCT_TYPE_MAX_LENGTH)
-      .optional(),
-    color: z.string().trim().min(1).max(PRODUCT_COLOR_MAX_LENGTH).nullable().optional(),
-    weight: decimalInputSchema.nullable().optional(),
-    length: decimalInputSchema.nullable().optional(),
-    warrantyPeriod: z.number().int().min(0).nullable().optional(),
-    returnTime: z.number().int().min(0).nullable().optional(),
-    deliveryTime: z.number().int().min(0).nullable().optional(),
     pricing: positiveDecimalInputSchema.optional(),
     moq: z.number().int().min(1).optional(),
     description: z
@@ -55,8 +46,13 @@ export const updateProductBodySchema = z
       .min(1)
       .max(PRODUCT_DESCRIPTION_MAX_LENGTH)
       .optional(),
-    details: z.string().trim().max(PRODUCT_DETAILS_MAX_LENGTH).nullable().optional(),
-    specifications: z.record(z.string(), z.unknown()).nullable().optional(),
+    details: z
+      .string()
+      .trim()
+      .max(PRODUCT_DETAILS_MAX_LENGTH)
+      .nullable()
+      .optional(),
+    attributes: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {

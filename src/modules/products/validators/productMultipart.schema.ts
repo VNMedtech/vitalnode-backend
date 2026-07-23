@@ -1,20 +1,17 @@
 import { z } from "zod";
 import {
   PRODUCT_BRAND_MAX_LENGTH,
-  PRODUCT_COLOR_MAX_LENGTH,
   PRODUCT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_DETAILS_MAX_LENGTH,
   PRODUCT_MODEL_MAX_LENGTH,
   PRODUCT_NAME_MAX_LENGTH,
-  PRODUCT_TYPE_MAX_LENGTH,
 } from "../constants/product.constants.js";
 import {
+  attributesFromForm,
+  categoryIdsFromForm,
   documentTypesFromForm,
-  nullableIntFromForm,
-  nullableSpecificationsFromForm,
-  nullableStringFromForm,
-  optionalIntFromForm,
-  specificationsFromForm,
+  nullableAttributesFromForm,
+  optionalCategoryIdsFromForm,
 } from "./multipartForm.util.js";
 
 const decimalInputSchema = z
@@ -34,7 +31,8 @@ const positiveDecimalInputSchema = decimalInputSchema.refine(
 
 export const createProductMultipartBodySchema = z
   .object({
-    categoryId: z.string().uuid("Invalid category ID"),
+    categoryIds: categoryIdsFromForm,
+    templateId: z.string().uuid("Invalid template ID").optional(),
     productName: z
       .string()
       .trim()
@@ -50,17 +48,6 @@ export const createProductMultipartBodySchema = z
       .trim()
       .min(1, "Model is required")
       .max(PRODUCT_MODEL_MAX_LENGTH),
-    productType: z
-      .string()
-      .trim()
-      .min(1, "Product type is required")
-      .max(PRODUCT_TYPE_MAX_LENGTH),
-    color: z.string().trim().min(1).max(PRODUCT_COLOR_MAX_LENGTH).optional(),
-    weight: decimalInputSchema.optional(),
-    length: decimalInputSchema.optional(),
-    warrantyPeriod: optionalIntFromForm,
-    returnTime: optionalIntFromForm,
-    deliveryTime: optionalIntFromForm,
     pricing: positiveDecimalInputSchema,
     moq: z.coerce.number().int().min(1, "MOQ must be at least 1"),
     description: z
@@ -69,7 +56,7 @@ export const createProductMultipartBodySchema = z
       .min(1, "Description is required")
       .max(PRODUCT_DESCRIPTION_MAX_LENGTH),
     details: z.string().trim().max(PRODUCT_DETAILS_MAX_LENGTH).optional(),
-    specifications: specificationsFromForm,
+    attributes: attributesFromForm,
     documentTypes: documentTypesFromForm,
   })
   .strict();
@@ -80,7 +67,12 @@ export type CreateProductMultipartBody = z.infer<
 
 export const updateProductMultipartBodySchema = z
   .object({
-    categoryId: z.string().uuid("Invalid category ID").optional(),
+    categoryIds: optionalCategoryIdsFromForm,
+    templateId: z
+      .string()
+      .uuid("Invalid template ID")
+      .nullable()
+      .optional(),
     productName: z
       .string()
       .trim()
@@ -89,24 +81,6 @@ export const updateProductMultipartBodySchema = z
       .optional(),
     brand: z.string().trim().min(1).max(PRODUCT_BRAND_MAX_LENGTH).optional(),
     model: z.string().trim().min(1).max(PRODUCT_MODEL_MAX_LENGTH).optional(),
-    productType: z
-      .string()
-      .trim()
-      .min(1)
-      .max(PRODUCT_TYPE_MAX_LENGTH)
-      .optional(),
-    color: z
-      .string()
-      .trim()
-      .min(1)
-      .max(PRODUCT_COLOR_MAX_LENGTH)
-      .nullable()
-      .optional(),
-    weight: decimalInputSchema.nullable().optional(),
-    length: decimalInputSchema.nullable().optional(),
-    warrantyPeriod: nullableIntFromForm,
-    returnTime: nullableIntFromForm,
-    deliveryTime: nullableIntFromForm,
     pricing: positiveDecimalInputSchema.optional(),
     moq: z.coerce.number().int().min(1).optional(),
     description: z
@@ -121,7 +95,7 @@ export const updateProductMultipartBodySchema = z
       .max(PRODUCT_DETAILS_MAX_LENGTH)
       .nullable()
       .optional(),
-    specifications: nullableSpecificationsFromForm,
+    attributes: nullableAttributesFromForm,
     documentTypes: documentTypesFromForm,
     replaceMedia: z
       .enum(["true", "false"])

@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { productCreationPayload } from "../../fixtures/product.payloads.js";
 import {
   createCategoryViaApi,
+  createTemplateViaApi,
   setupMarketplaceProduct,
 } from "../../factories/commerce.factory.js";
 import {
@@ -159,6 +160,11 @@ describe("Cart — Buyer Shopping Cart", () => {
       app,
       adminLogin.auth.accessToken,
     );
+    const { template } = await createTemplateViaApi(
+      app,
+      adminLogin.auth.accessToken,
+      [category.id],
+    );
     const sellerA = await createApprovedSeller(app, prisma, {
       businessName: "Seller Alpha",
     });
@@ -178,6 +184,14 @@ describe("Cart — Buyer Shopping Cart", () => {
     const productAId = productA.body.data.id;
     const productBId = productB.body.data.id;
 
+    await productRequest(app, adminLogin.auth.accessToken).attachTemplate(
+      productAId,
+      { templateId: template.id },
+    );
+    await productRequest(app, adminLogin.auth.accessToken).attachTemplate(
+      productBId,
+      { templateId: template.id },
+    );
     await productRequest(app, adminLogin.auth.accessToken).approve(productAId);
     await productRequest(app, adminLogin.auth.accessToken).approve(productBId);
 

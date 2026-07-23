@@ -2,7 +2,10 @@ import type { Express } from "express";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as s3Module from "../../../src/infrastructure/s3/index.js";
 import { productCreationPayload } from "../../fixtures/product.payloads.js";
-import { createCategoryViaApi } from "../../factories/commerce.factory.js";
+import {
+  createCategoryViaApi,
+  createTemplateViaApi,
+} from "../../factories/commerce.factory.js";
 import {
   createAdminViaApi,
   createApprovedSeller,
@@ -44,22 +47,25 @@ describe("E2E — Scenario 08: Marketplace default sort priority", () => {
     await disconnectTestPrisma();
   });
 
-  it("ranks fastest delivery first and lowest price second across marketplace browse", async () => {
+  it("ranks lowest price first across marketplace browse", async () => {
     const prisma = getTestPrisma();
     const { login: adminLogin } = await createAdminViaApi(app, prisma);
     const { category } = await createCategoryViaApi(
       app,
       adminLogin.auth.accessToken,
     );
+    const { template } = await createTemplateViaApi(
+      app,
+      adminLogin.auth.accessToken,
+      [category.id],
+    );
     const seller = await createApprovedSeller(app, prisma);
 
     const catalog = [
-      { productName: "Ultrasound A", deliveryTime: 2, pricing: "10000.00" },
-      { productName: "Ultrasound B", deliveryTime: 2, pricing: "9000.00" },
-      { productName: "Ultrasound C", deliveryTime: 5, pricing: "7000.00" },
+      { productName: "Ultrasound A", pricing: "10000.00" },
+      { productName: "Ultrasound B", pricing: "9000.00" },
+      { productName: "Ultrasound C", pricing: "7000.00" },
     ];
-
-    const createdIds: string[] = [];
 
     for (const item of catalog) {
       const createRes = await productRequest(
@@ -67,8 +73,11 @@ describe("E2E — Scenario 08: Marketplace default sort priority", () => {
         seller.login.auth.accessToken,
       ).create(productCreationPayload(category.id, item));
       const productId = createRes.body.data.id as string;
+      await productRequest(app, adminLogin.auth.accessToken).attachTemplate(
+        productId,
+        { templateId: template.id },
+      );
       await productRequest(app, adminLogin.auth.accessToken).approve(productId);
-      createdIds.push(productId);
     }
 
     const listRes = await productRequest(app).listMarketplace({
@@ -76,10 +85,8 @@ describe("E2E — Scenario 08: Marketplace default sort priority", () => {
     });
 
     expect(listRes.status).toBe(200);
-    expect(listRes.body.data.map((item: { productName: string }) => item.productName)).toEqual([
-      "Ultrasound B",
-      "Ultrasound A",
-      "Ultrasound C",
-    ]);
+    expect(
+      listRes.body.data.map((item: { productName: string }) => item.productName),
+    ).toEqual(["Ultrasound C", "Ultrasound B", "Ultrasound A"]);
   });
 });

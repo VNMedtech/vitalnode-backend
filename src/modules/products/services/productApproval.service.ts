@@ -1,6 +1,7 @@
 import { prisma } from "../../../infrastructure/prisma/client.js";
 import { logger } from "../../../infrastructure/logger/logger.js";
 import {
+  AppError,
   ConflictError,
   NotFoundError,
 } from "../../../shared/errors/app.errors.js";
@@ -201,6 +202,14 @@ export class ProductApprovalService {
     );
     assertTransitionAllowed(currentStatus, ProductStatus.APPROVED);
 
+    if (!product.templateId) {
+      throw new AppError(
+        "Cannot approve product without an attached template. Attach a product template first.",
+        400,
+        "TEMPLATE_REQUIRED",
+      );
+    }
+
     const updated = await this.repo.updateStatus(
       productId,
       ProductStatus.APPROVED,
@@ -216,6 +225,7 @@ export class ProductApprovalService {
         newStatus: ProductStatus.APPROVED,
         sellerId: product.sellerId,
         productName: product.productName,
+        templateId: product.templateId,
       },
     });
 

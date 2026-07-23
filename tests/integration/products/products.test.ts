@@ -4,6 +4,7 @@ import * as s3Module from "../../../src/infrastructure/s3/index.js";
 import { productCreationPayload } from "../../fixtures/product.payloads.js";
 import {
   createCategoryViaApi,
+  createTemplateViaApi,
   setupMarketplaceProduct,
 } from "../../factories/commerce.factory.js";
 import {
@@ -50,7 +51,7 @@ describe("Products — Catalog & Approval Workflow", () => {
     await disconnectTestPrisma();
   });
 
-  it("1. allows approved seller to create a pending product", async () => {
+  it("1. allows approved seller to create a pending product with categories", async () => {
     const prisma = getTestPrisma();
     const { login: adminLogin } = await createAdminViaApi(app, prisma);
     const { category } = await createCategoryViaApi(
@@ -67,6 +68,9 @@ describe("Products — Catalog & Approval Workflow", () => {
     expect(res.status).toBe(201);
     expect(res.body.data.status).toBe("PENDING_APPROVAL");
     expect(res.body.data.productName).toBe(payload.productName);
+    expect(res.body.data.categories).toHaveLength(1);
+    expect(res.body.data.categories[0].id).toBe(category.id);
+    expect(res.body.data.templateId).toBeNull();
   });
 
   it("2. lists seller own products", async () => {
@@ -120,11 +124,10 @@ describe("Products — Catalog & Approval Workflow", () => {
       seller.login.auth.accessToken,
     ).createMultipart(
       {
-        categoryId: payload.categoryId,
+        categoryIds: JSON.stringify(payload.categoryIds),
         productName: payload.productName,
         brand: payload.brand,
         model: payload.model,
-        productType: payload.productType,
         pricing: payload.pricing,
         moq: String(payload.moq),
         description: payload.description,
@@ -153,12 +156,17 @@ describe("Products — Catalog & Approval Workflow", () => {
     expect(marketplaceRes.status).toBe(404);
   });
 
-  it("4. approves a pending product", async () => {
+  it("4. rejects approve without template and succeeds after attach", async () => {
     const prisma = getTestPrisma();
     const { login: adminLogin } = await createAdminViaApi(app, prisma);
     const { category } = await createCategoryViaApi(
       app,
       adminLogin.auth.accessToken,
+    );
+    const { template } = await createTemplateViaApi(
+      app,
+      adminLogin.auth.accessToken,
+      [category.id],
     );
     const seller = await createApprovedSeller(app, prisma);
     const createRes = await productRequest(
@@ -167,10 +175,28 @@ describe("Products — Catalog & Approval Workflow", () => {
     ).create(productCreationPayload(category.id));
     const productId = createRes.body.data.id;
 
+    const rejectApprove = await productRequest(
+      app,
+      adminLogin.auth.accessToken,
+    ).approve(productId);
+    expect(rejectApprove.status).toBe(400);
+    expect(rejectApprove.body.message).toMatch(/template/i);
+
+    const attachRes = await productRequest(
+      app,
+      adminLogin.auth.accessToken,
+    ).attachTemplate(productId, { templateId: template.id });
+    expect(attachRes.status).toBe(200);
+    expect(attachRes.body.data.templateId).toBe(template.id);
+    expect(attachRes.body.data.attributes).toMatchObject({
+      color: "White",
+      weight: 1.5,
+      deliveryTime: 7,
+    });
+
     const res = await productRequest(app, adminLogin.auth.accessToken).approve(
       productId,
     );
-
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("APPROVED");
   });
@@ -197,19 +223,22 @@ describe("Products — Catalog & Approval Workflow", () => {
     expect(res.body.data.status).toBe("REJECTED");
   });
 
-  it("6. exposes approved products on marketplace listing", async () => {
+  it("6. exposes approved products on marketplace listing filtered by category", async () => {
     const prisma = getTestPrisma();
     const setup = await setupMarketplaceProduct(app, prisma);
 
-    const res = await productRequest(app).listMarketplace();
+    const res = await productRequest(app).listMarketplace({
+      categoryId: setup.categoryId,
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].id).toBe(setup.productId);
     expect(res.body.data[0].status).toBe("APPROVED");
+    expect(res.body.data[0].categories[0].id).toBe(setup.categoryId);
   });
 
-  it("7. returns marketplace product details by id", async () => {
+  it("7. returns marketplace product details by id with attribute fields", async () => {
     const prisma = getTestPrisma();
     const setup = await setupMarketplaceProduct(app, prisma);
 
@@ -218,19 +247,30 @@ describe("Products — Catalog & Approval Workflow", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.id).toBe(setup.productId);
     expect(res.body.data.inventory).toBeTruthy();
+    expect(res.body.data.template.id).toBe(setup.templateId);
+    expect(res.body.data.attributeFields.length).toBeGreaterThan(0);
   });
 
-  it("8. allows seller to update own product", async () => {
+  it("8. attributes-only update keeps APPROVED; core change forces re-approval", async () => {
     const prisma = getTestPrisma();
     const setup = await setupMarketplaceProduct(app, prisma);
 
-    const res = await productRequest(app, setup.sellerToken).update(
+    const attrsRes = await productRequest(app, setup.sellerToken).update(
+      setup.productId,
+      { attributes: { color: "Black", customNote: "orphan kept" } },
+    );
+    expect(attrsRes.status).toBe(200);
+    expect(attrsRes.body.data.status).toBe("APPROVED");
+    expect(attrsRes.body.data.attributes.color).toBe("Black");
+    expect(attrsRes.body.data.attributes.customNote).toBe("orphan kept");
+
+    const coreRes = await productRequest(app, setup.sellerToken).update(
       setup.productId,
       { productName: "Updated Product Name" },
     );
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.productName).toBe("Updated Product Name");
+    expect(coreRes.status).toBe(200);
+    expect(coreRes.body.data.productName).toBe("Updated Product Name");
+    expect(coreRes.body.data.status).toBe("PENDING_APPROVAL");
   });
 
   it("9. allows seller to disable an approved product", async () => {
@@ -314,11 +354,10 @@ describe("Products — Catalog & Approval Workflow", () => {
       seller.login.auth.accessToken,
     ).createMultipart(
       {
-        categoryId: payload.categoryId,
+        categoryIds: JSON.stringify(payload.categoryIds),
         productName: payload.productName,
         brand: payload.brand,
         model: payload.model,
-        productType: payload.productType,
         pricing: payload.pricing,
         moq: String(payload.moq),
         description: payload.description,
@@ -352,11 +391,10 @@ describe("Products — Catalog & Approval Workflow", () => {
       seller.login.auth.accessToken,
     ).createMultipart(
       {
-        categoryId: payload.categoryId,
+        categoryIds: JSON.stringify(payload.categoryIds),
         productName: payload.productName,
         brand: payload.brand,
         model: payload.model,
-        productType: payload.productType,
         pricing: payload.pricing,
         moq: String(payload.moq),
         description: payload.description,

@@ -1,12 +1,11 @@
 import { z } from "zod";
 import {
   PRODUCT_BRAND_MAX_LENGTH,
-  PRODUCT_COLOR_MAX_LENGTH,
   PRODUCT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_DETAILS_MAX_LENGTH,
+  PRODUCT_MIN_CATEGORIES,
   PRODUCT_MODEL_MAX_LENGTH,
   PRODUCT_NAME_MAX_LENGTH,
-  PRODUCT_TYPE_MAX_LENGTH,
 } from "../constants/product.constants.js";
 
 const decimalInputSchema = z
@@ -26,7 +25,10 @@ const positiveDecimalInputSchema = decimalInputSchema.refine(
 
 export const createProductBodySchema = z
   .object({
-    categoryId: z.string().uuid("Invalid category ID"),
+    categoryIds: z
+      .array(z.string().uuid("Invalid category ID"))
+      .min(PRODUCT_MIN_CATEGORIES, "At least one category is required"),
+    templateId: z.string().uuid("Invalid template ID").optional(),
     productName: z
       .string()
       .trim()
@@ -42,17 +44,6 @@ export const createProductBodySchema = z
       .trim()
       .min(1, "Model is required")
       .max(PRODUCT_MODEL_MAX_LENGTH),
-    productType: z
-      .string()
-      .trim()
-      .min(1, "Product type is required")
-      .max(PRODUCT_TYPE_MAX_LENGTH),
-    color: z.string().trim().min(1).max(PRODUCT_COLOR_MAX_LENGTH).optional(),
-    weight: decimalInputSchema.optional(),
-    length: decimalInputSchema.optional(),
-    warrantyPeriod: z.number().int().min(0).optional(),
-    returnTime: z.number().int().min(0).optional(),
-    deliveryTime: z.number().int().min(0).optional(),
     pricing: positiveDecimalInputSchema,
     moq: z.number().int().min(1, "MOQ must be at least 1"),
     description: z
@@ -61,7 +52,7 @@ export const createProductBodySchema = z
       .min(1, "Description is required")
       .max(PRODUCT_DESCRIPTION_MAX_LENGTH),
     details: z.string().trim().max(PRODUCT_DETAILS_MAX_LENGTH).optional(),
-    specifications: z.record(z.string(), z.unknown()).optional(),
+    attributes: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 

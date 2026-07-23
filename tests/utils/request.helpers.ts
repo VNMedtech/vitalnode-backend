@@ -7,6 +7,7 @@ const SELLERS_BASE = "/api/v1/sellers";
 const DELIVERY_PARTNERS_BASE = "/api/v1/delivery-partners";
 const CATEGORIES_BASE = "/api/v1/categories";
 const PRODUCTS_BASE = "/api/v1/products";
+const PRODUCT_TEMPLATES_BASE = "/api/v1/product-templates";
 const INVENTORY_BASE = "/api/v1/inventory";
 const ADDRESSES_BASE = "/api/v1/addresses";
 const SELLER_ADDRESSES_BASE = "/api/v1/seller/addresses";
@@ -282,6 +283,11 @@ export function productRequest(app: Express, accessToken = "") {
     approve: (id: string) =>
       auth(request(app).post(`${PRODUCTS_BASE}/${id}/approve`)),
 
+    attachTemplate: (id: string, body: Record<string, unknown>) =>
+      auth(request(app).post(`${PRODUCTS_BASE}/${id}/attach-template`)).send(
+        body,
+      ),
+
     reject: (id: string, body: Record<string, unknown> = {}) =>
       auth(request(app).post(`${PRODUCTS_BASE}/${id}/reject`)).send(body),
 
@@ -292,6 +298,41 @@ export function productRequest(app: Express, accessToken = "") {
       auth(request(app).get(`${PRODUCTS_BASE}/${productId}/reviews`)).query(
         query,
       ),
+  };
+}
+
+export function productTemplateRequest(app: Express, accessToken = "") {
+  const auth = (req: Test) =>
+    accessToken ? req.set("Authorization", `Bearer ${accessToken}`) : req;
+
+  return {
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(PRODUCT_TEMPLATES_BASE)).query(query),
+
+    search: (query: Record<string, string | number | string[] | undefined>) =>
+      auth(request(app).get(`${PRODUCT_TEMPLATES_BASE}/search`)).query(query),
+
+    getById: (id: string) =>
+      auth(request(app).get(`${PRODUCT_TEMPLATES_BASE}/${id}`)),
+
+    create: (body: Record<string, unknown>) =>
+      auth(request(app).post(PRODUCT_TEMPLATES_BASE)).send(body),
+
+    update: (id: string, body: Record<string, unknown>) =>
+      auth(request(app).patch(`${PRODUCT_TEMPLATES_BASE}/${id}`)).send(body),
+
+    disable: (id: string) =>
+      auth(request(app).delete(`${PRODUCT_TEMPLATES_BASE}/${id}`)),
+
+    replaceFields: (id: string, body: Record<string, unknown>) =>
+      auth(request(app).put(`${PRODUCT_TEMPLATES_BASE}/${id}/fields`)).send(
+        body,
+      ),
+
+    replaceCategories: (id: string, body: Record<string, unknown>) =>
+      auth(
+        request(app).put(`${PRODUCT_TEMPLATES_BASE}/${id}/categories`),
+      ).send(body),
   };
 }
 

@@ -18,6 +18,23 @@ const sellerSummarySelect = {
   businessName: true,
 } satisfies Prisma.SellerProfileSelect;
 
+const templateSummarySelect = {
+  id: true,
+  name: true,
+} satisfies Prisma.ProductTemplateSelect;
+
+const templateFieldSelect = {
+  id: true,
+  key: true,
+  label: true,
+  fieldType: true,
+  options: true,
+  defaultValue: true,
+  unit: true,
+  sortOrder: true,
+  isActive: true,
+} satisfies Prisma.ProductTemplateFieldSelect;
+
 const mediaSelect = {
   id: true,
   fileUploadId: true,
@@ -34,22 +51,30 @@ const documentSelect = {
   createdAt: true,
 } satisfies Prisma.ProductDocumentSelect;
 
+const productCategorySelect = {
+  isPrimary: true,
+  category: {
+    select: categorySummarySelect,
+  },
+} satisfies Prisma.ProductCategorySelect;
+
 const productListSelect = {
   id: true,
   sellerId: true,
-  categoryId: true,
+  templateId: true,
   productName: true,
   brand: true,
   model: true,
-  productType: true,
   pricing: true,
   moq: true,
-  deliveryTime: true,
   status: true,
   createdAt: true,
   updatedAt: true,
-  category: {
-    select: categorySummarySelect,
+  categories: {
+    select: productCategorySelect,
+  },
+  template: {
+    select: templateSummarySelect,
   },
   seller: {
     select: sellerSummarySelect,
@@ -68,14 +93,9 @@ const productListSelect = {
 
 const productDetailSelect = {
   ...productListSelect,
-  color: true,
-  weight: true,
-  length: true,
-  warrantyPeriod: true,
-  returnTime: true,
   description: true,
   details: true,
-  specifications: true,
+  attributes: true,
   media: {
     select: mediaSelect,
     orderBy: {
@@ -91,6 +111,15 @@ const productDetailSelect = {
   inventory: {
     select: {
       availableQuantity: true,
+    },
+  },
+  template: {
+    select: {
+      ...templateSummarySelect,
+      fields: {
+        select: templateFieldSelect,
+        orderBy: [{ sortOrder: "asc" as const }, { key: "asc" as const }],
+      },
     },
   },
 } satisfies Prisma.ProductSelect;
@@ -158,7 +187,13 @@ function buildProductWhere(
   const baseWhere: Prisma.ProductWhereInput = {
     deletedAt: null,
     ...(sellerId ? { sellerId } : {}),
-    ...(categoryId ? { categoryId } : {}),
+    ...(categoryId
+      ? {
+          categories: {
+            some: { categoryId },
+          },
+        }
+      : {}),
     ...(brand ? { brand: { equals: brand, mode: "insensitive" } } : {}),
     ...(status ? { status: status as PrismaProductStatus } : {}),
     ...(Object.keys(priceFilter).length > 0 ? { pricing: priceFilter } : {}),
@@ -172,9 +207,13 @@ function buildProductWhere(
               status: "ACTIVE",
             },
           },
-          category: {
-            deletedAt: null,
-            isActive: true,
+          categories: {
+            some: {
+              category: {
+                deletedAt: null,
+                isActive: true,
+              },
+            },
           },
         }
       : {}),
@@ -192,42 +231,31 @@ function buildProductWhere(
 
 export interface CreateProductData {
   sellerId: string;
-  categoryId: string;
+  categoryIds: string[];
+  primaryCategoryId: string;
+  templateId?: string | null;
   productName: string;
   brand: string;
   model: string;
-  productType: string;
-  color?: string | null;
-  weight?: Prisma.Decimal | null;
-  length?: Prisma.Decimal | null;
-  warrantyPeriod?: number | null;
-  returnTime?: number | null;
-  deliveryTime?: number | null;
   pricing: Prisma.Decimal;
   moq: number;
   description: string;
   details?: string | null;
-  specifications?: Prisma.InputJsonValue;
+  attributes?: Prisma.InputJsonValue;
   status: ProductStatus;
 }
 
 export interface UpdateProductData {
-  categoryId?: string;
+  templateId?: string | null;
   productName?: string;
   brand?: string;
   model?: string;
-  productType?: string;
-  color?: string | null;
-  weight?: Prisma.Decimal | null;
-  length?: Prisma.Decimal | null;
-  warrantyPeriod?: number | null;
-  returnTime?: number | null;
-  deliveryTime?: number | null;
   pricing?: Prisma.Decimal;
   moq?: number;
   description?: string;
   details?: string | null;
-  specifications?: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+  attributes?: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+  status?: ProductStatus;
 }
 
 export class ProductRepository {
@@ -248,23 +276,22 @@ export class ProductRepository {
       const product = await tx.product.create({
         data: {
           sellerId: data.sellerId,
-          categoryId: data.categoryId,
+          templateId: data.templateId ?? null,
           productName: data.productName,
           brand: data.brand,
           model: data.model,
-          productType: data.productType,
-          color: data.color ?? null,
-          weight: data.weight ?? null,
-          length: data.length ?? null,
-          warrantyPeriod: data.warrantyPeriod ?? null,
-          returnTime: data.returnTime ?? null,
-          deliveryTime: data.deliveryTime ?? null,
           pricing: data.pricing,
           moq: data.moq,
           description: data.description,
           details: data.details ?? null,
-          specifications: data.specifications ?? undefined,
+          attributes: data.attributes ?? undefined,
           status: data.status as PrismaProductStatus,
+          categories: {
+            create: data.categoryIds.map((categoryId) => ({
+              categoryId,
+              isPrimary: categoryId === data.primaryCategoryId,
+            })),
+          },
           inventory: {
             create: {
               availableQuantity: 0,
@@ -315,9 +342,13 @@ export class ProductRepository {
             status: "ACTIVE",
           },
         },
-        category: {
-          deletedAt: null,
-          isActive: true,
+        categories: {
+          some: {
+            category: {
+              deletedAt: null,
+              isActive: true,
+            },
+          },
         },
       },
       select: productDetailSelect,
@@ -337,9 +368,13 @@ export class ProductRepository {
             status: "ACTIVE",
           },
         },
-        category: {
-          deletedAt: null,
-          isActive: true,
+        categories: {
+          some: {
+            category: {
+              deletedAt: null,
+              isActive: true,
+            },
+          },
         },
       },
       select: productDetailSelect,
@@ -390,8 +425,42 @@ export class ProductRepository {
   update(id: string, data: UpdateProductData) {
     return this.prisma.product.update({
       where: { id },
-      data,
+      data: {
+        ...(data.templateId !== undefined ? { templateId: data.templateId } : {}),
+        ...(data.productName !== undefined
+          ? { productName: data.productName }
+          : {}),
+        ...(data.brand !== undefined ? { brand: data.brand } : {}),
+        ...(data.model !== undefined ? { model: data.model } : {}),
+        ...(data.pricing !== undefined ? { pricing: data.pricing } : {}),
+        ...(data.moq !== undefined ? { moq: data.moq } : {}),
+        ...(data.description !== undefined
+          ? { description: data.description }
+          : {}),
+        ...(data.details !== undefined ? { details: data.details } : {}),
+        ...(data.attributes !== undefined
+          ? { attributes: data.attributes }
+          : {}),
+        ...(data.status !== undefined
+          ? { status: data.status as PrismaProductStatus }
+          : {}),
+      },
       select: productDetailSelect,
+    });
+  }
+
+  async replaceCategories(
+    productId: string,
+    categoryIds: string[],
+    primaryCategoryId: string,
+  ) {
+    await this.prisma.productCategory.deleteMany({ where: { productId } });
+    await this.prisma.productCategory.createMany({
+      data: categoryIds.map((categoryId) => ({
+        productId,
+        categoryId,
+        isPrimary: categoryId === primaryCategoryId,
+      })),
     });
   }
 

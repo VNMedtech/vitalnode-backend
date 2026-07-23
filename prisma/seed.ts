@@ -492,16 +492,21 @@ async function seedSampleProduct(sellerUserId: string) {
   const product = await prisma.product.create({
     data: {
       sellerId: sellerProfile.id,
-      categoryId: category.id,
       productName: SEED_PRODUCT_NAME,
       brand: "VitalNode Demo",
       model: "VN-POX-SEED",
-      productType: "Monitoring Device",
       pricing: 8999,
       moq: 1,
       description:
         "Seeded fingertip pulse oximeter for local fulfillment demos (INTERNAL_DP sample orders).",
       status: ProductStatus.APPROVED,
+      attributes: {
+        productType: "Monitoring Device",
+        deliveryTime: 3,
+      },
+      categories: {
+        create: [{ categoryId: category.id, isPrimary: true }],
+      },
       inventory: { create: { availableQuantity: 25 } },
     },
   });
@@ -520,7 +525,7 @@ async function upsertSeedOrder(params: {
   buyerProfileId: string;
   sellerProfileId: string;
   deliveryPartnerProfileId: string | null;
-  product: { id: string; productName: string; brand: string; model: string; productType: string; pricing: unknown };
+  product: { id: string; productName: string; brand: string; model: string; pricing: unknown };
   shipment?: {
     status: ShipmentStatus;
     deliveryPartnerId: string;
@@ -622,7 +627,7 @@ async function upsertSeedOrder(params: {
             productName: params.product.productName,
             brand: params.product.brand,
             model: params.product.model,
-            productType: params.product.productType,
+            productType: "Monitoring Device",
             primaryImageUrl: null,
           },
         },
@@ -658,7 +663,7 @@ async function seedSampleOrders(params: {
   sellerUserId: string;
   buyerUserId: string;
   deliveryPartnerUserId: string;
-  product: { id: string; productName: string; brand: string; model: string; productType: string; pricing: unknown };
+  product: { id: string; productName: string; brand: string; model: string; pricing: unknown };
 }) {
   const sellerProfile = await prisma.sellerProfile.findUniqueOrThrow({
     where: { userId: params.sellerUserId },

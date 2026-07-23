@@ -25,7 +25,7 @@ Node.js / Express API for the Medical Equipment Marketplace.
    npm run dev
    ```
 
-   `db:seed` creates demo users (admin, seller, buyer, delivery partner), categories, and a system actor. Default password: `Password123!` (see `prisma/seed.ts`).
+   `db:seed` creates demo users (admin, seller, buyer, delivery partner), categories, a sample **approved** product (multi-category via `ProductCategory`, template-driven `attributes` JSON — not fixed color/weight columns), and a system actor. Default password: `Password123!` (see `prisma/seed.ts`).
 
 ## Database scripts
 

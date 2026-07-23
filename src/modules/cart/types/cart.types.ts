@@ -8,7 +8,6 @@ export interface CartProductSummaryDto {
   productName: string;
   brand: string;
   model: string;
-  productType: string;
   description: string;
   pricing: string;
   moq: number;

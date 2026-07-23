@@ -38,6 +38,10 @@ export const permissions = {
     approve: "products:approve",
     reject: "products:reject",
   },
+  productTemplates: {
+    read: "product-templates:read",
+    manage: "product-templates:manage",
+  },
   inventory: {
     read: "inventory:read",
     update: "inventory:update",
@@ -160,6 +164,7 @@ export const rolePermissions: Record<UserRole, readonly Permission[]> = {
     permissions.users.updateProfile,
     permissions.users.changePassword,
     permissions.categories.read,
+    permissions.productTemplates.read,
     permissions.products.create,
     permissions.products.read,
     permissions.products.update,

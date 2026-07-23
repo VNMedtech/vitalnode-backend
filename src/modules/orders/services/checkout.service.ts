@@ -45,7 +45,10 @@ function isCartProductEligible(product: CartItem["product"]): boolean {
     return false;
   }
 
-  if (product.category.deletedAt !== null || !product.category.isActive) {
+  const hasActiveCategory = product.categories.some(
+    (link) => link.category.deletedAt === null && link.category.isActive,
+  );
+  if (!hasActiveCategory) {
     return false;
   }
 
@@ -69,7 +72,7 @@ function buildProductSnapshot(item: CartItem): ProductSnapshot {
     productName: item.product.productName,
     brand: item.product.brand,
     model: item.product.model,
-    productType: item.product.productType,
+    productType: "",
     pricing: item.product.pricing.toString(),
     moq: item.product.moq,
     status: item.product.status,

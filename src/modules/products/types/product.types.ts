@@ -1,5 +1,6 @@
 import type { ProductSortField } from "../constants/product.constants.js";
 import type { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
+import type { ProductTemplateFieldType } from "../../../../generated/prisma/client.js";
 
 export interface ProductMediaDto {
   id: string;
@@ -20,6 +21,21 @@ export interface ProductDocumentDto {
 export interface ProductCategorySummaryDto {
   id: string;
   name: string;
+  isPrimary: boolean;
+}
+
+export interface ProductTemplateSummaryDto {
+  id: string;
+  name: string;
+}
+
+export interface ProductAttributeFieldDto {
+  key: string;
+  label: string;
+  fieldType: ProductTemplateFieldType;
+  unit: string | null;
+  value: unknown;
+  isOrphan: boolean;
 }
 
 export interface ProductSellerSummaryDto {
@@ -34,16 +50,16 @@ export interface ProductInventorySummaryDto {
 export interface ProductListItemDto {
   id: string;
   sellerId: string;
-  categoryId: string;
+  templateId: string | null;
   productName: string;
   brand: string;
   model: string;
-  productType: string;
   pricing: string;
   moq: number;
-  deliveryTime: number | null;
   status: ProductStatus;
-  category: ProductCategorySummaryDto;
+  categories: ProductCategorySummaryDto[];
+  primaryCategory: ProductCategorySummaryDto | null;
+  template: ProductTemplateSummaryDto | null;
   seller: ProductSellerSummaryDto;
   primaryImageUrl: string | null;
   averageRating: string | null;
@@ -53,14 +69,10 @@ export interface ProductListItemDto {
 }
 
 export interface ProductDetailDto extends ProductListItemDto {
-  color: string | null;
-  weight: string | null;
-  length: string | null;
-  warrantyPeriod: number | null;
-  returnTime: number | null;
   description: string;
   details: string | null;
-  specifications: Record<string, unknown> | null;
+  attributes: Record<string, unknown> | null;
+  attributeFields: ProductAttributeFieldDto[];
   media: ProductMediaDto[];
   documents: ProductDocumentDto[];
   inventory: ProductInventorySummaryDto | null;
@@ -79,49 +91,42 @@ export interface ProductDocumentInput {
 }
 
 export interface CreateProductInput {
-  categoryId: string;
+  categoryIds: string[];
+  templateId?: string;
   productName: string;
   brand: string;
   model: string;
-  productType: string;
-  color?: string;
-  weight?: string;
-  length?: string;
-  warrantyPeriod?: number;
-  returnTime?: number;
-  deliveryTime?: number;
   pricing: string;
   moq: number;
   description: string;
   details?: string;
-  specifications?: Record<string, unknown>;
+  attributes?: Record<string, unknown>;
   documentTypes?: string[];
   media?: ProductMediaInput[];
   documents?: ProductDocumentInput[];
 }
 
 export interface UpdateProductInput {
-  categoryId?: string;
+  categoryIds?: string[];
+  templateId?: string | null;
   productName?: string;
   brand?: string;
   model?: string;
-  productType?: string;
-  color?: string | null;
-  weight?: string | null;
-  length?: string | null;
-  warrantyPeriod?: number | null;
-  returnTime?: number | null;
-  deliveryTime?: number | null;
   pricing?: string;
   moq?: number;
   description?: string;
   details?: string | null;
-  specifications?: Record<string, unknown> | null;
+  attributes?: Record<string, unknown> | null;
   documentTypes?: string[];
   media?: ProductMediaInput[];
   documents?: ProductDocumentInput[];
   replaceMedia?: boolean;
   replaceDocuments?: boolean;
+}
+
+export interface AttachTemplateInput {
+  templateId: string;
+  attributes?: Record<string, unknown>;
 }
 
 export interface ListProductsQuery {
@@ -156,18 +161,12 @@ export interface RejectProductInput {
 export interface ProductCompareItemDto {
   id: string;
   productName: string;
-  category: ProductCategorySummaryDto;
+  categories: ProductCategorySummaryDto[];
   brand: string;
   model: string;
-  productType: string;
-  color: string | null;
-  weight: string | null;
-  length: string | null;
-  warrantyPeriod: number | null;
-  returnTime: number | null;
-  deliveryTime: number | null;
   pricing: string;
   moq: number;
+  attributes: Record<string, unknown> | null;
   primaryImageUrl: string | null;
 }
 

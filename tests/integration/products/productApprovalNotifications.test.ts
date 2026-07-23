@@ -3,7 +3,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import * as s3Module from "../../../src/infrastructure/s3/index.js";
 import { NOTIFICATION_TYPES } from "../../../src/modules/notifications/constants/notification.constants.js";
 import { productCreationPayload } from "../../fixtures/product.payloads.js";
-import { createCategoryViaApi } from "../../factories/commerce.factory.js";
+import {
+  createCategoryViaApi,
+  createTemplateViaApi,
+} from "../../factories/commerce.factory.js";
 import {
   createAdminViaApi,
   createApprovedSeller,
@@ -46,6 +49,25 @@ async function waitForNotification(
   return null;
 }
 
+async function createPendingProductWithTemplate(
+  app: Express,
+  adminToken: string,
+  sellerToken: string,
+) {
+  const { category } = await createCategoryViaApi(app, adminToken);
+  const { template } = await createTemplateViaApi(app, adminToken, [
+    category.id,
+  ]);
+  const createRes = await productRequest(app, sellerToken).create(
+    productCreationPayload(category.id),
+  );
+  const productId = createRes.body.data.id as string;
+  await productRequest(app, adminToken).attachTemplate(productId, {
+    templateId: template.id,
+  });
+  return { productId, productName: createRes.body.data.productName as string };
+}
+
 describe("Products — Approval/Rejection Notifications", () => {
   let app: Express;
 
@@ -66,16 +88,12 @@ describe("Products — Approval/Rejection Notifications", () => {
   it("creates a PRODUCT_APPROVED in-app notification when admin approves a product", async () => {
     const prisma = getTestPrisma();
     const { login: adminLogin } = await createAdminViaApi(app, prisma);
-    const { category } = await createCategoryViaApi(
+    const seller = await createApprovedSeller(app, prisma);
+    const { productId, productName } = await createPendingProductWithTemplate(
       app,
       adminLogin.auth.accessToken,
-    );
-    const seller = await createApprovedSeller(app, prisma);
-    const createRes = await productRequest(
-      app,
       seller.login.auth.accessToken,
-    ).create(productCreationPayload(category.id));
-    const productId = createRes.body.data.id;
+    );
 
     const approveRes = await productRequest(
       app,
@@ -92,7 +110,7 @@ describe("Products — Approval/Rejection Notifications", () => {
 
     expect(notification).toBeTruthy();
     expect(notification?.title).toBe("Product approved");
-    expect(notification?.message).toContain(createRes.body.data.productName);
+    expect(notification?.message).toContain(productName);
   });
 
   it("creates a PRODUCT_REJECTED in-app notification when admin rejects a product", async () => {
@@ -130,16 +148,12 @@ describe("Products — Approval/Rejection Notifications", () => {
   it("still creates an in-app notification when seller email is unavailable", async () => {
     const prisma = getTestPrisma();
     const { login: adminLogin } = await createAdminViaApi(app, prisma);
-    const { category } = await createCategoryViaApi(
+    const seller = await createApprovedSeller(app, prisma);
+    const { productId, productName } = await createPendingProductWithTemplate(
       app,
       adminLogin.auth.accessToken,
-    );
-    const seller = await createApprovedSeller(app, prisma);
-    const createRes = await productRequest(
-      app,
       seller.login.auth.accessToken,
-    ).create(productCreationPayload(category.id));
-    const productId = createRes.body.data.id;
+    );
 
     await prisma.user.update({
       where: { id: seller.auth.user.id },
@@ -160,6 +174,6 @@ describe("Products — Approval/Rejection Notifications", () => {
     );
 
     expect(notification).toBeTruthy();
-    expect(notification?.message).toContain(createRes.body.data.productName);
+    expect(notification?.message).toContain(productName);
   });
 });

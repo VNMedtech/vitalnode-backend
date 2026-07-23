@@ -28,6 +28,7 @@ export const sellerPendingApprovalPermissions = [
  */
 export const sellerOperationalPermissions = [
   permissions.categories.read,
+  permissions.productTemplates.read,
   permissions.products.create,
   permissions.products.read,
   permissions.products.update,

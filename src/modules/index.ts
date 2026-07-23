@@ -8,6 +8,7 @@ export * as sellerAddresses from "./sellerAddresses/index.js";
 export * as sellers from "./sellers/index.js";
 export * as deliveryPartners from "./deliveryPartners/index.js";
 export * as categories from "./categories/index.js";
+export * as productTemplates from "./productTemplates/index.js";
 export * as products from "./products/index.js";
 export * as inventory from "./inventory/index.js";
 export * as cart from "./cart/index.js";

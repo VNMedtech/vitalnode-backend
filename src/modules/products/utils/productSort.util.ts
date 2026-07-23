@@ -13,8 +13,6 @@ function mapSortField(
   switch (sortBy) {
     case "price":
       return "pricing";
-    case "deliveryTime":
-      return "deliveryTime";
     case "newest":
     default:
       return "createdAt";
@@ -43,10 +41,7 @@ export function buildProductOrderBy(
   options: ProductSortOptions,
 ): Prisma.ProductOrderByWithRelationInput | Prisma.ProductOrderByWithRelationInput[] {
   if (options.useMarketplaceDefaultSort) {
-    return [
-      { deliveryTime: { sort: "asc", nulls: "last" } },
-      { pricing: "asc" },
-    ];
+    return [{ pricing: "asc" }];
   }
 
   const sortBy = options.sortBy ?? "newest";

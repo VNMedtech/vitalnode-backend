@@ -46,6 +46,15 @@ enum ProductStatus {
   OUT_OF_STOCK
 }
 
+enum ProductTemplateFieldType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  SELECT
+  MULTISELECT
+  DATE
+}
+
 enum InventoryMovementType {
   MANUAL_INCREASE
   MANUAL_DECREASE
@@ -321,7 +330,73 @@ model Category {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
-  products Product[]
+  products  ProductCategory[]
+  templates ProductTemplateCategory[]
+}
+
+// =============================================================================
+// PRODUCT TEMPLATE DOMAIN
+// =============================================================================
+
+model ProductTemplate {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  fields     ProductTemplateField[]
+  categories ProductTemplateCategory[]
+  products   Product[]
+
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model ProductTemplateField {
+  id           String                   @id @default(uuid())
+  templateId   String
+  key          String
+  label        String
+  fieldType    ProductTemplateFieldType
+  options      Json?
+  defaultValue Json?
+  unit         String?
+  sortOrder    Int                      @default(0)
+  isActive     Boolean                  @default(true)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  template ProductTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, key])
+  @@index([templateId])
+}
+
+model ProductTemplateCategory {
+  templateId String
+  categoryId String
+
+  template ProductTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  category Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([templateId, categoryId])
+  @@index([categoryId])
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  isPrimary  Boolean @default(false)
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+  @@index([productId, isPrimary])
 }
 
 // =============================================================================
@@ -329,31 +404,25 @@ model Category {
 // =============================================================================
 
 model Product {
-  id             String        @id @default(uuid())
-  sellerId       String
-  categoryId     String
-  productName    String
-  brand          String
-  model          String
-  productType    String
-  color          String?
-  weight         Decimal?      @db.Decimal(10, 2)
-  length         Decimal?      @db.Decimal(10, 2)
-  warrantyPeriod Int?
-  returnTime     Int?
-  deliveryTime   Int?
-  pricing        Decimal       @db.Decimal(12, 2)
-  moq            Int
-  description    String
-  details        String?
-  specifications Json?
-  status         ProductStatus
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  deletedAt      DateTime?
+  id          String        @id @default(uuid())
+  sellerId    String
+  templateId  String?
+  productName String
+  brand       String
+  model       String
+  pricing     Decimal       @db.Decimal(12, 2)
+  moq         Int
+  description String
+  details     String?
+  attributes  Json?
+  status      ProductStatus
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
 
   seller         SellerProfile       @relation(fields: [sellerId], references: [id], onDelete: Restrict)
-  category       Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  template       ProductTemplate?    @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  categories     ProductCategory[]
   media          ProductMedia[]
   documents      ProductDocument[]
   inventory      Inventory?
@@ -363,7 +432,7 @@ model Product {
   reviews        ProductReview[]
 
   @@index([sellerId])
-  @@index([categoryId])
+  @@index([templateId])
   @@index([status])
   @@index([brand])
   @@index([model])

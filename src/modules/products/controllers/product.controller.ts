@@ -17,6 +17,7 @@ import type {
 import type { RejectProductBody } from "../validators/rejectProduct.schema.js";
 import type { UpdateProductMultipartBody } from "../validators/productMultipart.schema.js";
 import type { CompareProductsQueryInput } from "../validators/compareProducts.schema.js";
+import type { AttachTemplateBody } from "../validators/attachTemplate.schema.js";
 
 const productService = new ProductService();
 const productApprovalService = new ProductApprovalService();
@@ -111,7 +112,23 @@ export const createProduct: RequestHandler = async (req, res, next) => {
     const actorUserId = requireAuthenticatedUserId(req);
     const body = req.body as CreateProductMultipartBody;
     const files = extractProductUploadFiles(req);
-    const product = await productService.createProduct(actorUserId, body, files);
+    const product = await productService.createProduct(
+      actorUserId,
+      {
+        categoryIds: body.categoryIds,
+        templateId: body.templateId,
+        productName: body.productName,
+        brand: body.brand,
+        model: body.model,
+        pricing: body.pricing,
+        moq: body.moq,
+        description: body.description,
+        details: body.details,
+        attributes: body.attributes,
+        documentTypes: body.documentTypes,
+      },
+      files,
+    );
     res
       .status(201)
       .json(successResponse(product, "Product created successfully"));
@@ -212,6 +229,20 @@ export const getPendingProductById: RequestHandler = async (req, res, next) => {
     res
       .status(200)
       .json(successResponse(product, "Pending product fetched successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const attachTemplate: RequestHandler = async (req, res, next) => {
+  try {
+    const actorUserId = requireAuthenticatedUserId(req);
+    const { id } = req.params as ProductIdParam;
+    const body = req.body as AttachTemplateBody;
+    const product = await productService.attachTemplate(actorUserId, id, body);
+    res
+      .status(200)
+      .json(successResponse(product, "Template attached successfully"));
   } catch (err) {
     next(err);
   }
