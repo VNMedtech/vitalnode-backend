@@ -1,6 +1,9 @@
 import type { Express } from "express";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { setupMarketplaceProduct } from "../../factories/commerce.factory.js";
+import {
+  createCategoryViaApi,
+  setupMarketplaceProduct,
+} from "../../factories/commerce.factory.js";
 import {
   disconnectTestPrisma,
   getTestPrisma,
@@ -37,7 +40,11 @@ describe("Products — Compare", () => {
         productName: "Compare Product B",
         attributes: { color: "Black", weight: 3 },
       },
-      category: { name: `Compare Cat ${Date.now()}` },
+    });
+
+    // Align categories so the set has a non-empty intersection
+    await productRequest(app, second.sellerToken).update(second.productId, {
+      categoryIds: [first.categoryId],
     });
 
     // Attach attributes after approval setup by seller update (attributes-only stays APPROVED)
@@ -65,6 +72,56 @@ describe("Products — Compare", () => {
     expect(keys).toEqual(
       expect.arrayContaining(["productName", "brand", "pricing", "color", "weight"]),
     );
+  });
+
+  it("compares products that share a category via multicategory overlap", async () => {
+    const prisma = getTestPrisma();
+    const first = await setupMarketplaceProduct(app, prisma, {
+      product: { productName: "Overlap Product A" },
+    });
+    const second = await setupMarketplaceProduct(app, prisma, {
+      product: { productName: "Overlap Product B" },
+    });
+
+    const { category: shared } = await createCategoryViaApi(
+      app,
+      first.adminToken,
+      { name: `Shared Compare Cat ${Date.now()}` },
+    );
+
+    await productRequest(app, first.sellerToken).update(first.productId, {
+      categoryIds: [first.categoryId, shared.id],
+    });
+    await productRequest(app, second.sellerToken).update(second.productId, {
+      categoryIds: [second.categoryId, shared.id],
+    });
+
+    const res = await productRequest(app).compare([
+      first.productId,
+      second.productId,
+    ]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.products).toHaveLength(2);
+  });
+
+  it("returns 400 when selected products have no common category", async () => {
+    const prisma = getTestPrisma();
+    const first = await setupMarketplaceProduct(app, prisma, {
+      product: { productName: "Disjoint Product A" },
+    });
+    const second = await setupMarketplaceProduct(app, prisma, {
+      product: { productName: "Disjoint Product B" },
+      category: { name: `Disjoint Cat ${Date.now()}` },
+    });
+
+    const res = await productRequest(app).compare([
+      first.productId,
+      second.productId,
+    ]);
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/share at least one category/i);
   });
 
   it("returns 404 when a product is not marketplace-visible", async () => {

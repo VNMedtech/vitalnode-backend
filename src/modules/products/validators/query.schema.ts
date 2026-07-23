@@ -18,6 +18,19 @@ const decimalFilterSchema = z
   ])
   .transform((value) => (typeof value === "number" ? value.toString() : value));
 
+const categoryIdsQuerySchema = z.preprocess((value) => {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return String(value)
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}, z.array(z.string().uuid("Invalid category ID")).min(1).optional());
+
 const baseListProductsQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).default(PRODUCT_DEFAULT_PAGE),
@@ -31,6 +44,7 @@ const baseListProductsQuerySchema = z
     sortOrder: z.enum(["asc", "desc"]).default("desc"),
     search: z.string().trim().min(1).max(PRODUCT_SEARCH_MAX_LENGTH).optional(),
     categoryId: z.string().uuid("Invalid category ID").optional(),
+    categoryIds: categoryIdsQuerySchema,
     brand: z.string().trim().min(1).max(120).optional(),
     status: z.nativeEnum(ProductStatus).optional(),
     minPrice: decimalFilterSchema.optional(),
@@ -44,7 +58,20 @@ export const listMarketplaceProductsQuerySchema = baseListProductsQuerySchema
     sortBy: z.enum(PRODUCT_SORT_FIELDS).optional(),
     sortOrder: z.enum(["asc", "desc"]).optional(),
   })
-  .strict();
+  .strict()
+  .transform((query) => {
+    const categoryIds =
+      query.categoryIds && query.categoryIds.length > 0
+        ? [...new Set(query.categoryIds)]
+        : query.categoryId
+          ? [query.categoryId]
+          : undefined;
+
+    return {
+      ...query,
+      categoryIds,
+    };
+  });
 
 export const listOwnProductsQuerySchema = baseListProductsQuerySchema.strict();
 

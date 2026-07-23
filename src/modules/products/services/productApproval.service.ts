@@ -164,6 +164,7 @@ export class ProductApprovalService {
     const filterOptions = {
       search: query.search,
       categoryId: query.categoryId,
+      categoryIds: query.categoryIds,
       brand: query.brand,
       status: ProductStatus.PENDING_APPROVAL,
       minPrice: query.minPrice,

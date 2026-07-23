@@ -72,6 +72,18 @@ export const productRouter = Router();
  *         schema: { type: string, format: uuid }
  *         description: Filter products linked to this category (any of product categories)
  *       - in: query
+ *         name: categoryIds
+ *         schema:
+ *           type: array
+ *           items: { type: string, format: uuid }
+ *           minItems: 1
+ *         style: form
+ *         explode: true
+ *         description: |
+ *           Filter products that belong to any of these categories (OR / any-of).
+ *           Accepts repeated query params or a comma-separated list.
+ *           When both categoryId and categoryIds are provided, categoryIds wins.
+ *       - in: query
  *         name: brand
  *         schema: { type: string, maxLength: 120 }
  *       - in: query
@@ -113,6 +125,7 @@ productRouter.get(
  *     summary: Compare marketplace products
  *     description: |
  *       Public endpoint. Compares 2 to 4 approved, marketplace-visible products side by side.
+ *       Products must share at least one category (non-empty intersection across the full set).
  *       Returns comparison attributes aligned to the requested product order.
  *     parameters:
  *       - in: query
@@ -141,7 +154,7 @@ productRouter.get(
  *                 data:
  *                   $ref: '#/components/schemas/ProductCompare'
  *       400:
- *         description: Validation failed
+ *         description: Validation failed, or products do not share a common category
  *       404:
  *         description: One or more products are not available for comparison
  */

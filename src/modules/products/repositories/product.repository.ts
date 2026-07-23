@@ -140,6 +140,7 @@ export interface FindProductsOptions {
   useMarketplaceDefaultSort?: boolean;
   search?: string;
   categoryId?: string;
+  categoryIds?: string[];
   brand?: string;
   status?: ProductStatus;
   minPrice?: string;
@@ -168,6 +169,7 @@ function buildProductWhere(
   const {
     search,
     categoryId,
+    categoryIds,
     brand,
     status,
     minPrice,
@@ -184,16 +186,38 @@ function buildProductWhere(
     priceFilter.lte = maxPrice;
   }
 
+  const resolvedCategoryIds =
+    categoryIds && categoryIds.length > 0
+      ? [...new Set(categoryIds)]
+      : categoryId
+        ? [categoryId]
+        : undefined;
+
+  const categoryFilter: Prisma.ProductWhereInput | undefined =
+    resolvedCategoryIds || marketplaceOnly
+      ? {
+          categories: {
+            some: {
+              ...(resolvedCategoryIds
+                ? { categoryId: { in: resolvedCategoryIds } }
+                : {}),
+              ...(marketplaceOnly
+                ? {
+                    category: {
+                      deletedAt: null,
+                      isActive: true,
+                    },
+                  }
+                : {}),
+            },
+          },
+        }
+      : undefined;
+
   const baseWhere: Prisma.ProductWhereInput = {
     deletedAt: null,
     ...(sellerId ? { sellerId } : {}),
-    ...(categoryId
-      ? {
-          categories: {
-            some: { categoryId },
-          },
-        }
-      : {}),
+    ...(categoryFilter ?? {}),
     ...(brand ? { brand: { equals: brand, mode: "insensitive" } } : {}),
     ...(status ? { status: status as PrismaProductStatus } : {}),
     ...(Object.keys(priceFilter).length > 0 ? { pricing: priceFilter } : {}),
@@ -205,14 +229,6 @@ function buildProductWhere(
             user: {
               deletedAt: null,
               status: "ACTIVE",
-            },
-          },
-          categories: {
-            some: {
-              category: {
-                deletedAt: null,
-                isActive: true,
-              },
             },
           },
         }

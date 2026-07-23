@@ -136,6 +136,7 @@ export interface ListProductsQuery {
   sortOrder: "asc" | "desc";
   search?: string;
   categoryId?: string;
+  categoryIds?: string[];
   brand?: string;
   status?: ProductStatus;
   minPrice?: string;
@@ -149,6 +150,7 @@ export interface ListMarketplaceProductsQuery {
   sortOrder?: "asc" | "desc";
   search?: string;
   categoryId?: string;
+  categoryIds?: string[];
   brand?: string;
   minPrice?: string;
   maxPrice?: string;

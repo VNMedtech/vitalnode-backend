@@ -4,6 +4,7 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  ValidationError,
 } from "../../../shared/errors/app.errors.js";
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
@@ -538,6 +539,7 @@ export class ProductService {
     const filterOptions = {
       search: query.search,
       categoryId: query.categoryId,
+      categoryIds: query.categoryIds,
       brand: query.brand,
       status: query.status,
       minPrice: query.minPrice,
@@ -567,6 +569,7 @@ export class ProductService {
     const filterOptions = {
       search: query.search,
       categoryId: query.categoryId,
+      categoryIds: query.categoryIds,
       brand: query.brand,
       minPrice: query.minPrice,
       maxPrice: query.maxPrice,
@@ -631,6 +634,25 @@ export class ProductService {
     if (records.length !== productIds.length) {
       throw new NotFoundError(
         "One or more products are not available for comparison",
+      );
+    }
+
+    const categoryIdSets = records.map(
+      (record) => new Set(record.categories.map((link) => link.category.id)),
+    );
+    const sharedCategoryIds = categoryIdSets.reduce<Set<string> | null>(
+      (intersection, next) => {
+        if (intersection === null) {
+          return new Set(next);
+        }
+        return new Set([...intersection].filter((id) => next.has(id)));
+      },
+      null,
+    );
+
+    if (!sharedCategoryIds || sharedCategoryIds.size === 0) {
+      throw new ValidationError(
+        "Products must share at least one category to be compared",
       );
     }
 
