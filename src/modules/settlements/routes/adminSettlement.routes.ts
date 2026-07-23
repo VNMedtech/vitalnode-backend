@@ -113,6 +113,19 @@ adminSettlementRouter.get(
  *     responses:
  *       200:
  *         description: Settlement history listed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: Settlement history fetched successfully }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/SettlementBatchSummary'
+ *                 meta:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *   post:
  *     tags: [Admin Settlements]
  *     summary: Create a settlement batch
@@ -135,6 +148,15 @@ adminSettlementRouter.get(
  *     responses:
  *       201:
  *         description: Settlement batch created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: Settlement batch created successfully }
+ *                 data:
+ *                   $ref: '#/components/schemas/SettlementBatchDetail'
  *       400:
  *         description: Validation failed
  */
@@ -162,6 +184,15 @@ adminSettlementRouter.get(
  *     responses:
  *       200:
  *         description: Settlement batch fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: Settlement batch fetched successfully }
+ *                 data:
+ *                   $ref: '#/components/schemas/SettlementBatchDetail'
  *       404:
  *         description: Settlement batch not found
  */
@@ -207,6 +238,15 @@ adminSettlementRouter.post(
  *     responses:
  *       200:
  *         description: Settlement batch disbursed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: Settlement batch disbursed successfully }
+ *                 data:
+ *                   $ref: '#/components/schemas/SettlementBatchDetail'
  *       404:
  *         description: Settlement batch not found
  *       409:
@@ -266,3 +306,63 @@ adminSellerCommissionRouter.patch(
   }),
   adminSettlementController.updateSellerCommission,
 );
+
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     SettlementBatchSellerSummary:
+ *       type: object
+ *       description: Seller identity on settlement batch list items
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         businessName: { type: string }
+ *     SettlementBatchSellerDetail:
+ *       allOf:
+ *         - $ref: '#/components/schemas/SettlementBatchSellerSummary'
+ *         - type: object
+ *           properties:
+ *             commissionPercentage: { type: string, nullable: true, example: "10.00" }
+ *     SettlementOrderSummary:
+ *       type: object
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         orderNumber: { type: string }
+ *         orderStatus: { type: string }
+ *         grossAmount: { type: string }
+ *         commissionAmount: { type: string }
+ *         sellerReceivableAmount: { type: string }
+ *         deliveredAt: { type: string, format: date-time, nullable: true }
+ *     SettlementBatchSummary:
+ *       type: object
+ *       description: |
+ *         Settlement batch list item. Includes nested `seller` with `id` and `businessName`
+ *         (no commission on list — see SettlementBatchDetail for commissionPercentage).
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         sellerId: { type: string, format: uuid }
+ *         batchNumber: { type: string }
+ *         status: { type: string, enum: [PENDING, DISBURSED] }
+ *         grossAmount: { type: string }
+ *         commissionAmount: { type: string }
+ *         netAmount: { type: string }
+ *         paymentReference: { type: string, nullable: true }
+ *         remarks: { type: string, nullable: true }
+ *         disbursedAt: { type: string, format: date-time, nullable: true }
+ *         createdAt: { type: string, format: date-time }
+ *         updatedAt: { type: string, format: date-time }
+ *         orderCount: { type: integer }
+ *         seller:
+ *           $ref: '#/components/schemas/SettlementBatchSellerSummary'
+ *     SettlementBatchDetail:
+ *       allOf:
+ *         - $ref: '#/components/schemas/SettlementBatchSummary'
+ *         - type: object
+ *           properties:
+ *             seller:
+ *               $ref: '#/components/schemas/SettlementBatchSellerDetail'
+ *             orders:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/SettlementOrderSummary'
+ */

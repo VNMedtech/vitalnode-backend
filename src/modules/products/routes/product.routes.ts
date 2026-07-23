@@ -140,7 +140,9 @@ productRouter.get(
  *             format: uuid
  *         style: form
  *         explode: true
- *         description: Repeat the parameter for each product ID (e.g. `?productIds=uuid1&productIds=uuid2`)
+ *         description: |
+ *           Product UUIDs to compare (2–4). Repeat the parameter
+ *           (`?productIds=uuid1&productIds=uuid2`) or pass a comma-separated list.
  *     responses:
  *       200:
  *         description: Products compared successfully

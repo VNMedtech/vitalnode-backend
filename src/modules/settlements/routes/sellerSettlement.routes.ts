@@ -84,6 +84,19 @@ export const sellerSettlementRouter = Router();
  *     responses:
  *       200:
  *         description: Settlements listed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: Settlements listed successfully }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/SettlementBatchSummary'
+ *                 meta:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  */
 sellerSettlementRouter.get(
   "/",
@@ -111,6 +124,15 @@ sellerSettlementRouter.get(
  *     responses:
  *       200:
  *         description: Settlement batch fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: Settlement batch fetched successfully }
+ *                 data:
+ *                   $ref: '#/components/schemas/SettlementBatchDetail'
  *       404:
  *         description: Settlement batch not found
  */

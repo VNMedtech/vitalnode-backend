@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   createCategoryViaApi,
@@ -132,5 +133,34 @@ describe("Products — Compare", () => {
       "00000000-0000-4000-8000-000000000099",
     ]);
     expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for invalid productIds count, duplicates, and UUID format", async () => {
+    const prisma = getTestPrisma();
+    const setup = await setupMarketplaceProduct(app, prisma);
+
+    const onlyOne = await productRequest(app).compare([setup.productId]);
+    expect(onlyOne.status).toBe(400);
+
+    const tooManyIds = [
+      setup.productId,
+      "00000000-0000-4000-8000-000000000001",
+      "00000000-0000-4000-8000-000000000002",
+      "00000000-0000-4000-8000-000000000003",
+      "00000000-0000-4000-8000-000000000004",
+    ];
+    const tooMany = await productRequest(app).compare(tooManyIds);
+    expect(tooMany.status).toBe(400);
+
+    const duplicates = await productRequest(app).compare([
+      setup.productId,
+      setup.productId,
+    ]);
+    expect(duplicates.status).toBe(400);
+
+    const invalidUuid = await request(app).get(
+      "/api/v1/products/compare?productIds=not-a-uuid&productIds=also-bad",
+    );
+    expect(invalidUuid.status).toBe(400);
   });
 });

@@ -48,6 +48,10 @@ export function toSettlementBatchSummaryDto(
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
     orderCount: record._count.orders,
+    seller: {
+      id: record.seller.id,
+      businessName: record.seller.businessName,
+    },
   };
 }
 

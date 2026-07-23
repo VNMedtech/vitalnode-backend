@@ -112,8 +112,44 @@ describe("Settlements — Admin and Seller", () => {
     expect(createRes.status).toBe(201);
     expect(createRes.body.data.status).toBe("PENDING");
     expect(createRes.body.data.orderCount).toBe(1);
+    expect(createRes.body.data.seller).toEqual(
+      expect.objectContaining({
+        id: sellerId,
+        businessName: expect.any(String),
+        commissionPercentage: expect.anything(),
+      }),
+    );
 
     const batchId = createRes.body.data.id as string;
+
+    const adminListRes = await adminSettlementRequest(app, adminToken).list({
+      page: "1",
+      limit: "20",
+      sellerId,
+    });
+    expect(adminListRes.status).toBe(200);
+    const adminListItem = adminListRes.body.data.find(
+      (b: { id: string }) => b.id === batchId,
+    );
+    expect(adminListItem).toBeDefined();
+    expect(adminListItem.seller).toEqual({
+      id: sellerId,
+      businessName: expect.any(String),
+    });
+    expect(adminListItem.seller).not.toHaveProperty("commissionPercentage");
+
+    const sellerListRes = await sellerSettlementRequest(
+      app,
+      sellerToken,
+    ).list({ page: "1", limit: "20" });
+    expect(sellerListRes.status).toBe(200);
+    const sellerListItem = sellerListRes.body.data.find(
+      (b: { id: string }) => b.id === batchId,
+    );
+    expect(sellerListItem?.seller).toEqual({
+      id: sellerId,
+      businessName: expect.any(String),
+    });
 
     const disburseRes = await adminSettlementRequest(app, adminToken).disburse(
       batchId,

@@ -28,6 +28,10 @@ export interface SettlementBatchSummaryDto {
   createdAt: string;
   updatedAt: string;
   orderCount: number;
+  seller: {
+    id: string;
+    businessName: string;
+  };
 }
 
 export interface SettlementBatchDetailDto extends SettlementBatchSummaryDto {

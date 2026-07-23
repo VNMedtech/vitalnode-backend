@@ -32,6 +32,12 @@ const settlementBatchListSelect = {
   disbursedAt: true,
   createdAt: true,
   updatedAt: true,
+  seller: {
+    select: {
+      id: true,
+      businessName: true,
+    },
+  },
   _count: {
     select: {
       orders: true,
