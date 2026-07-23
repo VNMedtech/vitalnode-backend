@@ -141,7 +141,10 @@ export interface ListProductsQuery {
   status?: ProductStatus;
   minPrice?: string;
   maxPrice?: string;
+  sellerId?: string;
 }
+
+export interface ListAdminProductsQuery extends ListProductsQuery {}
 
 export interface ListMarketplaceProductsQuery {
   page: number;

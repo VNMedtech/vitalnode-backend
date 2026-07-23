@@ -10,6 +10,7 @@ import { extractProductUploadFiles } from "../utils/productUpload.util.js";
 import type { CreateProductMultipartBody } from "../validators/productMultipart.schema.js";
 import type { ProductIdParam } from "../validators/productParams.schema.js";
 import type {
+  ListAdminProductsQueryInput,
   ListMarketplaceProductsQueryInput,
   ListOwnProductsQueryInput,
   ListPendingProductsQueryInput,
@@ -146,7 +147,10 @@ export const updateProduct: RequestHandler = async (req, res, next) => {
     const product = await productService.updateProduct(
       actorUserId,
       id,
-      body,
+      {
+        ...body,
+        documents: body.keptDocuments ?? body.documents,
+      },
       files,
     );
     res
@@ -243,6 +247,85 @@ export const attachTemplate: RequestHandler = async (req, res, next) => {
     res
       .status(200)
       .json(successResponse(product, "Template attached successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const listAdminProducts: RequestHandler = async (req, res, next) => {
+  try {
+    const query = req.query as unknown as ListAdminProductsQueryInput;
+    const result = await productService.listAdminProducts(query);
+    res
+      .status(200)
+      .json(
+        paginatedResponse(
+          result.items,
+          result.meta,
+          "Products fetched successfully",
+        ),
+      );
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getAdminProductById: RequestHandler = async (req, res, next) => {
+  try {
+    const { id } = req.params as ProductIdParam;
+    const product = await productService.getAdminProductById(id);
+    res
+      .status(200)
+      .json(successResponse(product, "Product fetched successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateAdminProduct: RequestHandler = async (req, res, next) => {
+  try {
+    const actorUserId = requireAuthenticatedUserId(req);
+    const { id } = req.params as ProductIdParam;
+    const body = req.body as UpdateProductMultipartBody;
+    const files = extractProductUploadFiles(req);
+    const product = await productService.updateAdminProduct(
+      actorUserId,
+      id,
+      {
+        ...body,
+        documents: body.keptDocuments ?? body.documents,
+      },
+      files,
+    );
+    res
+      .status(200)
+      .json(successResponse(product, "Product updated successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const disableAdminProduct: RequestHandler = async (req, res, next) => {
+  try {
+    const actorUserId = requireAuthenticatedUserId(req);
+    const { id } = req.params as ProductIdParam;
+    const product = await productService.disableAdminProduct(actorUserId, id);
+    res
+      .status(200)
+      .json(successResponse(product, "Product disabled successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const enableAdminProduct: RequestHandler = async (req, res, next) => {
+  try {
+    const actorUserId = requireAuthenticatedUserId(req);
+    const { id } = req.params as ProductIdParam;
+    const product = await productService.enableAdminProduct(actorUserId, id);
+    res
+      .status(200)
+      .json(successResponse(product, "Product enabled successfully"));
   } catch (err) {
     next(err);
   }

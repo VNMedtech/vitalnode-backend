@@ -218,8 +218,14 @@ export function productRequest(app: Express, accessToken = "") {
     listPending: (query: Record<string, string | number | undefined> = {}) =>
       auth(request(app).get(`${PRODUCTS_BASE}/pending`)).query(query),
 
+    listAdmin: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${PRODUCTS_BASE}/admin`)).query(query),
+
     getPendingById: (id: string) =>
       auth(request(app).get(`${PRODUCTS_BASE}/pending/${id}`)),
+
+    getAdminById: (id: string) =>
+      auth(request(app).get(`${PRODUCTS_BASE}/admin/${id}`)),
 
     getMarketplaceById: (id: string) =>
       auth(request(app).get(`${PRODUCTS_BASE}/${id}`)),
@@ -256,6 +262,9 @@ export function productRequest(app: Express, accessToken = "") {
     update: (id: string, body: Record<string, unknown>) =>
       auth(request(app).patch(`${PRODUCTS_BASE}/${id}`)).send(body),
 
+    updateAdmin: (id: string, body: Record<string, unknown>) =>
+      auth(request(app).patch(`${PRODUCTS_BASE}/admin/${id}`)).send(body),
+
     updateMultipart: (
       id: string,
       fields: Record<string, string>,
@@ -277,8 +286,35 @@ export function productRequest(app: Express, accessToken = "") {
       return req;
     },
 
+    updateAdminMultipart: (
+      id: string,
+      fields: Record<string, string>,
+      files?: {
+        images?: Array<{ buffer: Buffer; filename: string }>;
+        documents?: Array<{ buffer: Buffer; filename: string }>;
+      },
+    ) => {
+      let req = auth(request(app).patch(`${PRODUCTS_BASE}/admin/${id}`));
+      for (const [key, value] of Object.entries(fields)) {
+        req = req.field(key, value);
+      }
+      for (const image of files?.images ?? []) {
+        req = req.attach("images", image.buffer, image.filename);
+      }
+      for (const document of files?.documents ?? []) {
+        req = req.attach("documents", document.buffer, document.filename);
+      }
+      return req;
+    },
+
     disable: (id: string) =>
       auth(request(app).delete(`${PRODUCTS_BASE}/${id}`)),
+
+    disableAdmin: (id: string) =>
+      auth(request(app).post(`${PRODUCTS_BASE}/admin/${id}/disable`)),
+
+    enableAdmin: (id: string) =>
+      auth(request(app).post(`${PRODUCTS_BASE}/admin/${id}/enable`)),
 
     approve: (id: string) =>
       auth(request(app).post(`${PRODUCTS_BASE}/${id}/approve`)),

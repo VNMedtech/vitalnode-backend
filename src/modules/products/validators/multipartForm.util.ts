@@ -144,3 +144,41 @@ export const documentTypesFromForm = z.preprocess(
   },
   z.array(z.string().trim().min(1).max(120)).optional(),
 );
+
+const mediaItemSchema = z.object({
+  fileUploadId: z.string().uuid("Invalid file upload ID"),
+  fileUrl: z.string().trim().min(1, "File URL is required"),
+  displayOrder: z.number().int().min(0).optional(),
+});
+
+const documentItemSchema = z.object({
+  fileUploadId: z.string().uuid("Invalid file upload ID"),
+  fileUrl: z.string().trim().min(1, "File URL is required"),
+  documentType: z.string().trim().min(1).max(120),
+});
+
+export const mediaFromForm = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null || value === "") {
+      return undefined;
+    }
+    if (Array.isArray(value)) {
+      return value;
+    }
+    return JSON.parse(String(value));
+  },
+  z.array(mediaItemSchema).optional(),
+);
+
+export const documentsFromForm = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null || value === "") {
+      return undefined;
+    }
+    if (Array.isArray(value)) {
+      return value;
+    }
+    return JSON.parse(String(value));
+  },
+  z.array(documentItemSchema).optional(),
+);

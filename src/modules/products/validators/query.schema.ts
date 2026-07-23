@@ -79,6 +79,25 @@ export const listPendingProductsQuerySchema = baseListProductsQuerySchema
   .omit({ status: true })
   .strict();
 
+export const listAdminProductsQuerySchema = baseListProductsQuerySchema
+  .extend({
+    sellerId: z.string().uuid("Invalid seller ID").optional(),
+  })
+  .strict()
+  .transform((query) => {
+    const categoryIds =
+      query.categoryIds && query.categoryIds.length > 0
+        ? [...new Set(query.categoryIds)]
+        : query.categoryId
+          ? [query.categoryId]
+          : undefined;
+
+    return {
+      ...query,
+      categoryIds,
+    };
+  });
+
 export type ListMarketplaceProductsQueryInput = z.infer<
   typeof listMarketplaceProductsQuerySchema
 >;
@@ -89,4 +108,8 @@ export type ListOwnProductsQueryInput = z.infer<
 
 export type ListPendingProductsQueryInput = z.infer<
   typeof listPendingProductsQuerySchema
+>;
+
+export type ListAdminProductsQueryInput = z.infer<
+  typeof listAdminProductsQuerySchema
 >;

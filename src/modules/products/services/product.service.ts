@@ -36,6 +36,7 @@ import { toProductReviewStats } from "../../reviews/dto/review.dto.js";
 import type {
   AttachTemplateInput,
   CreateProductInput,
+  ListAdminProductsQuery,
   ListMarketplaceProductsQuery,
   ListProductsQuery,
   ProductCompareDto,
@@ -152,6 +153,7 @@ export class ProductService {
 
   private async processUploadedMedia(
     actorUserId: string,
+    actorRole: UserRole,
     files: ProductUploadFiles,
     documentTypes?: string[],
   ): Promise<{
@@ -168,7 +170,7 @@ export class ProductService {
     for (const [index, image] of files.images.entries()) {
       const upload = await this.uploadAssociation.storeFileForAssociation(
         actorUserId,
-        UserRole.SELLER,
+        actorRole,
         UPLOAD_TYPES.PRODUCT_IMAGE,
         image,
       );
@@ -183,7 +185,7 @@ export class ProductService {
     for (const [index, document] of files.documents.entries()) {
       const upload = await this.uploadAssociation.storeFileForAssociation(
         actorUserId,
-        UserRole.SELLER,
+        actorRole,
         UPLOAD_TYPES.PRODUCT_DOCUMENT,
         document,
       );
@@ -226,6 +228,7 @@ export class ProductService {
     if (files) {
       const uploaded = await this.processUploadedMedia(
         actorUserId,
+        UserRole.SELLER,
         files,
         input.documentTypes,
       );
@@ -285,6 +288,73 @@ export class ProductService {
   ): Promise<ProductDetailDto> {
     const sellerId = await this.requireApprovedSeller(actorUserId);
     const existing = await this.getOwnedProductOrThrow(productId, sellerId);
+    await this.applyProductUpdate({
+      actorUserId,
+      actorRole: UserRole.SELLER,
+      productId,
+      existing,
+      input,
+      files,
+      reapproveOnCoreChange: true,
+    });
+
+    const updated = await this.repo.findByIdForSeller(productId, sellerId);
+    if (!updated) {
+      throw new NotFoundError("Product not found");
+    }
+    return toProductDetailDto(updated);
+  }
+
+  async updateAdminProduct(
+    actorUserId: string,
+    productId: string,
+    input: UpdateProductInput,
+    files?: ProductUploadFiles,
+  ): Promise<ProductDetailDto> {
+    const existing = await this.repo.findDetailById(productId);
+    if (!existing) {
+      throw new NotFoundError("Product not found");
+    }
+
+    await this.applyProductUpdate({
+      actorUserId,
+      actorRole: UserRole.ADMIN,
+      productId,
+      existing,
+      input,
+      files,
+      reapproveOnCoreChange: false,
+    });
+
+    const updated = await this.repo.findDetailById(productId);
+    if (!updated) {
+      throw new NotFoundError("Product not found");
+    }
+    return toProductDetailDto(updated);
+  }
+
+  private async applyProductUpdate(options: {
+    actorUserId: string;
+    actorRole: UserRole;
+    productId: string;
+    existing: {
+      status: string;
+      templateId: string | null;
+      attributes: unknown;
+    };
+    input: UpdateProductInput;
+    files?: ProductUploadFiles;
+    reapproveOnCoreChange: boolean;
+  }): Promise<void> {
+    const {
+      actorUserId,
+      actorRole,
+      productId,
+      existing,
+      input,
+      files,
+      reapproveOnCoreChange,
+    } = options;
     const currentStatus = existing.status as ProductStatus;
 
     if (!PRODUCT_EDITABLE_STATUSES.includes(currentStatus)) {
@@ -363,28 +433,60 @@ export class ProductService {
     let mediaToReplace: ProductMediaInput[] | undefined;
     let documentsToReplace: ProductDocumentInput[] | undefined;
 
-    if (files && (files.images.length > 0 || input.replaceMedia)) {
-      const uploaded = await this.processUploadedMedia(
-        actorUserId,
-        { images: files.images, documents: [] },
-      );
-      mediaToReplace = uploaded.media;
-    } else if (input.media !== undefined) {
-      mediaToReplace = input.media;
+    const hasNewImages = Boolean(files && files.images.length > 0);
+    const hasNewDocuments = Boolean(files && files.documents.length > 0);
+
+    if (hasNewImages || input.replaceMedia || input.media !== undefined) {
+      let uploadedMedia: ProductMediaInput[] = [];
+      if (hasNewImages) {
+        const uploaded = await this.processUploadedMedia(
+          actorUserId,
+          actorRole,
+          { images: files!.images, documents: [] },
+        );
+        uploadedMedia = uploaded.media;
+      }
+
+      if (input.media !== undefined) {
+        const kept = normalizeMediaInput(input.media);
+        const offset = kept.length;
+        mediaToReplace = [
+          ...kept,
+          ...uploadedMedia.map((item, index) => ({
+            ...item,
+            displayOrder: offset + index,
+          })),
+        ];
+      } else {
+        mediaToReplace = uploadedMedia;
+      }
     }
 
-    if (files && (files.documents.length > 0 || input.replaceDocuments)) {
-      const uploaded = await this.processUploadedMedia(
-        actorUserId,
-        { images: [], documents: files.documents },
-        input.documentTypes,
-      );
-      documentsToReplace = uploaded.documents;
-    } else if (input.documents !== undefined) {
-      documentsToReplace = input.documents;
+    if (
+      hasNewDocuments ||
+      input.replaceDocuments ||
+      input.documents !== undefined
+    ) {
+      let uploadedDocuments: ProductDocumentInput[] = [];
+      if (hasNewDocuments) {
+        const uploaded = await this.processUploadedMedia(
+          actorUserId,
+          actorRole,
+          { images: [], documents: files!.documents },
+          input.documentTypes,
+        );
+        uploadedDocuments = uploaded.documents;
+      }
+
+      if (input.documents !== undefined) {
+        documentsToReplace = [...input.documents, ...uploadedDocuments];
+      } else {
+        documentsToReplace = uploadedDocuments;
+      }
     }
 
     const shouldReapprove =
+      reapproveOnCoreChange &&
       currentStatus === ProductStatus.APPROVED &&
       (requiresReapproval(input) ||
         mediaToReplace !== undefined ||
@@ -421,11 +523,6 @@ export class ProductService {
       }
     });
 
-    const updated = await this.repo.findByIdForSeller(productId, sellerId);
-    if (!updated) {
-      throw new NotFoundError("Product not found");
-    }
-
     auditLogger.log({
       actorUserId,
       action: PRODUCT_ACTIONS.UPDATE,
@@ -436,10 +533,9 @@ export class ProductService {
         ...(shouldReapprove
           ? { newStatus: ProductStatus.PENDING_APPROVAL }
           : {}),
+        ...(actorRole === UserRole.ADMIN ? { adminOverride: true } : {}),
       },
     });
-
-    return toProductDetailDto(updated);
   }
 
   async attachTemplate(
@@ -516,6 +612,112 @@ export class ProductService {
     });
 
     return toProductDetailDto(updated);
+  }
+
+  async disableAdminProduct(
+    actorUserId: string,
+    productId: string,
+  ): Promise<ProductDetailDto> {
+    const existing = await this.repo.findDetailById(productId);
+    if (!existing) {
+      throw new NotFoundError("Product not found");
+    }
+
+    const currentStatus = existing.status as ProductStatus;
+    assertTransitionAllowed(currentStatus, ProductStatus.DISABLED);
+
+    const updated = await this.repo.updateStatus(
+      productId,
+      ProductStatus.DISABLED,
+    );
+
+    auditLogger.log({
+      actorUserId,
+      action: PRODUCT_ACTIONS.DISABLE,
+      entityType: PRODUCT_AUDIT_ENTITY_TYPE,
+      entityId: productId,
+      metadata: {
+        previousStatus: currentStatus,
+        newStatus: ProductStatus.DISABLED,
+        sellerId: existing.sellerId,
+        productName: existing.productName,
+        adminOverride: true,
+      },
+    });
+
+    return toProductDetailDto(updated);
+  }
+
+  async enableAdminProduct(
+    actorUserId: string,
+    productId: string,
+  ): Promise<ProductDetailDto> {
+    const existing = await this.repo.findDetailById(productId);
+    if (!existing) {
+      throw new NotFoundError("Product not found");
+    }
+
+    const currentStatus = existing.status as ProductStatus;
+    assertTransitionAllowed(currentStatus, ProductStatus.APPROVED);
+
+    const updated = await this.repo.updateStatus(
+      productId,
+      ProductStatus.APPROVED,
+    );
+
+    auditLogger.log({
+      actorUserId,
+      action: PRODUCT_ACTIONS.ENABLE,
+      entityType: PRODUCT_AUDIT_ENTITY_TYPE,
+      entityId: productId,
+      metadata: {
+        previousStatus: currentStatus,
+        newStatus: ProductStatus.APPROVED,
+        sellerId: existing.sellerId,
+        productName: existing.productName,
+        adminOverride: true,
+      },
+    });
+
+    return toProductDetailDto(updated);
+  }
+
+  async getAdminProductById(productId: string): Promise<ProductDetailDto> {
+    const product = await this.repo.findDetailById(productId);
+    if (!product) {
+      throw new NotFoundError("Product not found");
+    }
+    return toProductDetailDto(product);
+  }
+
+  async listAdminProducts(query: ListAdminProductsQuery): Promise<{
+    items: ProductListItemDto[];
+    meta: ReturnType<typeof buildPaginationMeta>;
+  }> {
+    const filterOptions = {
+      search: query.search,
+      categoryId: query.categoryId,
+      categoryIds: query.categoryIds,
+      brand: query.brand,
+      status: query.status,
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      sellerId: query.sellerId,
+      marketplaceOnly: false,
+    };
+
+    const [records, total] = await Promise.all([
+      this.repo.findManyPaginated({
+        ...query,
+        ...filterOptions,
+      }),
+      this.repo.count(filterOptions),
+    ]);
+
+    return {
+      items: records.map((record) => toProductListItemDtoFromRecord(record)),
+      meta: buildPaginationMeta(query.page, query.limit, total),
+    };
   }
 
   async getOwnProductById(

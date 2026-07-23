@@ -10,6 +10,8 @@ import {
   attributesFromForm,
   categoryIdsFromForm,
   documentTypesFromForm,
+  documentsFromForm,
+  mediaFromForm,
   nullableAttributesFromForm,
   optionalCategoryIdsFromForm,
 } from "./multipartForm.util.js";
@@ -68,11 +70,14 @@ export type CreateProductMultipartBody = z.infer<
 export const updateProductMultipartBodySchema = z
   .object({
     categoryIds: optionalCategoryIdsFromForm,
-    templateId: z
-      .string()
-      .uuid("Invalid template ID")
-      .nullable()
-      .optional(),
+    templateId: z.preprocess(
+      (value) => {
+        if (value === undefined) return undefined;
+        if (value === null || value === "") return null;
+        return value;
+      },
+      z.string().uuid("Invalid template ID").nullable().optional(),
+    ),
     productName: z
       .string()
       .trim()
@@ -97,6 +102,9 @@ export const updateProductMultipartBodySchema = z
       .optional(),
     attributes: nullableAttributesFromForm,
     documentTypes: documentTypesFromForm,
+    media: mediaFromForm,
+    documents: documentsFromForm,
+    keptDocuments: documentsFromForm,
     replaceMedia: z
       .enum(["true", "false"])
       .transform((value) => value === "true")

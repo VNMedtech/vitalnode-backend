@@ -7,9 +7,11 @@
 import { Router } from "express";
 import {
   authenticate,
+  authorize,
   authorizePermission,
   validate,
 } from "../../../middlewares/index.js";
+import { UserRole } from "../../../shared/enums/userRole.enum.js";
 import { permissions } from "../../../shared/permissions/rbac.permissions.js";
 import * as productController from "../controllers/product.controller.js";
 import { productFileUpload } from "../middleware/productUpload.middleware.js";
@@ -19,6 +21,7 @@ import {
 } from "../validators/productMultipart.schema.js";
 import { productIdParamSchema } from "../validators/productParams.schema.js";
 import {
+  listAdminProductsQuerySchema,
   listMarketplaceProductsQuerySchema,
   listOwnProductsQuerySchema,
   listPendingProductsQuerySchema,
@@ -445,6 +448,251 @@ productRouter.get(
   authorizePermission(permissions.products.approve),
   validate({ params: productIdParamSchema }),
   productController.getPendingProductById,
+);
+
+/**
+ * @openapi
+ * /api/v1/products/admin:
+ *   get:
+ *     tags: [Products]
+ *     summary: List all products (admin)
+ *     description: |
+ *       Admin only. Returns paginated products across all statuses.
+ *       Supports search, status, seller, brand, category, and price filters.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [price, newest]
+ *           default: newest
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *       - in: query
+ *         name: search
+ *         schema: { type: string, maxLength: 120 }
+ *       - in: query
+ *         name: categoryId
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: brand
+ *         schema: { type: string, maxLength: 120 }
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING_APPROVAL, APPROVED, REJECTED, DISABLED, OUT_OF_STOCK]
+ *       - in: query
+ *         name: sellerId
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: minPrice
+ *         schema: { type: string, example: "100.00" }
+ *       - in: query
+ *         name: maxPrice
+ *         schema: { type: string, example: "5000.00" }
+ *     responses:
+ *       200:
+ *         description: Products fetched successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+productRouter.get(
+  "/admin",
+  authenticate,
+  authorize([UserRole.ADMIN]),
+  authorizePermission(permissions.products.read),
+  validate({ query: listAdminProductsQuerySchema }),
+  productController.listAdminProducts,
+);
+
+/**
+ * @openapi
+ * /api/v1/products/admin/{id}:
+ *   get:
+ *     tags: [Products]
+ *     summary: Get product details (admin)
+ *     description: |
+ *       Admin only. Returns full product details for any non-deleted product,
+ *       including media, documents, attributes, template, inventory, and seller.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Product fetched successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Product not found
+ */
+productRouter.get(
+  "/admin/:id",
+  authenticate,
+  authorize([UserRole.ADMIN]),
+  authorizePermission(permissions.products.read),
+  validate({ params: productIdParamSchema }),
+  productController.getAdminProductById,
+);
+
+/**
+ * @openapi
+ * /api/v1/products/admin/{id}:
+ *   patch:
+ *     tags: [Products]
+ *     summary: Update a product (admin)
+ *     description: |
+ *       Admin only. Updates any editable product (multipart/form-data).
+ *       Core commerce/copy/media/docs changes on APPROVED products stay APPROVED
+ *       (no re-approval queue).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             allOf:
+ *               - $ref: '#/components/schemas/UpdateProductRequest'
+ *               - type: object
+ *                 properties:
+ *                   images:
+ *                     type: array
+ *                     items: { type: string, format: binary }
+ *                   documents:
+ *                     type: array
+ *                     items: { type: string, format: binary }
+ *                   documentTypes:
+ *                     type: string
+ *                     description: JSON array of document type strings
+ *                   categoryIds:
+ *                     type: string
+ *                     description: JSON array of category UUIDs
+ *                   attributes:
+ *                     type: string
+ *                     description: JSON object of template-driven attribute values
+ *     responses:
+ *       200:
+ *         description: Product updated successfully
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Product not found
+ *       409:
+ *         description: Product cannot be updated in its current status
+ */
+productRouter.patch(
+  "/admin/:id",
+  authenticate,
+  authorize([UserRole.ADMIN]),
+  authorizePermission(permissions.products.update),
+  productFileUpload,
+  validate({
+    params: productIdParamSchema,
+    body: updateProductMultipartBodySchema,
+  }),
+  productController.updateAdminProduct,
+);
+
+/**
+ * @openapi
+ * /api/v1/products/admin/{id}/disable:
+ *   post:
+ *     tags: [Products]
+ *     summary: Disable a product (admin)
+ *     description: |
+ *       Admin only. Transitions product from `APPROVED` to `DISABLED`.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Product disabled successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Product not found
+ *       409:
+ *         description: Invalid state transition
+ */
+productRouter.post(
+  "/admin/:id/disable",
+  authenticate,
+  authorize([UserRole.ADMIN]),
+  authorizePermission(permissions.products.delete),
+  validate({ params: productIdParamSchema }),
+  productController.disableAdminProduct,
+);
+
+/**
+ * @openapi
+ * /api/v1/products/admin/{id}/enable:
+ *   post:
+ *     tags: [Products]
+ *     summary: Enable a product (admin)
+ *     description: |
+ *       Admin only. Transitions product from `DISABLED` (or `OUT_OF_STOCK`) to `APPROVED`.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Product enabled successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Product not found
+ *       409:
+ *         description: Invalid state transition
+ */
+productRouter.post(
+  "/admin/:id/enable",
+  authenticate,
+  authorize([UserRole.ADMIN]),
+  authorizePermission(permissions.products.update),
+  validate({ params: productIdParamSchema }),
+  productController.enableAdminProduct,
 );
 
 /**

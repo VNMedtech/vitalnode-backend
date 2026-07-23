@@ -83,6 +83,26 @@ sellerAddressRouter.get(
   sellerAddressController.getAddress,
 );
 
+/**
+ * @openapi
+ * /api/v1/seller/addresses/{id}/default:
+ *   patch:
+ *     tags: [SellerAddresses]
+ *     summary: Set warehouse address as default
+ *     description: Seller only. Unsets default on all other addresses owned by the seller.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Default warehouse updated successfully
+ *       404:
+ *         description: Address not found
+ */
 sellerAddressRouter.patch(
   "/:id/default",
   authenticate,
@@ -91,6 +111,30 @@ sellerAddressRouter.patch(
   sellerAddressController.setDefaultAddress,
 );
 
+/**
+ * @openapi
+ * /api/v1/seller/addresses/{id}/disable:
+ *   patch:
+ *     tags: [SellerAddresses]
+ *     summary: Disable a warehouse address
+ *     description: |
+ *       Seller only. Soft-disables the address. Cannot disable the last active warehouse
+ *       or the current default without first assigning another default.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Warehouse disabled successfully
+ *       404:
+ *         description: Address not found
+ *       409:
+ *         description: Cannot disable last active or default warehouse
+ */
 sellerAddressRouter.patch(
   "/:id/disable",
   authenticate,
