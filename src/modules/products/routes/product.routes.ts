@@ -129,7 +129,9 @@ productRouter.get(
  *     description: |
  *       Public endpoint. Compares 2 to 4 approved, marketplace-visible products side by side.
  *       Products must share at least one category (non-empty intersection across the full set).
- *       Returns comparison attributes aligned to the requested product order.
+ *       Returns core commerce rows plus the union of template attribute keys across the
+ *       selected products (shared keys first, then product-specific), aligned to the
+ *       requested product order.
  *     parameters:
  *       - in: query
  *         name: productIds
@@ -1158,6 +1160,11 @@ productRouter.get(
  *               - { type: "null" }
  *     ProductCompare:
  *       type: object
+ *       description: |
+ *         Side-by-side comparison payload. `attributes` starts with core commerce
+ *         rows, then the union of template attribute keys across selected products
+ *         (keys present on 2+ products first, then product-specific keys). Missing
+ *         values are `null`.
  *       properties:
  *         productIds:
  *           type: array
@@ -1170,6 +1177,10 @@ productRouter.get(
  *             $ref: '#/components/schemas/ProductCompareItem'
  *         attributes:
  *           type: array
+ *           description: |
+ *             Core rows (productName, categories, brand, model, pricing, moq)
+ *             followed by dynamic attribute rows — shared keys first, then
+ *             product-specific keys. Value arrays align to `productIds` order.
  *           items:
  *             $ref: '#/components/schemas/ProductCompareAttribute'
  *     CreateProductRequest:

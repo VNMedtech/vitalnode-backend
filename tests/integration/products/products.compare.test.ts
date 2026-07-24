@@ -28,7 +28,7 @@ describe("Products — Compare", () => {
     await disconnectTestPrisma();
   });
 
-  it("compares marketplace products using core fields and shared attributes", async () => {
+  it("compares marketplace products using core fields and all attribute keys", async () => {
     const prisma = getTestPrisma();
     const first = await setupMarketplaceProduct(app, prisma, {
       product: {
@@ -73,6 +73,57 @@ describe("Products — Compare", () => {
     expect(keys).toEqual(
       expect.arrayContaining(["productName", "brand", "pricing", "color", "weight"]),
     );
+  });
+
+  it("includes product-specific attributes after shared ones", async () => {
+    const prisma = getTestPrisma();
+    const first = await setupMarketplaceProduct(app, prisma, {
+      product: { productName: "Union Product A" },
+    });
+    const second = await setupMarketplaceProduct(app, prisma, {
+      product: { productName: "Union Product B" },
+    });
+
+    await productRequest(app, second.sellerToken).update(second.productId, {
+      categoryIds: [first.categoryId],
+    });
+
+    await productRequest(app, first.sellerToken).update(first.productId, {
+      attributes: { color: "White", voltage: "220V" },
+    });
+    await productRequest(app, second.sellerToken).update(second.productId, {
+      attributes: { color: "Black", weight: 3 },
+    });
+
+    const res = await productRequest(app).compare([
+      first.productId,
+      second.productId,
+    ]);
+
+    expect(res.status).toBe(200);
+    const keys = res.body.data.attributes.map(
+      (row: { key: string }) => row.key,
+    );
+    const colorIdx = keys.indexOf("color");
+    const voltageIdx = keys.indexOf("voltage");
+    const weightIdx = keys.indexOf("weight");
+
+    expect(colorIdx).toBeGreaterThan(-1);
+    expect(voltageIdx).toBeGreaterThan(-1);
+    expect(weightIdx).toBeGreaterThan(-1);
+    // Shared keys appear before product-specific keys
+    expect(colorIdx).toBeLessThan(voltageIdx);
+    expect(colorIdx).toBeLessThan(weightIdx);
+
+    const colorRow = res.body.data.attributes.find(
+      (row: { key: string }) => row.key === "color",
+    );
+    const voltageRow = res.body.data.attributes.find(
+      (row: { key: string }) => row.key === "voltage",
+    );
+    expect(colorRow.values).toEqual(["White", "Black"]);
+    expect(voltageRow.values[0]).toBe("220V");
+    expect(voltageRow.values[1]).toBeNull();
   });
 
   it("compares products that share a category via multicategory overlap", async () => {

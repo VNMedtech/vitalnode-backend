@@ -197,7 +197,12 @@ function toProductCompareItemDto(
   };
 }
 
-function collectSharedAttributeKeys(
+/**
+ * Union of attribute keys across compared products.
+ * Shared keys (present on 2+) come first, then product-specific keys.
+ * Within each group keys are sorted alphabetically.
+ */
+function collectCompareAttributeKeys(
   products: ProductCompareItemDto[],
 ): string[] {
   const keyCounts = new Map<string, number>();
@@ -207,10 +212,16 @@ function collectSharedAttributeKeys(
     }
   }
 
-  return [...keyCounts.entries()]
-    .filter(([, count]) => count >= 2)
-    .map(([key]) => key)
-    .sort();
+  const shared: string[] = [];
+  const unique: string[] = [];
+  for (const [key, count] of keyCounts.entries()) {
+    if (count >= 2) shared.push(key);
+    else unique.push(key);
+  }
+
+  shared.sort();
+  unique.sort();
+  return [...shared, ...unique];
 }
 
 function buildCompareAttributes(
@@ -232,8 +243,8 @@ function buildCompareAttributes(
     }
   }
 
-  const sharedKeys = collectSharedAttributeKeys(products);
-  const attributeRows = sharedKeys.map((key) => ({
+  const attributeKeys = collectCompareAttributeKeys(products);
+  const attributeRows = attributeKeys.map((key) => ({
     key,
     label: labelByKey.get(key) ?? key,
     values: products.map((product) =>
