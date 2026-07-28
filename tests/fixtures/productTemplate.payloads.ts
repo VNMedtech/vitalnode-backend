@@ -1,3 +1,14 @@
+/** Sample base-field snapshot for create-form autofill tests. */
+export const sampleBaseDefaults = {
+  productName: "Dual-Head Stethoscope",
+  brand: "Littmann",
+  model: "Classic III",
+  pricing: "8999.00",
+  moq: 1,
+  description: "Acoustic dual-head stethoscope for clinical use",
+  details: null as string | null,
+};
+
 export function productTemplateCreationPayload(
   categoryIds: string[],
   overrides: Record<string, unknown> = {},

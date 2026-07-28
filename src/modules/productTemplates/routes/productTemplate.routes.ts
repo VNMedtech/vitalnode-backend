@@ -2,7 +2,9 @@
  * @openapi
  * tags:
  *   - name: Product Templates
- *     description: Admin-configurable product attribute blueprints for autofill and approval
+ *     description: >
+ *       Admin-configurable product blueprints for create-form autofill (base field
+ *       snapshot + attribute defaults) and approval gating
  */
 import { Router } from "express";
 import {
@@ -34,7 +36,8 @@ export const productTemplateRouter = Router();
  *     summary: Search active templates by category
  *     description: |
  *       Seller/admin. Returns active templates linked to **any** of the given
- *       `categoryIds` (OR semantics), including fields and defaults for autofill.
+ *       `categoryIds` (OR semantics), including `baseDefaults` (base-field snapshot)
+ *       and field defaults for create-form autofill.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -122,7 +125,10 @@ productTemplateRouter.get(
  *   post:
  *     tags: [Product Templates]
  *     summary: Create a product template
- *     description: Admin only. Creates a configurable blueprint with optional fields and category links.
+ *     description: |
+ *       Admin only. Creates a configurable blueprint with optional fields,
+ *       category links, and optional `baseDefaults` (form-field snapshot for
+ *       product create autofill — no images/documents).
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -157,6 +163,7 @@ productTemplateRouter.post(
  *   get:
  *     tags: [Product Templates]
  *     summary: Get product template details
+ *     description: Includes fields, categories, and optional `baseDefaults` for create-form autofill.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -188,7 +195,9 @@ productTemplateRouter.get(
  *   patch:
  *     tags: [Product Templates]
  *     summary: Update a product template
- *     description: Admin only. Template edits affect new uses only; existing product attributes are unchanged.
+ *     description: |
+ *       Admin only. May update `baseDefaults` (set or clear with `null`).
+ *       Template edits affect new uses only; existing product attributes are unchanged.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -360,6 +369,25 @@ productTemplateRouter.put(
  * @openapi
  * components:
  *   schemas:
+ *     ProductTemplateBaseDefaults:
+ *       type: object
+ *       additionalProperties: false
+ *       description: |
+ *         Snapshot of base product form fields for create-form prefill.
+ *         Form fields only — no images/documents. `null`/absent = no base prefill.
+ *       properties:
+ *         productName: { type: string, example: Dual-Head Stethoscope }
+ *         brand: { type: string, example: Littmann }
+ *         model: { type: string, example: Classic III }
+ *         pricing:
+ *           oneOf:
+ *             - type: string
+ *               example: "8999.00"
+ *             - type: number
+ *           description: Decimal string (preferred) or number; stored/returned as string
+ *         moq: { type: integer, minimum: 1, example: 1 }
+ *         description: { type: string }
+ *         details: { type: string, nullable: true }
  *     ProductTemplateFieldInput:
  *       type: object
  *       required: [key, label, fieldType]
@@ -382,6 +410,11 @@ productTemplateRouter.put(
  *       properties:
  *         name: { type: string, maxLength: 120 }
  *         description: { type: string, nullable: true, maxLength: 2000 }
+ *         baseDefaults:
+ *           allOf:
+ *             - $ref: '#/components/schemas/ProductTemplateBaseDefaults'
+ *           nullable: true
+ *           description: Optional base-field snapshot for product create autofill
  *         isActive: { type: boolean, default: true }
  *         categoryIds:
  *           type: array
@@ -391,10 +424,24 @@ productTemplateRouter.put(
  *           items:
  *             $ref: '#/components/schemas/ProductTemplateFieldInput'
  *     UpdateProductTemplateRequest:
- *       allOf:
- *         - $ref: '#/components/schemas/CreateProductTemplateRequest'
- *         - type: object
- *           minProperties: 1
+ *       type: object
+ *       minProperties: 1
+ *       properties:
+ *         name: { type: string, maxLength: 120 }
+ *         description: { type: string, nullable: true, maxLength: 2000 }
+ *         baseDefaults:
+ *           allOf:
+ *             - $ref: '#/components/schemas/ProductTemplateBaseDefaults'
+ *           nullable: true
+ *           description: Set or clear (`null`) the base-field snapshot
+ *         isActive: { type: boolean }
+ *         categoryIds:
+ *           type: array
+ *           items: { type: string, format: uuid }
+ *         fields:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ProductTemplateFieldInput'
  *     ProductTemplateField:
  *       allOf:
  *         - $ref: '#/components/schemas/ProductTemplateFieldInput'
@@ -409,8 +456,14 @@ productTemplateRouter.put(
  *         id: { type: string, format: uuid }
  *         name: { type: string }
  *         description: { type: string, nullable: true }
+ *         baseDefaults:
+ *           allOf:
+ *             - $ref: '#/components/schemas/ProductTemplateBaseDefaults'
+ *           nullable: true
  *         isActive: { type: boolean }
- *         fieldCount: { type: integer }
+ *         fieldCount:
+ *           type: integer
+ *           description: Number of active (isActive=true) template fields only; inactive fields are excluded
  *         categories:
  *           type: array
  *           items:

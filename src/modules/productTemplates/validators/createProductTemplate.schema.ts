@@ -1,5 +1,12 @@
 import { z } from "zod";
 import {
+  PRODUCT_BRAND_MAX_LENGTH,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+  PRODUCT_DETAILS_MAX_LENGTH,
+  PRODUCT_MODEL_MAX_LENGTH,
+  PRODUCT_NAME_MAX_LENGTH,
+} from "../../products/constants/product.constants.js";
+import {
   PRODUCT_TEMPLATE_DESCRIPTION_MAX_LENGTH,
   PRODUCT_TEMPLATE_FIELD_KEY_MAX_LENGTH,
   PRODUCT_TEMPLATE_FIELD_LABEL_MAX_LENGTH,
@@ -7,6 +14,41 @@ import {
   PRODUCT_TEMPLATE_FIELD_UNIT_MAX_LENGTH,
   PRODUCT_TEMPLATE_NAME_MAX_LENGTH,
 } from "../constants/productTemplate.constants.js";
+
+const baseDefaultsPricingSchema = z
+  .union([
+    z
+      .string()
+      .trim()
+      .regex(/^\d+(\.\d{1,2})?$/, "Must be a valid decimal with up to 2 places"),
+    z.number().finite().nonnegative(),
+  ])
+  .transform((value) => (typeof value === "number" ? value.toString() : value));
+
+export const productTemplateBaseDefaultsSchema = z
+  .object({
+    productName: z
+      .string()
+      .trim()
+      .max(PRODUCT_NAME_MAX_LENGTH)
+      .optional(),
+    brand: z.string().trim().max(PRODUCT_BRAND_MAX_LENGTH).optional(),
+    model: z.string().trim().max(PRODUCT_MODEL_MAX_LENGTH).optional(),
+    pricing: baseDefaultsPricingSchema.optional(),
+    moq: z.number().int().min(1).optional(),
+    description: z
+      .string()
+      .trim()
+      .max(PRODUCT_DESCRIPTION_MAX_LENGTH)
+      .optional(),
+    details: z
+      .string()
+      .trim()
+      .max(PRODUCT_DETAILS_MAX_LENGTH)
+      .nullable()
+      .optional(),
+  })
+  .strict();
 
 const fieldKeySchema = z
   .string()
@@ -65,6 +107,7 @@ export const createProductTemplateBodySchema = z
       .max(PRODUCT_TEMPLATE_DESCRIPTION_MAX_LENGTH)
       .nullable()
       .optional(),
+    baseDefaults: productTemplateBaseDefaultsSchema.nullable().optional(),
     isActive: z.boolean().optional(),
     categoryIds: z.array(z.string().uuid("Invalid category ID")).optional(),
     fields: z.array(productTemplateFieldInputSchema).optional(),
@@ -105,6 +148,7 @@ export const updateProductTemplateBodySchema = z
       .max(PRODUCT_TEMPLATE_DESCRIPTION_MAX_LENGTH)
       .nullable()
       .optional(),
+    baseDefaults: productTemplateBaseDefaultsSchema.nullable().optional(),
     isActive: z.boolean().optional(),
     categoryIds: z.array(z.string().uuid("Invalid category ID")).optional(),
     fields: z.array(productTemplateFieldInputSchema).optional(),

@@ -1,7 +1,7 @@
-import type {
+import {
   Prisma,
-  PrismaClient,
-  ProductTemplateFieldType,
+  type PrismaClient,
+  type ProductTemplateFieldType,
 } from "../../../../generated/prisma/client.js";
 import type { ProductTemplateSortField } from "../constants/productTemplate.constants.js";
 
@@ -28,6 +28,7 @@ const templateListSelect = {
   id: true,
   name: true,
   description: true,
+  baseDefaults: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -40,7 +41,7 @@ const templateListSelect = {
   },
   _count: {
     select: {
-      fields: true,
+      fields: { where: { isActive: true } },
     },
   },
 } satisfies Prisma.ProductTemplateSelect;
@@ -49,6 +50,7 @@ const templateDetailSelect = {
   id: true,
   name: true,
   description: true,
+  baseDefaults: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -98,6 +100,7 @@ export interface ProductTemplateFieldCreateData {
 export interface CreateProductTemplateData {
   name: string;
   description?: string | null;
+  baseDefaults?: Prisma.InputJsonValue | null;
   isActive: boolean;
   categoryIds: string[];
   fields: ProductTemplateFieldCreateData[];
@@ -106,6 +109,7 @@ export interface CreateProductTemplateData {
 export interface UpdateProductTemplateData {
   name?: string;
   description?: string | null;
+  baseDefaults?: Prisma.InputJsonValue | null;
   isActive?: boolean;
 }
 
@@ -149,6 +153,12 @@ export class ProductTemplateRepository {
       data: {
         name: data.name,
         description: data.description ?? null,
+        baseDefaults:
+          data.baseDefaults === undefined
+            ? undefined
+            : data.baseDefaults === null
+              ? Prisma.DbNull
+              : data.baseDefaults,
         isActive: data.isActive,
         ...(data.categoryIds.length > 0
           ? {
@@ -267,6 +277,14 @@ export class ProductTemplateRepository {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.description !== undefined
           ? { description: data.description }
+          : {}),
+        ...(data.baseDefaults !== undefined
+          ? {
+              baseDefaults:
+                data.baseDefaults === null
+                  ? Prisma.DbNull
+                  : data.baseDefaults,
+            }
           : {}),
         ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
       },

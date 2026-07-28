@@ -339,13 +339,15 @@ model Category {
 // =============================================================================
 
 model ProductTemplate {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  description String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id           String    @id @default(uuid())
+  name         String    @unique
+  description  String?
+  /// Snapshot of base product form fields for create-form prefill
+  baseDefaults Json?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
   fields     ProductTemplateField[]
   categories ProductTemplateCategory[]

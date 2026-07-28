@@ -20,11 +20,25 @@ export interface ProductTemplateFieldDto {
   updatedAt: Date;
 }
 
+/** Snapshot of base product form fields for create-form prefill. */
+export interface ProductTemplateBaseDefaults {
+  productName?: string;
+  brand?: string;
+  model?: string;
+  /** Decimal as string to match create-form inputs. */
+  pricing?: string;
+  moq?: number;
+  description?: string;
+  details?: string | null;
+}
+
 export interface ProductTemplateListItemDto {
   id: string;
   name: string;
   description: string | null;
+  baseDefaults: ProductTemplateBaseDefaults | null;
   isActive: boolean;
+  /** Count of active (`isActive: true`) template fields only. */
   fieldCount: number;
   categories: ProductTemplateCategorySummaryDto[];
   createdAt: Date;
@@ -49,6 +63,7 @@ export interface ProductTemplateFieldInput {
 export interface CreateProductTemplateInput {
   name: string;
   description?: string | null;
+  baseDefaults?: ProductTemplateBaseDefaults | null;
   isActive?: boolean;
   categoryIds?: string[];
   fields?: ProductTemplateFieldInput[];
@@ -57,6 +72,7 @@ export interface CreateProductTemplateInput {
 export interface UpdateProductTemplateInput {
   name?: string;
   description?: string | null;
+  baseDefaults?: ProductTemplateBaseDefaults | null;
   isActive?: boolean;
   categoryIds?: string[];
   fields?: ProductTemplateFieldInput[];

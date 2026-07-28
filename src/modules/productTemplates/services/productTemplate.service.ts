@@ -22,6 +22,7 @@ import {
 import type {
   CreateProductTemplateInput,
   ListProductTemplatesQuery,
+  ProductTemplateBaseDefaults,
   ProductTemplateDetailDto,
   ProductTemplateFieldInput,
   ProductTemplateListItemDto,
@@ -45,6 +46,27 @@ function toJsonInput(
     return undefined;
   }
   return value as Prisma.InputJsonValue;
+}
+
+/** Normalize optional baseDefaults snapshot for storage. */
+function normalizeBaseDefaults(
+  input: ProductTemplateBaseDefaults | null | undefined,
+): Prisma.InputJsonValue | null | undefined {
+  if (input === undefined) return undefined;
+  if (input === null) return null;
+
+  const out: Record<string, unknown> = {};
+  if (input.productName !== undefined) out.productName = input.productName;
+  if (input.brand !== undefined) out.brand = input.brand;
+  if (input.model !== undefined) out.model = input.model;
+  if (input.pricing !== undefined) out.pricing = String(input.pricing);
+  if (input.moq !== undefined) out.moq = input.moq;
+  if (input.description !== undefined) out.description = input.description;
+  if (input.details !== undefined) out.details = input.details;
+
+  return Object.keys(out).length > 0
+    ? (out as Prisma.InputJsonValue)
+    : null;
 }
 
 function mapFieldInputs(
@@ -94,6 +116,7 @@ export class ProductTemplateService {
       const created = await this.repo.create({
         name: input.name,
         description: input.description,
+        baseDefaults: normalizeBaseDefaults(input.baseDefaults),
         isActive: input.isActive ?? true,
         categoryIds: [...new Set(categoryIds)],
         fields: mapFieldInputs(input.fields ?? []),
@@ -146,6 +169,9 @@ export class ProductTemplateService {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.description !== undefined
           ? { description: input.description }
+          : {}),
+        ...(input.baseDefaults !== undefined
+          ? { baseDefaults: normalizeBaseDefaults(input.baseDefaults) }
           : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       });
