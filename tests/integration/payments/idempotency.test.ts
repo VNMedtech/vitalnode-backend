@@ -6,6 +6,7 @@ import {
 } from "../../factories/payment.factory.js";
 import { randomRazorpayPaymentId } from "../../fixtures/payment.payloads.js";
 import { mockRazorpayLayer, type RazorpayMockHandles } from "../../mocks/razorpay.mock.js";
+import { mockS3Layer } from "../../mocks/s3.mock.js";
 import {
   disconnectTestPrisma,
   getTestPrisma,
@@ -29,6 +30,7 @@ describe("Payments — Section 7: Idempotency", () => {
   beforeEach(async () => {
     await resetDatabase();
     razorpayMock = mockRazorpayLayer();
+    mockS3Layer();
   });
 
   afterAll(async () => {

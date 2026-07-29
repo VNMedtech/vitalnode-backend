@@ -22,6 +22,7 @@ const SELLER_EARNINGS_BASE = "/api/v1/seller/earnings";
 const SELLER_SETTLEMENTS_BASE = "/api/v1/seller/settlements";
 const SALES_REPORTS_BASE = "/api/v1/sales-reports";
 const UPLOADS_BASE = "/api/v1/uploads";
+const NOTIFICATIONS_BASE = "/api/v1/notifications";
 const IDEMPOTENCY_HEADER = "idempotency-key";
 
 export interface AuthTokens {
@@ -389,6 +390,9 @@ export function reviewRequest(app: Express, accessToken = "") {
     listAdmin: (query: Record<string, string | number | undefined> = {}) =>
       auth(request(app).get(REVIEWS_BASE)).query(query),
 
+    listFeatured: (query: Record<string, string | number | undefined> = {}) =>
+      request(app).get(`${REVIEWS_BASE}/featured`).query(query),
+
     disable: (reviewId: string) =>
       auth(request(app).post(`${REVIEWS_BASE}/${reviewId}/disable`)),
   };
@@ -732,6 +736,29 @@ export function analyticsRequest(app: Express, accessToken: string) {
     ) =>
       auth(request(app).get(`${ANALYTICS_BASE}/sales/sellers`)).query(query),
 
+    dashboard: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/dashboard`)).query(query),
+
+    users: (query: Record<string, string | undefined> = {}) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/users`)).query(query),
+
+    sellers: (query: Record<string, string | undefined> = {}) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/sellers`)).query(query),
+
+    products: (query: Record<string, string | undefined> = {}) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/products`)).query(query),
+
+    orders: (query: Record<string, string | undefined> = {}) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/orders`)).query(query),
+
+    revenue: (query: Record<string, string | undefined> = {}) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/revenue`)).query(query),
+
+    inventoryAlerts: (
+      query: Record<string, string | number | undefined> = {},
+    ) =>
+      auth(request(app).get(`${ANALYTICS_BASE}/inventory-alerts`)).query(query),
+
     commission: (query: Record<string, string | undefined> = {}) =>
       auth(request(app).get(`${ANALYTICS_BASE}/commission`)).query(query),
   };
@@ -928,5 +955,26 @@ export function adminInvoiceRequest(app: Express, accessToken?: string) {
 
     getById: (id: string) =>
       auth(request(app).get(`${ADMIN_BASE}/invoices/${id}`)),
+  };
+}
+
+export function notificationRequest(app: Express, accessToken?: string) {
+  const auth = (req: Test) =>
+    accessToken
+      ? req.set("Authorization", `Bearer ${accessToken}`)
+      : req;
+
+  return {
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(NOTIFICATIONS_BASE)).query(query),
+
+    unreadCount: () =>
+      auth(request(app).get(`${NOTIFICATIONS_BASE}/unread-count`)),
+
+    markAllAsRead: () =>
+      auth(request(app).patch(`${NOTIFICATIONS_BASE}/read-all`)),
+
+    markAsRead: (id: string) =>
+      auth(request(app).patch(`${NOTIFICATIONS_BASE}/${id}/read`)),
   };
 }

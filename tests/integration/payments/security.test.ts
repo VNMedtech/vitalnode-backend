@@ -7,6 +7,7 @@ import {
 } from "../../factories/payment.factory.js";
 import { setUserStatus } from "../../factories/user.factory.js";
 import { mockRazorpayLayer } from "../../mocks/razorpay.mock.js";
+import { mockS3Layer } from "../../mocks/s3.mock.js";
 import { UserStatus } from "../../../src/shared/enums/userStatus.enum.js";
 import {
   disconnectTestPrisma,
@@ -28,6 +29,7 @@ describe("Payments — Section 5: Security", () => {
   beforeEach(async () => {
     await resetDatabase();
     mockRazorpayLayer();
+    mockS3Layer();
   });
 
   afterAll(async () => {

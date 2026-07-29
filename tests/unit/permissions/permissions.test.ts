@@ -50,6 +50,30 @@ describe("Permission system", () => {
         roleHasPermission(UserRole.SELLER, permissions.orders.assignDelivery),
       ).toBe(false);
     });
+
+    it("grants seller productTemplates, sellerAddresses, and settlements read", () => {
+      expect(
+        roleHasPermission(UserRole.SELLER, permissions.productTemplates.read),
+      ).toBe(true);
+      expect(
+        roleHasPermission(UserRole.SELLER, permissions.sellerAddresses.create),
+      ).toBe(true);
+      expect(
+        roleHasPermission(UserRole.SELLER, permissions.settlements.read),
+      ).toBe(true);
+      expect(
+        roleHasPermission(UserRole.SELLER, permissions.settlements.manage),
+      ).toBe(false);
+      expect(
+        roleHasPermission(UserRole.BUYER, permissions.productTemplates.read),
+      ).toBe(false);
+      expect(
+        roleHasPermission(UserRole.BUYER, permissions.sellerAddresses.read),
+      ).toBe(false);
+      expect(
+        roleHasPermission(UserRole.BUYER, permissions.settlements.read),
+      ).toBe(false);
+    });
   });
 
   describe("rolesHavePermission()", () => {
@@ -90,6 +114,56 @@ describe("Permission system", () => {
         sellerHasPermission(
           SellerApprovalStatus.REJECTED,
           permissions.products.create,
+        ),
+      ).toBe(false);
+    });
+
+    it("gates productTemplates, sellerAddresses, and settlements to ACTIVE sellers", () => {
+      const operational = [
+        permissions.productTemplates.read,
+        permissions.sellerAddresses.create,
+        permissions.sellerAddresses.setDefault,
+        permissions.settlements.read,
+      ] as const;
+
+      for (const permission of operational) {
+        expect(
+          sellerHasPermission(SellerApprovalStatus.ACTIVE, permission),
+        ).toBe(true);
+        expect(
+          sellerHasPermission(
+            SellerApprovalStatus.PENDING_APPROVAL,
+            permission,
+          ),
+        ).toBe(false);
+        expect(
+          sellerHasPermission(SellerApprovalStatus.REJECTED, permission),
+        ).toBe(false);
+      }
+
+      // Disabled sellers keep warehouse read for in-flight fulfillment only
+      expect(
+        sellerHasPermission(
+          SellerApprovalStatus.DISABLED,
+          permissions.sellerAddresses.read,
+        ),
+      ).toBe(true);
+      expect(
+        sellerHasPermission(
+          SellerApprovalStatus.DISABLED,
+          permissions.sellerAddresses.create,
+        ),
+      ).toBe(false);
+      expect(
+        sellerHasPermission(
+          SellerApprovalStatus.DISABLED,
+          permissions.settlements.read,
+        ),
+      ).toBe(false);
+      expect(
+        sellerHasPermission(
+          SellerApprovalStatus.DISABLED,
+          permissions.productTemplates.read,
         ),
       ).toBe(false);
     });

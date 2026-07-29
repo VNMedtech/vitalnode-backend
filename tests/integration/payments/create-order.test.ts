@@ -14,6 +14,7 @@ import {
   missingOrderIdPayload,
 } from "../../fixtures/payment.payloads.js";
 import { mockRazorpayLayer } from "../../mocks/razorpay.mock.js";
+import { mockS3Layer } from "../../mocks/s3.mock.js";
 import {
   disconnectTestPrisma,
   getTestPrisma,
@@ -33,6 +34,7 @@ describe("Payments — Section 1: Razorpay Order Creation", () => {
   beforeEach(async () => {
     await resetDatabase();
     mockRazorpayLayer();
+    mockS3Layer();
   });
 
   afterAll(async () => {

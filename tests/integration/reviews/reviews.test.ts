@@ -180,4 +180,97 @@ describe("Reviews — Buyer & Admin Workflows", () => {
 
     expect(res.status).toBe(403);
   });
+
+  it("9. lists featured reviews publicly with platform stats", async () => {
+    const prisma = getTestPrisma();
+    const emptyRes = await reviewRequest(app).listFeatured();
+    expect(emptyRes.status).toBe(200);
+    expect(emptyRes.body.message).toBe("Featured reviews fetched successfully");
+    expect(emptyRes.body.data.reviews).toEqual([]);
+    expect(emptyRes.body.data.stats).toEqual({
+      averageRating: null,
+      reviewCount: 0,
+    });
+
+    const delivered = await setupDeliveredOrder(app, prisma);
+    const createRes = await reviewRequest(
+      app,
+      delivered.buyerAuth.accessToken,
+    ).create(reviewCreationPayload(delivered.productId, { rating: 5 }));
+    expect(createRes.status).toBe(201);
+
+    const featuredRes = await reviewRequest(app).listFeatured({ limit: 3 });
+    expect(featuredRes.status).toBe(200);
+    expect(featuredRes.body.data.reviews).toHaveLength(1);
+    expect(featuredRes.body.data.reviews[0].id).toBe(createRes.body.data.id);
+    expect(featuredRes.body.data.reviews[0].rating).toBe(5);
+    expect(featuredRes.body.data.reviews[0].product).toEqual(
+      expect.objectContaining({
+        id: delivered.productId,
+        productName: expect.any(String),
+      }),
+    );
+    expect(featuredRes.body.data.stats).toEqual({
+      averageRating: "5.0",
+      reviewCount: 1,
+    });
+  });
+
+  it("10. excludes low-rated and disabled reviews from featured", async () => {
+    const prisma = getTestPrisma();
+    const lowRated = await setupDeliveredOrder(app, prisma);
+    await reviewRequest(app, lowRated.buyerAuth.accessToken).create(
+      reviewCreationPayload(lowRated.productId, {
+        rating: 3,
+        title: "Average",
+      }),
+    );
+
+    const highRated = await setupDeliveredOrder(app, prisma);
+    const highRes = await reviewRequest(
+      app,
+      highRated.buyerAuth.accessToken,
+    ).create(
+      reviewCreationPayload(highRated.productId, {
+        rating: 5,
+        title: "Great",
+      }),
+    );
+    expect(highRes.status).toBe(201);
+
+    let featuredRes = await reviewRequest(app).listFeatured();
+    expect(featuredRes.status).toBe(200);
+    expect(featuredRes.body.data.reviews).toHaveLength(1);
+    expect(featuredRes.body.data.reviews[0].id).toBe(highRes.body.data.id);
+    expect(featuredRes.body.data.stats.reviewCount).toBe(2);
+
+    await reviewRequest(app, highRated.adminToken).disable(
+      highRes.body.data.id as string,
+    );
+
+    featuredRes = await reviewRequest(app).listFeatured();
+    expect(featuredRes.status).toBe(200);
+    expect(featuredRes.body.data.reviews).toHaveLength(0);
+    expect(featuredRes.body.data.stats.reviewCount).toBe(1);
+  });
+
+  it("11. respects featured limit and rejects invalid limit", async () => {
+    const prisma = getTestPrisma();
+    const first = await setupDeliveredOrder(app, prisma);
+    await reviewRequest(app, first.buyerAuth.accessToken).create(
+      reviewCreationPayload(first.productId, { rating: 5, title: "First" }),
+    );
+    const second = await setupDeliveredOrder(app, prisma);
+    await reviewRequest(app, second.buyerAuth.accessToken).create(
+      reviewCreationPayload(second.productId, { rating: 4, title: "Second" }),
+    );
+
+    const limited = await reviewRequest(app).listFeatured({ limit: 1 });
+    expect(limited.status).toBe(200);
+    expect(limited.body.data.reviews).toHaveLength(1);
+    expect(limited.body.data.stats.reviewCount).toBe(2);
+
+    const invalid = await reviewRequest(app).listFeatured({ limit: 13 });
+    expect(invalid.status).toBe(400);
+  });
 });

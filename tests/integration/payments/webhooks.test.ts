@@ -5,6 +5,7 @@ import {
   setupPendingPaymentOrder,
 } from "../../factories/payment.factory.js";
 import { mockRazorpayLayer } from "../../mocks/razorpay.mock.js";
+import { mockS3Layer } from "../../mocks/s3.mock.js";
 import {
   disconnectTestPrisma,
   getTestPrisma,
@@ -31,6 +32,7 @@ describe("Payments — Section 3: Webhooks", () => {
   beforeEach(async () => {
     await resetDatabase();
     mockRazorpayLayer();
+    mockS3Layer();
   });
 
   afterAll(async () => {

@@ -9,6 +9,7 @@ import {
 } from "../../factories/payment.factory.js";
 import { randomRazorpayPaymentId } from "../../fixtures/payment.payloads.js";
 import { mockRazorpayLayer } from "../../mocks/razorpay.mock.js";
+import { mockS3Layer } from "../../mocks/s3.mock.js";
 import {
   disconnectTestPrisma,
   getTestPrisma,
@@ -31,6 +32,7 @@ describe("Payments — Section 6: Audit Logging", () => {
   beforeEach(async () => {
     await resetDatabase();
     mockRazorpayLayer();
+    mockS3Layer();
   });
 
   afterAll(async () => {
