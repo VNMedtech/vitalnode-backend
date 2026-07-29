@@ -89,6 +89,6 @@ export interface ListProductTemplatesQuery {
 }
 
 export interface SearchProductTemplatesQuery {
-  categoryIds: string[];
+  categoryIds?: string[];
   q?: string;
 }

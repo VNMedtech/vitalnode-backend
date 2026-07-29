@@ -304,4 +304,91 @@ describe("Product Templates", () => {
       template.id,
     );
   });
+
+  it("searches active templates without categoryIds", async () => {
+    const prisma = getTestPrisma();
+    const { login: adminLogin } = await createAdminViaApi(app, prisma);
+    const { category } = await createCategoryViaApi(
+      app,
+      adminLogin.auth.accessToken,
+    );
+    const { template } = await createTemplateViaApi(
+      app,
+      adminLogin.auth.accessToken,
+      [category.id],
+    );
+
+    const disableRes = await productTemplateRequest(
+      app,
+      adminLogin.auth.accessToken,
+    ).disable(template.id);
+    expect(disableRes.status).toBe(200);
+
+    const { template: activeTemplate } = await createTemplateViaApi(
+      app,
+      adminLogin.auth.accessToken,
+      [category.id],
+      { name: `Active Search ${Date.now()}` },
+    );
+
+    const seller = await createApprovedSeller(app, prisma);
+    const searchRes = await productTemplateRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).search({});
+
+    expect(searchRes.status).toBe(200);
+    const ids = searchRes.body.data.map((t: { id: string }) => t.id);
+    expect(ids).toContain(activeTemplate.id);
+    expect(ids).not.toContain(template.id);
+    expect(searchRes.body.data[0]).toHaveProperty("baseDefaults");
+    expect(searchRes.body.data[0]).toHaveProperty("fields");
+    expect(searchRes.body.data[0]).toHaveProperty("categories");
+  });
+
+  it("filters by q when categoryIds is omitted", async () => {
+    const prisma = getTestPrisma();
+    const { login: adminLogin } = await createAdminViaApi(app, prisma);
+    const { category } = await createCategoryViaApi(
+      app,
+      adminLogin.auth.accessToken,
+    );
+    const stamp = Date.now();
+    const { template: match } = await createTemplateViaApi(
+      app,
+      adminLogin.auth.accessToken,
+      [category.id],
+      { name: `Stethoscope Universal ${stamp}` },
+    );
+    await createTemplateViaApi(app, adminLogin.auth.accessToken, [category.id], {
+      name: `Unrelated Device ${stamp}`,
+    });
+
+    const seller = await createApprovedSeller(app, prisma);
+    const searchRes = await productTemplateRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).search({ q: "Stethoscope Universal" });
+
+    expect(searchRes.status).toBe(200);
+    expect(searchRes.body.data).toHaveLength(1);
+    expect(searchRes.body.data[0].id).toBe(match.id);
+  });
+
+  it("rejects empty categoryIds and invalid UUID on search", async () => {
+    const prisma = getTestPrisma();
+    const seller = await createApprovedSeller(app, prisma);
+    const token = seller.login.auth.accessToken;
+
+    // Comma-only query becomes [] after preprocess → min(1) fails
+    const emptyRes = await productTemplateRequest(app, token).search({
+      categoryIds: ",",
+    });
+    expect(emptyRes.status).toBe(400);
+
+    const invalidRes = await productTemplateRequest(app, token).search({
+      categoryIds: ["not-a-uuid"],
+    });
+    expect(invalidRes.status).toBe(400);
+  });
 });

@@ -246,16 +246,21 @@ export class ProductTemplateRepository {
     });
   }
 
-  searchActiveByCategoryIds(categoryIds: string[], q?: string) {
+  searchActive(options: { categoryIds?: string[]; q?: string }) {
+    const { categoryIds, q } = options;
     return this.prisma.productTemplate.findMany({
       where: {
         deletedAt: null,
         isActive: true,
-        categories: {
-          some: {
-            categoryId: { in: categoryIds },
-          },
-        },
+        ...(categoryIds && categoryIds.length > 0
+          ? {
+              categories: {
+                some: {
+                  categoryId: { in: categoryIds },
+                },
+              },
+            }
+          : {}),
         ...(q
           ? {
               OR: [

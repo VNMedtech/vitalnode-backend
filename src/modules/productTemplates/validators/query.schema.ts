@@ -62,7 +62,8 @@ export const searchProductTemplatesQuerySchema = z
       },
       z
         .array(z.string().uuid("Invalid category ID"))
-        .min(1, "At least one categoryId is required"),
+        .min(1, "At least one categoryId is required")
+        .optional(),
     ),
     q: z.string().trim().max(PRODUCT_TEMPLATE_SEARCH_MAX_LENGTH).optional(),
   })

@@ -338,11 +338,16 @@ export class ProductTemplateService {
   async searchTemplates(
     query: SearchProductTemplatesQuery,
   ): Promise<ProductTemplateDetailDto[]> {
-    await this.assertCategoriesExist(query.categoryIds);
-    const records = await this.repo.searchActiveByCategoryIds(
-      [...new Set(query.categoryIds)],
-      query.q,
-    );
+    const categoryIds = query.categoryIds
+      ? [...new Set(query.categoryIds)]
+      : undefined;
+    if (categoryIds && categoryIds.length > 0) {
+      await this.assertCategoriesExist(categoryIds);
+    }
+    const records = await this.repo.searchActive({
+      categoryIds,
+      q: query.q,
+    });
     return records.map(toProductTemplateDetailDto);
   }
 }

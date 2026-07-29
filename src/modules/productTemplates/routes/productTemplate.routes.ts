@@ -33,32 +33,36 @@ export const productTemplateRouter = Router();
  * /api/v1/product-templates/search:
  *   get:
  *     tags: [Product Templates]
- *     summary: Search active templates by category
+ *     summary: Search active templates (optional category filter)
  *     description: |
- *       Seller/admin. Returns active templates linked to **any** of the given
- *       `categoryIds` (OR semantics), including `baseDefaults` (base-field snapshot)
- *       and field defaults for create-form autofill.
+ *       Seller/admin. Returns **active** templates for create/edit form autofill
+ *       (`baseDefaults` base-field snapshot + field defaults + linked `categories`).
+ *       Without `categoryIds`, searches all active templates (optionally filtered by `q`).
+ *       With `categoryIds`, returns templates linked to **any** of those categories (OR).
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: categoryIds
- *         required: true
+ *         required: false
  *         schema:
  *           type: array
  *           minItems: 1
  *           items: { type: string, format: uuid }
  *         style: form
  *         explode: true
- *         description: Templates matching any of these categories
+ *         description: >
+ *           Optional. When provided (min 1 UUID), OR-match templates linked to any
+ *           of these categories. When omitted, return all active templates (filter by `q`).
  *       - in: query
  *         name: q
  *         schema: { type: string, maxLength: 120 }
+ *         description: Optional name/description filter
  *     responses:
  *       200:
  *         description: Product templates fetched successfully
  *       400:
- *         description: Validation failed
+ *         description: Validation failed (e.g. empty `categoryIds` or invalid UUID)
  *       401:
  *         description: Unauthorized
  *       403:
