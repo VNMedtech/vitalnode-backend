@@ -72,6 +72,8 @@ function createProductionConfig(
     pendingPaymentSweepIntervalMs: 300_000,
     readNotificationTtlDays: 30,
     readNotificationSweepIntervalMs: 86_400_000,
+    idempotencyTtlMs: 86_400_000,
+    idempotencySweepIntervalMs: 3_600_000,
     ...overrides,
   };
 }

@@ -128,4 +128,47 @@ describe("Payments — Section 7: Idempotency", () => {
     });
     expect(payment?.paymentStatus).toBe("SUCCESS");
   });
+
+  it("re-runs create-order after the idempotency key expires", async () => {
+    const prisma = getTestPrisma();
+    const context = await setupPendingPaymentOrder(app, prisma);
+    const idempotencyKey = newIdempotencyKey("idem-expired");
+
+    const first = await createRazorpayOrderForContext(
+      app,
+      context,
+      idempotencyKey,
+    );
+    expect(first.status).toBe(200);
+
+    await prisma.idempotencyKey.updateMany({
+      where: {
+        key: idempotencyKey,
+        route: "POST:/api/v1/payments/create-order",
+      },
+      data: { expiresAt: new Date(Date.now() - 60_000) },
+    });
+
+    const second = await createRazorpayOrderForContext(
+      app,
+      context,
+      idempotencyKey,
+    );
+
+    expect(second.status).toBe(200);
+    expect(second.body.data.razorpayOrderId).toBe(
+      first.body.data.razorpayOrderId,
+    );
+    // Handler runs again after expiry, but create-order still reuses the existing Razorpay order.
+    expect(razorpayMock.createOrderSpy).toHaveBeenCalledTimes(1);
+
+    const idempotencyRows = await prisma.idempotencyKey.findMany({
+      where: {
+        key: idempotencyKey,
+        route: "POST:/api/v1/payments/create-order",
+      },
+    });
+    expect(idempotencyRows).toHaveLength(1);
+    expect(idempotencyRows[0]?.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
 });

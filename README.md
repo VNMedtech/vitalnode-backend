@@ -89,6 +89,17 @@ Read in-app notifications older than the retention window are hard-deleted. Unre
 
 Job: `src/jobs/cleanup/expireReadNotifications.job.ts` (started from `startServer`). Retention uses `readAt` (set when the notification is first marked read).
 
+## Idempotency key TTL
+
+Idempotency keys replay cached responses only until `expiresAt`. After expiry the same key may be reused, and a background job hard-deletes expired rows.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `IDEMPOTENCY_TTL_MS` | `86400000` | Replay window written to `expiresAt` on create (24 hours) |
+| `IDEMPOTENCY_SWEEP_INTERVAL_MS` | `3600000` | How often the server purges expired rows (1 hour) |
+
+Job: `src/jobs/cleanup/expireIdempotencyKeys.job.ts` (started from `startServer`). Lookups ignore expired rows (and delete them so the unique constraint can be reused).
+
 ## Tests
 
 ```bash

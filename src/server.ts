@@ -8,6 +8,10 @@ import { runStartupChecks } from "./config/startupChecks.js";
 import { disconnectPrisma } from "./infrastructure/prisma/client.js";
 import { logger } from "./infrastructure/logger/logger.js";
 import {
+  startExpireIdempotencyKeysJob,
+  stopExpireIdempotencyKeysJob,
+} from "./jobs/cleanup/expireIdempotencyKeys.job.js";
+import {
   startExpirePendingOrdersJob,
   stopExpirePendingOrdersJob,
 } from "./jobs/cleanup/expirePendingOrders.job.js";
@@ -31,6 +35,7 @@ function registerShutdownHandlers(): void {
     logger.info({ signal }, "Shutdown signal received");
     stopExpirePendingOrdersJob();
     stopExpireReadNotificationsJob();
+    stopExpireIdempotencyKeysJob();
 
     const forceExitTimer = setTimeout(() => {
       logger.error("Graceful shutdown timed out; forcing exit");
@@ -77,6 +82,7 @@ export function startServer(): Server {
   });
   startExpirePendingOrdersJob();
   startExpireReadNotificationsJob();
+  startExpireIdempotencyKeysJob();
   registerShutdownHandlers();
   return server;
 }

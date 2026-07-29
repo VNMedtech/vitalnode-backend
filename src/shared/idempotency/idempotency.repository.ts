@@ -73,4 +73,30 @@ export class IdempotencyRepository {
       },
     });
   }
+
+  deleteById(id: string) {
+    return this.db.idempotencyKey.delete({ where: { id } });
+  }
+
+  async deleteExpired(options: {
+    before: Date;
+    limit: number;
+  }): Promise<{ deleted: number }> {
+    const stale = await this.db.idempotencyKey.findMany({
+      where: { expiresAt: { lt: options.before } },
+      select: { id: true },
+      take: options.limit,
+      orderBy: { expiresAt: "asc" },
+    });
+
+    if (stale.length === 0) {
+      return { deleted: 0 };
+    }
+
+    const result = await this.db.idempotencyKey.deleteMany({
+      where: { id: { in: stale.map((row) => row.id) } },
+    });
+
+    return { deleted: result.count };
+  }
 }

@@ -103,6 +103,18 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(86_400_000),
+  /** Idempotency key replay window written to expiresAt on create (ms). */
+  IDEMPOTENCY_TTL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(86_400_000),
+  /** How often the expired idempotency-key purge runs (ms). */
+  IDEMPOTENCY_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3_600_000),
 });
 
 export interface EnvConfig {
@@ -161,6 +173,8 @@ export interface EnvConfig {
   pendingPaymentSweepIntervalMs: number;
   readNotificationTtlDays: number;
   readNotificationSweepIntervalMs: number;
+  idempotencyTtlMs: number;
+  idempotencySweepIntervalMs: number;
 }
 
 function parseEnvConfig(): EnvConfig {
@@ -276,6 +290,8 @@ function parseEnvConfig(): EnvConfig {
     pendingPaymentSweepIntervalMs: env.PENDING_PAYMENT_SWEEP_INTERVAL_MS,
     readNotificationTtlDays: env.READ_NOTIFICATION_TTL_DAYS,
     readNotificationSweepIntervalMs: env.READ_NOTIFICATION_SWEEP_INTERVAL_MS,
+    idempotencyTtlMs: env.IDEMPOTENCY_TTL_MS,
+    idempotencySweepIntervalMs: env.IDEMPOTENCY_SWEEP_INTERVAL_MS,
   };
 }
 
