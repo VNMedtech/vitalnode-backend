@@ -78,6 +78,17 @@ Orders left in `PENDING_PAYMENT` longer than the TTL are auto-cancelled (same ou
 
 Requires `SYSTEM_ACTOR_USER_ID`. Job: `src/jobs/cleanup/expirePendingOrders.job.ts` (started from `startServer`).
 
+## Read notification TTL
+
+Read in-app notifications older than the retention window are hard-deleted. Unread notifications are never deleted by this job.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `READ_NOTIFICATION_TTL_DAYS` | `30` | Age after which a read notification is deleted |
+| `READ_NOTIFICATION_SWEEP_INTERVAL_MS` | `86400000` | How often the server scans (24 hours) |
+
+Job: `src/jobs/cleanup/expireReadNotifications.job.ts` (started from `startServer`). Retention uses `readAt` (set when the notification is first marked read).
+
 ## Tests
 
 ```bash

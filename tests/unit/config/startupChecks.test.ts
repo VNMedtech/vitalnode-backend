@@ -70,6 +70,8 @@ function createProductionConfig(
     systemActorUserId: "",
     pendingPaymentTtlMinutes: 30,
     pendingPaymentSweepIntervalMs: 300_000,
+    readNotificationTtlDays: 30,
+    readNotificationSweepIntervalMs: 86_400_000,
     ...overrides,
   };
 }

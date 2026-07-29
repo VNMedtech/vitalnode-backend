@@ -7,6 +7,7 @@ export interface NotificationDto {
   title: string;
   message: string;
   isRead: boolean;
+  readAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -65,17 +65,46 @@ export class NotificationRepository {
     });
   }
 
-  markAsRead(id: string, userId: string) {
+  markAsRead(id: string, userId: string, readAt = new Date()) {
     return this.db.notification.updateMany({
       where: { id, userId, isRead: false },
-      data: { isRead: true },
+      data: { isRead: true, readAt },
     });
   }
 
-  markAllAsRead(userId: string) {
+  markAllAsRead(userId: string, readAt = new Date()) {
     return this.db.notification.updateMany({
       where: { userId, isRead: false },
-      data: { isRead: true },
+      data: { isRead: true, readAt },
     });
+  }
+
+  /**
+   * Hard-deletes read notifications whose readAt is older than the cutoff.
+   * Batched via find-then-deleteMany so large backlogs do not lock the table.
+   */
+  async deleteReadOlderThan(options: {
+    olderThan: Date;
+    limit: number;
+  }): Promise<{ deleted: number }> {
+    const stale = await this.db.notification.findMany({
+      where: {
+        isRead: true,
+        readAt: { not: null, lt: options.olderThan },
+      },
+      select: { id: true },
+      take: options.limit,
+      orderBy: { readAt: "asc" },
+    });
+
+    if (stale.length === 0) {
+      return { deleted: 0 };
+    }
+
+    const result = await this.db.notification.deleteMany({
+      where: { id: { in: stale.map((row) => row.id) } },
+    });
+
+    return { deleted: result.count };
   }
 }

@@ -95,6 +95,14 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(300_000),
+  /** Hard-delete read in-app notifications older than this many days. */
+  READ_NOTIFICATION_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  /** How often the read-notification cleanup sweep runs (ms). */
+  READ_NOTIFICATION_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(86_400_000),
 });
 
 export interface EnvConfig {
@@ -151,6 +159,8 @@ export interface EnvConfig {
   systemActorUserId: string;
   pendingPaymentTtlMinutes: number;
   pendingPaymentSweepIntervalMs: number;
+  readNotificationTtlDays: number;
+  readNotificationSweepIntervalMs: number;
 }
 
 function parseEnvConfig(): EnvConfig {
@@ -264,6 +274,8 @@ function parseEnvConfig(): EnvConfig {
     systemActorUserId: env.SYSTEM_ACTOR_USER_ID ?? "",
     pendingPaymentTtlMinutes: env.PENDING_PAYMENT_TTL_MINUTES,
     pendingPaymentSweepIntervalMs: env.PENDING_PAYMENT_SWEEP_INTERVAL_MS,
+    readNotificationTtlDays: env.READ_NOTIFICATION_TTL_DAYS,
+    readNotificationSweepIntervalMs: env.READ_NOTIFICATION_SWEEP_INTERVAL_MS,
   };
 }
 

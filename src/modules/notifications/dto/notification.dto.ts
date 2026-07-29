@@ -9,6 +9,7 @@ export function toNotificationDto(record: Notification): NotificationDto {
     title: record.title,
     message: record.message,
     isRead: record.isRead,
+    readAt: record.readAt ? record.readAt.toISOString() : null,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };

@@ -11,6 +11,10 @@ import {
   startExpirePendingOrdersJob,
   stopExpirePendingOrdersJob,
 } from "./jobs/cleanup/expirePendingOrders.job.js";
+import {
+  startExpireReadNotificationsJob,
+  stopExpireReadNotificationsJob,
+} from "./jobs/cleanup/expireReadNotifications.job.js";
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -26,6 +30,7 @@ function registerShutdownHandlers(): void {
     isShuttingDown = true;
     logger.info({ signal }, "Shutdown signal received");
     stopExpirePendingOrdersJob();
+    stopExpireReadNotificationsJob();
 
     const forceExitTimer = setTimeout(() => {
       logger.error("Graceful shutdown timed out; forcing exit");
@@ -71,6 +76,7 @@ export function startServer(): Server {
     logger.info({ port: env.port }, "Server listening");
   });
   startExpirePendingOrdersJob();
+  startExpireReadNotificationsJob();
   registerShutdownHandlers();
   return server;
 }
