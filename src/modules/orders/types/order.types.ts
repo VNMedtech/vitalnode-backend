@@ -79,7 +79,8 @@ export interface ProductSnapshot {
   brand: string;
   model: string;
   productType: string;
-  pricing: string;
+  /** Null when redacted for delivery partners. */
+  pricing: string | null;
   moq: number;
   status: string;
   sellerId: string;
@@ -135,8 +136,10 @@ export interface OrderItemDto {
   id: string;
   productId: string;
   quantity: number;
-  unitPrice: string;
-  totalPrice: string;
+  /** Null when redacted for delivery partners. */
+  unitPrice: string | null;
+  /** Null when redacted for delivery partners. */
+  totalPrice: string | null;
   productSnapshot: ProductSnapshot;
 }
 
@@ -144,8 +147,10 @@ export interface OrderSummaryDto {
   id: string;
   orderNumber: string;
   orderStatus: OrderStatus;
-  totalAmount: string;
-  subtotal: string;
+  /** Null when redacted for delivery partners. */
+  totalAmount: string | null;
+  /** Null when redacted for delivery partners. */
+  subtotal: string | null;
   placedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -205,6 +210,7 @@ export interface OrderDetailDto extends OrderSummaryDto {
   deliveryPartner: OrderDeliveryPartnerContactDto | null;
   shipment: ShipmentDto | null;
   items: OrderItemDto[];
+  /** Null when redacted for delivery partners (or when no payment exists). */
   payment: OrderPaymentSummary | null;
   proofs: OrderProofDto[];
 }

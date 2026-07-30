@@ -969,6 +969,7 @@ export class OrderStatusService {
 
       return toOrderDetailDto(detail, {
         redactBuyerShippingForDeliveryPartner: true,
+        redactPricingForDeliveryPartner: true,
       });
     });
   }
@@ -1131,6 +1132,7 @@ export class OrderStatusService {
 
       return toOrderDetailDto(detail, {
         redactBuyerShippingForDeliveryPartner: true,
+        redactPricingForDeliveryPartner: true,
       });
     });
   }
@@ -1337,7 +1339,11 @@ export class OrderStatusService {
         notificationDispatcher.emit(deliveryFailedEvent);
       }
 
-      return toOrderDetailDto(detail);
+      return toOrderDetailDto(detail, {
+        redactBuyerShippingForDeliveryPartner:
+          role === UserRole.DELIVERY_PARTNER,
+        redactPricingForDeliveryPartner: role === UserRole.DELIVERY_PARTNER,
+      });
     });
   }
 }

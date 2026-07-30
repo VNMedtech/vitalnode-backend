@@ -40,15 +40,19 @@ function decimalToString(value: Prisma.Decimal): string {
   return value.toString();
 }
 
-function parseProductSnapshot(snapshot: Prisma.JsonValue): ProductSnapshot {
+function parseProductSnapshot(
+  snapshot: Prisma.JsonValue,
+  options: { redactPricingForDeliveryPartner?: boolean } = {},
+): ProductSnapshot {
   const data = snapshot as Record<string, unknown>;
+  const redactPricing = options.redactPricingForDeliveryPartner === true;
   return {
     id: String(data.id ?? ""),
     productName: String(data.productName ?? ""),
     brand: String(data.brand ?? ""),
     model: String(data.model ?? ""),
     productType: String(data.productType ?? ""),
-    pricing: String(data.pricing ?? ""),
+    pricing: redactPricing ? null : String(data.pricing ?? ""),
     moq: Number(data.moq ?? 0),
     status: String(data.status ?? ""),
     sellerId: String(data.sellerId ?? ""),
@@ -149,14 +153,16 @@ function resolvePickupAddressSnapshot(
 
 function toOrderItemDto(
   item: OrderSummaryRecord["items"][number],
+  options: { redactPricingForDeliveryPartner?: boolean } = {},
 ): OrderItemDto {
+  const redactPricing = options.redactPricingForDeliveryPartner === true;
   return {
     id: item.id,
     productId: item.productId,
     quantity: item.quantity,
-    unitPrice: decimalToString(item.unitPrice),
-    totalPrice: decimalToString(item.totalPrice),
-    productSnapshot: parseProductSnapshot(item.productSnapshot),
+    unitPrice: redactPricing ? null : decimalToString(item.unitPrice),
+    totalPrice: redactPricing ? null : decimalToString(item.totalPrice),
+    productSnapshot: parseProductSnapshot(item.productSnapshot, options),
   };
 }
 
@@ -247,13 +253,22 @@ function toShipmentDto(
   };
 }
 
-export function toOrderSummaryDto(record: OrderSummaryRecord): OrderSummaryDto {
+export type ToOrderSummaryDtoOptions = {
+  /** When true, null out commercial pricing fields for delivery partners. */
+  redactPricingForDeliveryPartner?: boolean;
+};
+
+export function toOrderSummaryDto(
+  record: OrderSummaryRecord,
+  options: ToOrderSummaryDtoOptions = {},
+): OrderSummaryDto {
+  const redactPricing = options.redactPricingForDeliveryPartner === true;
   return {
     id: record.id,
     orderNumber: record.orderNumber,
     orderStatus: record.orderStatus,
-    totalAmount: decimalToString(record.totalAmount),
-    subtotal: decimalToString(record.subtotal),
+    totalAmount: redactPricing ? null : decimalToString(record.totalAmount),
+    subtotal: redactPricing ? null : decimalToString(record.subtotal),
     placedAt: record.placedAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -267,6 +282,8 @@ export function toOrderSummaryDto(record: OrderSummaryRecord): OrderSummaryDto {
 export type ToOrderDetailDtoOptions = {
   /** When true, omit buyer shipping until the order is SHIPPED. */
   redactBuyerShippingForDeliveryPartner?: boolean;
+  /** When true, null out commercial pricing / payment for delivery partners. */
+  redactPricingForDeliveryPartner?: boolean;
 };
 
 export function toOrderDetailDto(
@@ -276,9 +293,11 @@ export function toOrderDetailDto(
   const showCustomerShipping =
     !options.redactBuyerShippingForDeliveryPartner ||
     isCustomerDetailsVisibleToDeliveryPartner(record.orderStatus);
+  const redactPricing = options.redactPricingForDeliveryPartner === true;
+  const pricingOptions = { redactPricingForDeliveryPartner: redactPricing };
 
   return {
-    ...toOrderSummaryDto(record),
+    ...toOrderSummaryDto(record, pricingOptions),
     shippingAddressSnapshot: showCustomerShipping
       ? parseAddressSnapshot(record.shippingAddressSnapshot)
       : null,
@@ -286,8 +305,8 @@ export function toOrderDetailDto(
     seller: toSellerContactDto(record.seller),
     deliveryPartner: toDeliveryPartnerContactDto(record.deliveryPartner),
     shipment: toShipmentDto(record.shipment),
-    items: record.items.map(toOrderItemDto),
-    payment: toPaymentSummary(record.payment),
+    items: record.items.map((item) => toOrderItemDto(item, pricingOptions)),
+    payment: redactPricing ? null : toPaymentSummary(record.payment),
     proofs: record.proofs.map(toProofDto),
   };
 }

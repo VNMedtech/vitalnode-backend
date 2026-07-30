@@ -80,8 +80,14 @@ export class OrderService {
       this.orderRepo.count(filters),
     ]);
 
+    const redactPricing = role === UserRole.DELIVERY_PARTNER;
+
     return {
-      items: records.map(toOrderSummaryDto),
+      items: records.map((record) =>
+        toOrderSummaryDto(record, {
+          redactPricingForDeliveryPartner: redactPricing,
+        }),
+      ),
       meta: buildPaginationMeta(query.page, query.limit, total),
     };
   }
@@ -107,7 +113,11 @@ export class OrderService {
     ]);
 
     return {
-      items: records.map(toOrderSummaryDto),
+      items: records.map((record) =>
+        toOrderSummaryDto(record, {
+          redactPricingForDeliveryPartner: true,
+        }),
+      ),
       meta: buildPaginationMeta(query.page, query.limit, total),
     };
   }
@@ -150,9 +160,10 @@ export class OrderService {
       throw new NotFoundError("Order not found");
     }
 
+    const forDeliveryPartner = role === UserRole.DELIVERY_PARTNER;
     return toOrderDetailDto(record, {
-      redactBuyerShippingForDeliveryPartner:
-        role === UserRole.DELIVERY_PARTNER,
+      redactBuyerShippingForDeliveryPartner: forDeliveryPartner,
+      redactPricingForDeliveryPartner: forDeliveryPartner,
     });
   }
 }
