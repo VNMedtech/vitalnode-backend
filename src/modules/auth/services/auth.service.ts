@@ -171,14 +171,6 @@ export class AuthService {
       userAgent: input.userAgent,
     });
 
-    auditLogger.log({
-      actorUserId: created.id,
-      action: AUTH_ACTIONS.REGISTER_BUYER,
-      entityType: AUTH_AUDIT_ENTITY_TYPE,
-      entityId: created.id,
-      metadata: { email: created.email },
-    });
-
     return {
       user: userDto,
       ...tokens,
@@ -238,17 +230,6 @@ export class AuthService {
       userAgent: input.userAgent,
     });
 
-    auditLogger.log({
-      actorUserId: created.id,
-      action: AUTH_ACTIONS.REGISTER_SELLER,
-      entityType: AUTH_AUDIT_ENTITY_TYPE,
-      entityId: created.id,
-      metadata: {
-        email: created.email,
-        approvalStatus: userDto.sellerApprovalStatus,
-      },
-    });
-
     return {
       user: userDto,
       ...tokens,
@@ -273,17 +254,6 @@ export class AuthService {
     const tokens = await this.issueTokenPair(userDto, {
       ipAddress: input.ipAddress,
       userAgent: input.userAgent,
-    });
-
-    auditLogger.log({
-      actorUserId: user.id,
-      action: AUTH_ACTIONS.LOGIN,
-      entityType: AUTH_AUDIT_ENTITY_TYPE,
-      entityId: user.id,
-      metadata: {
-        email: user.email,
-        sellerApprovalStatus: userDto.sellerApprovalStatus,
-      },
     });
 
     return {
@@ -326,14 +296,6 @@ export class AuthService {
       userAgent: input.userAgent,
     });
 
-    auditLogger.log({
-      actorUserId: user.id,
-      action: AUTH_ACTIONS.REFRESH,
-      entityType: AUTH_AUDIT_ENTITY_TYPE,
-      entityId: user.id,
-      metadata: { rotatedFromSessionId: session.id },
-    });
-
     return tokens;
   }
 
@@ -343,13 +305,6 @@ export class AuthService {
 
     if (session && !session.revokedAt) {
       await this.repo.revokeSession(session.id);
-      auditLogger.log({
-        actorUserId: session.userId,
-        action: AUTH_ACTIONS.LOGOUT,
-        entityType: AUTH_AUDIT_ENTITY_TYPE,
-        entityId: session.userId,
-        metadata: { sessionId: session.id },
-      });
     }
   }
 

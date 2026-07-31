@@ -3,13 +3,8 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../../../shared/errors/app.errors.js";
-import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
 import { BuyerRepository } from "../../buyers/repositories/buyer.repository.js";
 import { ProductRepository } from "../../products/repositories/product.repository.js";
-import {
-  CART_ACTIONS,
-  CART_AUDIT_ENTITY_TYPE,
-} from "../constants/cart.constants.js";
 import { toCartDto, toEmptyCartDto } from "../dto/cart.dto.js";
 import { CartItemRepository } from "../repositories/cartItem.repository.js";
 import { CartRepository } from "../repositories/cart.repository.js";
@@ -102,18 +97,6 @@ export class CartService {
       return cart.id;
     });
 
-    auditLogger.log({
-      actorUserId,
-      action: CART_ACTIONS.ADD_ITEM,
-      entityType: CART_AUDIT_ENTITY_TYPE,
-      entityId: cartId,
-      metadata: {
-        buyerId,
-        productId: input.productId,
-        quantity: input.quantity,
-      },
-    });
-
     const cart = await this.cartRepo.findByBuyerIdWithItemsAfterMutation(cartId);
     return toCartDto(cart);
   }
@@ -138,20 +121,6 @@ export class CartService {
 
     await this.cartItemRepo.updateQuantity(existingItem.id, input.quantity);
 
-    auditLogger.log({
-      actorUserId,
-      action: CART_ACTIONS.UPDATE_ITEM,
-      entityType: CART_AUDIT_ENTITY_TYPE,
-      entityId: cart.id,
-      metadata: {
-        buyerId,
-        itemId,
-        productId: existingItem.productId,
-        previousQuantity: existingItem.quantity,
-        newQuantity: input.quantity,
-      },
-    });
-
     const updatedCart =
       await this.cartRepo.findByBuyerIdWithItemsAfterMutation(cart.id);
     return toCartDto(updatedCart);
@@ -166,19 +135,6 @@ export class CartService {
 
     const existingItem = await this.getOwnedCartItemOrThrow(itemId, cart.id);
     await this.cartItemRepo.delete(existingItem.id);
-
-    auditLogger.log({
-      actorUserId,
-      action: CART_ACTIONS.REMOVE_ITEM,
-      entityType: CART_AUDIT_ENTITY_TYPE,
-      entityId: cart.id,
-      metadata: {
-        buyerId,
-        itemId,
-        productId: existingItem.productId,
-        quantity: existingItem.quantity,
-      },
-    });
 
     const updatedCart =
       await this.cartRepo.findByBuyerIdWithItemsAfterMutation(cart.id);
@@ -196,17 +152,6 @@ export class CartService {
     const removedCount = await this.cartItemRepo.countByCartId(cart.id);
     if (removedCount > 0) {
       await this.cartItemRepo.deleteAllByCartId(cart.id);
-
-      auditLogger.log({
-        actorUserId,
-        action: CART_ACTIONS.CLEAR,
-        entityType: CART_AUDIT_ENTITY_TYPE,
-        entityId: cart.id,
-        metadata: {
-          buyerId,
-          removedItemCount: removedCount,
-        },
-      });
     }
 
     const updatedCart =
