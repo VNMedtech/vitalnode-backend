@@ -371,6 +371,23 @@ export class OrderRepository {
     });
   }
 
+  /**
+   * Aggregate assigned INTERNAL_DP orders by status for a delivery partner.
+   * Uses the same shipment scoping as listAssignedOrders — no full row load.
+   */
+  countAssignedByStatus(deliveryPartnerId: string) {
+    return this.db.order.groupBy({
+      by: ["orderStatus"],
+      where: {
+        shipment: {
+          method: FulfillmentMethod.INTERNAL_DP,
+          deliveryPartnerId,
+        },
+      },
+      _count: { _all: true },
+    });
+  }
+
   async lockById(orderId: string): Promise<OrderWithPaymentAndItems | null> {
     await this.db.$queryRawUnsafe(
       `SELECT id FROM "Order" WHERE id = $1 FOR UPDATE`,

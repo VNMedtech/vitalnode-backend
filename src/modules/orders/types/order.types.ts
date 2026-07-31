@@ -223,3 +223,14 @@ export interface CheckoutResultDto {
   totalAmount: string;
   paymentId: string;
 }
+
+/** Partner-scoped dashboard aggregates for `GET /orders/assigned/stats`. */
+export interface DeliveryPartnerAssignedStatsDto {
+  ongoing: number;
+  completed: number;
+  failed: number;
+  /** Always null until partner ratings are implemented. */
+  rating: number | null;
+  /** Always null until partner ratings are implemented. */
+  ratingCount: number | null;
+}

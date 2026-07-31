@@ -12,13 +12,27 @@ import { UserRole } from "../../../shared/enums/userRole.enum.js";
 import { buildPaginationMeta } from "../../../shared/responses/api.response.js";
 import { BuyerRepository } from "../../buyers/repositories/buyer.repository.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
+import {
+  DELIVERY_PARTNER_COMPLETED_STATUSES,
+  DELIVERY_PARTNER_FAILED_STATUSES,
+  DELIVERY_PARTNER_INACTIVE_ASSIGNMENT_STATUSES,
+} from "../constants/order.constants.js";
 import { toOrderDetailDto, toOrderSummaryDto } from "../dto/order.dto.js";
 import { OrderRepository } from "../repositories/order.repository.js";
 import type {
+  DeliveryPartnerAssignedStatsDto,
   ListOrdersQuery,
   OrderDetailDto,
   OrderSummaryDto,
 } from "../types/order.types.js";
+
+const INACTIVE_ASSIGNMENT_STATUS_SET = new Set<string>(
+  DELIVERY_PARTNER_INACTIVE_ASSIGNMENT_STATUSES,
+);
+const COMPLETED_STATUS_SET = new Set<string>(
+  DELIVERY_PARTNER_COMPLETED_STATUSES,
+);
+const FAILED_STATUS_SET = new Set<string>(DELIVERY_PARTNER_FAILED_STATUSES);
 
 export class OrderService {
   private readonly orderRepo = new OrderRepository(prisma);
@@ -119,6 +133,38 @@ export class OrderService {
         }),
       ),
       meta: buildPaginationMeta(query.page, query.limit, total),
+    };
+  }
+
+  async getAssignedStats(
+    actorUserId: string,
+  ): Promise<DeliveryPartnerAssignedStatsDto> {
+    const deliveryPartnerId = await this.resolveDeliveryPartnerId(actorUserId);
+    const groups = await this.orderRepo.countAssignedByStatus(deliveryPartnerId);
+
+    let ongoing = 0;
+    let completed = 0;
+    let failed = 0;
+
+    for (const group of groups) {
+      const count = group._count._all;
+      const status = group.orderStatus;
+
+      if (COMPLETED_STATUS_SET.has(status)) {
+        completed += count;
+      } else if (FAILED_STATUS_SET.has(status)) {
+        failed += count;
+      } else if (!INACTIVE_ASSIGNMENT_STATUS_SET.has(status)) {
+        ongoing += count;
+      }
+    }
+
+    return {
+      ongoing,
+      completed,
+      failed,
+      rating: null,
+      ratingCount: null,
     };
   }
 

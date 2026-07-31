@@ -94,6 +94,23 @@ export const listAssignedOrders: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const getAssignedStats: RequestHandler = async (req, res, next) => {
+  try {
+    const actor = requireAuthenticatedUser(req);
+    const stats = await orderService.getAssignedStats(actor.id);
+    res
+      .status(200)
+      .json(
+        successResponse(
+          stats,
+          "Delivery partner stats fetched successfully",
+        ),
+      );
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getOrderDetails: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);

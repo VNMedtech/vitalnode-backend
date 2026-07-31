@@ -559,6 +559,9 @@ export function orderRequest(app: Express, accessToken = "") {
     listAssigned: (query: Record<string, string | number | undefined> = {}) =>
       auth(request(app).get(`${ORDERS_BASE}/assigned`)).query(query),
 
+    getAssignedStats: () =>
+      auth(request(app).get(`${ORDERS_BASE}/assigned/stats`)),
+
     getById: (id: string) =>
       auth(request(app).get(`${ORDERS_BASE}/${id}`)),
 

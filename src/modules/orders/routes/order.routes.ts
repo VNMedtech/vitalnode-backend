@@ -81,6 +81,58 @@ orderRouter.post(
 
 /**
  * @openapi
+ * /api/v1/orders/assigned/stats:
+ *   get:
+ *     tags: [Orders]
+ *     summary: Delivery partner dashboard stats
+ *     description: |
+ *       Delivery-partner only. Returns partner-scoped aggregate counts via DB
+ *       aggregation (not paginated list totals).
+ *
+ *       **Buckets** (aligned with portal `orderUtils`):
+ *       - `ongoing` — assigned INTERNAL_DP orders not in terminal partner statuses
+ *         (excludes PENDING_SETTLEMENT, DELIVERED, SETTLED, DELIVERY_FAILED,
+ *         CANCELLED, REFUNDED)
+ *       - `completed` — DELIVERED, PENDING_SETTLEMENT, SETTLED
+ *       - `failed` — DELIVERY_FAILED
+ *       - `rating` / `ratingCount` — always `null` until partner ratings exist
+ *
+ *       Buyers, sellers, and admins without a delivery partner profile receive 403.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Delivery partner stats fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string }
+ *                 data:
+ *                   type: object
+ *                   required: [ongoing, completed, failed, rating]
+ *                   properties:
+ *                     ongoing: { type: integer, minimum: 0 }
+ *                     completed: { type: integer, minimum: 0 }
+ *                     failed: { type: integer, minimum: 0 }
+ *                     rating: { type: number, nullable: true, example: null }
+ *                     ratingCount: { type: integer, nullable: true, example: null }
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden — delivery partner profile required
+ */
+orderRouter.get(
+  "/assigned/stats",
+  authenticate,
+  authorizePermission(permissions.orders.read),
+  orderController.getAssignedStats,
+);
+
+/**
+ * @openapi
  * /api/v1/orders/assigned:
  *   get:
  *     tags: [Orders]

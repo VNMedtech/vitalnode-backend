@@ -36,3 +36,26 @@ export const ORDER_NUMBER_PREFIX = "ORD";
 export const ORDER_CANCEL_REASON_MAX_LENGTH = 500;
 export const ORDER_PROOF_URL_MAX_LENGTH = 2048;
 export const ORDER_DELIVERY_FAIL_REASON_MAX_LENGTH = 500;
+
+/**
+ * Terminal statuses for a delivery partner assignment (aligns with portal
+ * `INACTIVE_ASSIGNMENT_STATUSES`). Assigned orders outside this set count as ongoing.
+ */
+export const DELIVERY_PARTNER_INACTIVE_ASSIGNMENT_STATUSES = [
+  "PENDING_SETTLEMENT",
+  "DELIVERED",
+  "SETTLED",
+  "DELIVERY_FAILED",
+  "CANCELLED",
+  "REFUNDED",
+] as const;
+
+/** Successful delivery outcomes for partner dashboard stats. */
+export const DELIVERY_PARTNER_COMPLETED_STATUSES = [
+  "DELIVERED",
+  "PENDING_SETTLEMENT",
+  "SETTLED",
+] as const;
+
+/** Failed drop-offs for partner dashboard stats. */
+export const DELIVERY_PARTNER_FAILED_STATUSES = ["DELIVERY_FAILED"] as const;
