@@ -33,7 +33,7 @@ AWS_SES_REGION=ap-south-1
 AWS_SES_ACCESS_KEY_ID=your_ses_access_key
 AWS_SES_SECRET_ACCESS_KEY=your_ses_secret_key
 SES_FROM_EMAIL=noreply@yourdomain.com
-SES_FROM_NAME=Medical Equipment Marketplace
+SES_FROM_NAME=VitalNode Marketplace
 SES_REPLY_TO_EMAIL=support@yourdomain.com
 WEB_APP_BASE_URL=http://localhost:3001
 # Per-portal bases for password-reset and notification deep links

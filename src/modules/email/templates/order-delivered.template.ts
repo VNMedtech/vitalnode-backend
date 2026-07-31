@@ -35,7 +35,7 @@ export function renderOrderDeliveredEmail(
       : `Order ${data.orderNumber} has been delivered.`,
     bodyHtml: `<p>${escapeHtml(greeting(data.recipientName))}</p>
       <p>${roleMessage(data)}</p>
-      <p>Thank you for using the Medical Equipment Marketplace.</p>`,
+      <p>Thank you for using the VitalNode Marketplace.</p>`,
     ctaLabel: data.orderUrl ? "View order" : undefined,
     ctaUrl: data.orderUrl,
   });

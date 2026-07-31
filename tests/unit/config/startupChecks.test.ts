@@ -46,7 +46,7 @@ function createProductionConfig(
       accessKeyId: "",
       secretAccessKey: "",
       fromEmail: "",
-      fromName: "Medical Equipment Marketplace",
+      fromName: "VitalNode Marketplace",
       replyToEmail: "",
     },
     corsOrigin: "https://buyer.example.com",

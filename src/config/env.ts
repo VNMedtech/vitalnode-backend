@@ -261,7 +261,7 @@ function parseEnvConfig(): EnvConfig {
       accessKeyId: env.AWS_SES_ACCESS_KEY_ID ?? "",
       secretAccessKey: env.AWS_SES_SECRET_ACCESS_KEY ?? "",
       fromEmail: env.SES_FROM_EMAIL ?? env.SMTP_FROM_EMAIL ?? "",
-      fromName: env.SES_FROM_NAME ?? "Medical Equipment Marketplace",
+      fromName: env.SES_FROM_NAME ?? "VitalNode Marketplace",
       replyToEmail: env.SES_REPLY_TO_EMAIL ?? "",
     },
     corsOrigin: env.CORS_ORIGIN,

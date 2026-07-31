@@ -29,6 +29,6 @@ export const EMAIL_SUBJECTS = {
 } as const;
 
 export const EMAIL_BRAND = {
-  name: "Medical Equipment Marketplace",
-  supportEmail: "support@marketplace.local",
+  name: "VitalNode Marketplace",
+  supportEmail: "team@vitalnode.in",
 } as const;
