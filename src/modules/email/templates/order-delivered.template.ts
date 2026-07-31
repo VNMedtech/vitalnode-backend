@@ -3,18 +3,36 @@ import type { OrderDeliveredEmailData, RenderedEmail } from "../types/email.type
 import { escapeHtml, greeting, renderEmailLayout } from "./layout.template.js";
 
 function roleMessage(data: OrderDeliveredEmailData): string {
-  if (data.role === "SELLER") {
-    return `Order <strong>${escapeHtml(data.orderNumber)}</strong> has been marked as delivered.`;
+  switch (data.role) {
+    case "DELIVERY_PARTNER":
+      return `You have completed delivery of order <strong>${escapeHtml(data.orderNumber)}</strong>.`;
+    case "SELLER":
+      return `Order <strong>${escapeHtml(data.orderNumber)}</strong> has been marked as delivered.`;
+    default:
+      return `Your order <strong>${escapeHtml(data.orderNumber)}</strong> has been delivered successfully.`;
   }
-  return `Your order <strong>${escapeHtml(data.orderNumber)}</strong> has been delivered successfully.`;
+}
+
+function roleText(data: OrderDeliveredEmailData): string {
+  switch (data.role) {
+    case "DELIVERY_PARTNER":
+      return `You have completed delivery of order ${data.orderNumber}.`;
+    case "SELLER":
+      return `Order ${data.orderNumber} has been marked as delivered.`;
+    default:
+      return `Your order ${data.orderNumber} has been delivered successfully.`;
+  }
 }
 
 export function renderOrderDeliveredEmail(
   data: OrderDeliveredEmailData,
 ): RenderedEmail {
+  const isPartner = data.role === "DELIVERY_PARTNER";
   const html = renderEmailLayout({
-    title: "Order delivered",
-    preheader: `Order ${data.orderNumber} has been delivered.`,
+    title: isPartner ? "Delivery completed" : "Order delivered",
+    preheader: isPartner
+      ? `Delivery of order ${data.orderNumber} is complete.`
+      : `Order ${data.orderNumber} has been delivered.`,
     bodyHtml: `<p>${escapeHtml(greeting(data.recipientName))}</p>
       <p>${roleMessage(data)}</p>
       <p>Thank you for using the Medical Equipment Marketplace.</p>`,
@@ -25,16 +43,14 @@ export function renderOrderDeliveredEmail(
   const text = [
     greeting(data.recipientName),
     "",
-    data.role === "SELLER"
-      ? `Order ${data.orderNumber} has been marked as delivered.`
-      : `Your order ${data.orderNumber} has been delivered successfully.`,
+    roleText(data),
     data.orderUrl ? `View order: ${data.orderUrl}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 
   return {
-    subject: EMAIL_SUBJECTS.ORDER_DELIVERED,
+    subject: isPartner ? "Delivery completed" : EMAIL_SUBJECTS.ORDER_DELIVERED,
     html,
     text,
   };

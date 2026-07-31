@@ -136,7 +136,7 @@ export interface OrderDeliveredEvent {
     recipientName?: string;
     orderNumber: string;
     orderUrl?: string;
-    role: "BUYER" | "SELLER";
+    role: "DELIVERY_PARTNER" | "BUYER" | "SELLER";
   }>;
 }
 

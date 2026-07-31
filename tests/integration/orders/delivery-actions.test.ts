@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { NOTIFICATION_TYPES } from "../../../src/modules/notifications/constants/notification.constants.js";
 import {
   ORDER_PROOF_FILE,
   setupAssignedOrder,
@@ -8,6 +9,24 @@ import { getTestPrisma } from "../../utils/db.js";
 import { orderRequest } from "../../utils/request.helpers.js";
 import { registerBuyerViaApi } from "../../factories/user.factory.js";
 import { useOrdersTestLifecycle } from "./setup.js";
+
+async function waitForNotification(
+  prisma: ReturnType<typeof getTestPrisma>,
+  userId: string,
+  type: string,
+) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const notification = await prisma.notification.findFirst({
+      where: { userId, type },
+      orderBy: { createdAt: "desc" },
+    });
+    if (notification) {
+      return notification;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return null;
+}
 
 describe("Orders — Section 5: Delivery Actions", () => {
   const { getApp } = useOrdersTestLifecycle();
@@ -170,6 +189,15 @@ describe("Orders — Section 5: Delivery Actions", () => {
       where: { id: context.orderId },
     });
     expect(order?.orderStatus).toBe("PENDING_SETTLEMENT");
+
+    const partnerNotification = await waitForNotification(
+      prisma,
+      context.deliveryPartner.deliveryPartnerUserId,
+      NOTIFICATION_TYPES.ORDER_DELIVERED,
+    );
+    expect(partnerNotification).not.toBeNull();
+    expect(partnerNotification?.title).toBe("Delivery completed");
+    expect(partnerNotification?.message).toContain(order?.orderNumber ?? "");
   });
 
   it("does not list orders for unassigned delivery partners", async () => {

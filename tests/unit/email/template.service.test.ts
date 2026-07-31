@@ -99,4 +99,37 @@ describe("Email — TemplateService", () => {
     expect(rendered.html).toContain("Recipient unavailable");
     expect(rendered.text).toContain("Recipient unavailable");
   });
+
+  it("renders order delivered email for buyer", () => {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_DELIVERED, {
+      orderNumber: "ORD-1001",
+      orderUrl: "https://app.example.com/orders/abc",
+      role: "BUYER",
+    });
+
+    expect(rendered.subject).toBe("Order delivered");
+    expect(rendered.html).toContain("ORD-1001");
+    expect(rendered.html).toContain("has been delivered successfully");
+    expect(rendered.text).toContain("View order: https://app.example.com/orders/abc");
+  });
+
+  it("renders order delivered email for delivery partner", () => {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_DELIVERED, {
+      recipientName: "Ravi Partner",
+      orderNumber: "ORD-1001",
+      orderUrl: "https://app.example.com/delivery/orders/abc",
+      role: "DELIVERY_PARTNER",
+    });
+
+    expect(rendered.subject).toBe("Delivery completed");
+    expect(rendered.html).toContain("Delivery completed");
+    expect(rendered.html).toContain("You have completed delivery of order");
+    expect(rendered.html).toContain("ORD-1001");
+    expect(rendered.text).toContain(
+      "You have completed delivery of order ORD-1001.",
+    );
+    expect(rendered.text).toContain(
+      "View order: https://app.example.com/delivery/orders/abc",
+    );
+  });
 });

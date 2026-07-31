@@ -408,45 +408,71 @@ export class OrderNotificationContextService {
       return null;
     }
 
+    const inApp: OrderDeliveredEvent["inApp"] = [
+      {
+        userId: order.buyer.userId,
+        type: NOTIFICATION_TYPES.ORDER_DELIVERED,
+        title: "Order delivered",
+        message: `Your order ${order.orderNumber} has been delivered.`,
+      },
+      {
+        userId: order.seller.userId,
+        type: NOTIFICATION_TYPES.ORDER_DELIVERED,
+        title: "Order delivered",
+        message: `Order ${order.orderNumber} has been marked as delivered.`,
+      },
+    ];
+
+    const emails: OrderDeliveredEvent["emails"] = [
+      {
+        to: order.buyer.user.email,
+        recipientName: buildRecipientName(
+          order.buyer.user.firstName,
+          order.buyer.user.lastName,
+        ),
+        orderNumber: order.orderNumber,
+        orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
+        role: "BUYER",
+      },
+      {
+        to: order.seller.user.email,
+        recipientName: buildRecipientName(
+          order.seller.user.firstName,
+          order.seller.user.lastName,
+        ),
+        orderNumber: order.orderNumber,
+        orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
+        role: "SELLER",
+      },
+    ];
+
+    if (order.deliveryPartner) {
+      inApp.push({
+        userId: order.deliveryPartner.userId,
+        type: NOTIFICATION_TYPES.ORDER_DELIVERED,
+        title: "Delivery completed",
+        message: `You have completed delivery of order ${order.orderNumber}.`,
+      });
+      emails.push({
+        to: order.deliveryPartner.user.email,
+        recipientName: buildRecipientName(
+          order.deliveryPartner.user.firstName,
+          order.deliveryPartner.user.lastName,
+        ),
+        orderNumber: order.orderNumber,
+        orderUrl: buildPortalUrl(
+          AuthPortal.DELIVERY,
+          `/delivery/orders/${orderId}`,
+        ),
+        role: "DELIVERY_PARTNER",
+      });
+    }
+
     return {
       eventType: NOTIFICATION_EVENTS.ORDER_DELIVERED,
       correlationId: orderId,
-      inApp: [
-        {
-          userId: order.buyer.userId,
-          type: NOTIFICATION_TYPES.ORDER_DELIVERED,
-          title: "Order delivered",
-          message: `Your order ${order.orderNumber} has been delivered.`,
-        },
-        {
-          userId: order.seller.userId,
-          type: NOTIFICATION_TYPES.ORDER_DELIVERED,
-          title: "Order delivered",
-          message: `Order ${order.orderNumber} has been marked as delivered.`,
-        },
-      ],
-      emails: [
-        {
-          to: order.buyer.user.email,
-          recipientName: buildRecipientName(
-            order.buyer.user.firstName,
-            order.buyer.user.lastName,
-          ),
-          orderNumber: order.orderNumber,
-          orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
-          role: "BUYER",
-        },
-        {
-          to: order.seller.user.email,
-          recipientName: buildRecipientName(
-            order.seller.user.firstName,
-            order.seller.user.lastName,
-          ),
-          orderNumber: order.orderNumber,
-          orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
-          role: "SELLER",
-        },
-      ],
+      inApp,
+      emails,
     };
   }
 

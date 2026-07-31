@@ -94,7 +94,7 @@ export interface OrderDeliveredEmailData {
   recipientName?: string;
   orderNumber: string;
   orderUrl?: string;
-  role: "BUYER" | "SELLER";
+  role: "DELIVERY_PARTNER" | "BUYER" | "SELLER";
 }
 
 export interface DeliveryFailedEmailData {
