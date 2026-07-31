@@ -18,6 +18,7 @@ export interface SellerProfileSummary {
   country: string;
   postalCode: string;
   approvalStatus: string;
+  commissionPercentage: string | null;
 }
 
 export interface DeliveryPartnerProfileSummary {

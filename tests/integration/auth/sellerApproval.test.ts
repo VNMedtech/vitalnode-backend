@@ -34,6 +34,10 @@ describe("Auth — Seller Approval", () => {
 
     const profileRes = await userRequest(app, auth.accessToken).getProfile();
     expect(profileRes.status).toBe(200);
+    expect(profileRes.body.data.sellerProfile.approvalStatus).toBe(
+      "PENDING_APPROVAL",
+    );
+    expect(profileRes.body.data.sellerProfile.commissionPercentage).toBeNull();
 
     const operationalRes = await sellerProbeRequest(app, auth.accessToken);
     expect(operationalRes.status).toBe(403);
@@ -52,6 +56,9 @@ describe("Auth — Seller Approval", () => {
     ).getProfile();
     expect(profileRes.status).toBe(200);
     expect(profileRes.body.data.sellerProfile.approvalStatus).toBe("ACTIVE");
+    expect(
+      Number(profileRes.body.data.sellerProfile.commissionPercentage),
+    ).toBe(10);
 
     const operationalRes = await sellerProbeRequest(
       app,

@@ -59,7 +59,13 @@ function toUserProfileDto(record: UserProfileRecord): UserProfileDto {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     buyerProfile: record.buyerProfile,
-    sellerProfile: record.sellerProfile,
+    sellerProfile: record.sellerProfile
+      ? {
+          ...record.sellerProfile,
+          commissionPercentage:
+            record.sellerProfile.commissionPercentage?.toString() ?? null,
+        }
+      : null,
     deliveryPartnerProfile: record.deliveryPartnerProfile,
   };
 }

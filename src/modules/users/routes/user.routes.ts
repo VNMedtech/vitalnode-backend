@@ -69,6 +69,7 @@ export const userRouter = Router();
  *                         country: { type: string }
  *                         postalCode: { type: string }
  *                         approvalStatus: { type: string }
+ *                         commissionPercentage: { type: string, nullable: true, example: "10.00" }
  *                     deliveryPartnerProfile:
  *                       type: object
  *                       nullable: true

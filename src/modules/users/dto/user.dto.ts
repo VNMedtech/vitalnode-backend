@@ -17,6 +17,7 @@ export const sellerProfileSummaryDtoSchema = z.object({
   country: z.string(),
   postalCode: z.string(),
   approvalStatus: z.string(),
+  commissionPercentage: z.string().nullable(),
 });
 
 export const deliveryPartnerProfileSummaryDtoSchema = z.object({

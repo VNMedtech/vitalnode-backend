@@ -31,6 +31,7 @@ const userProfileSelect = {
       country: true,
       postalCode: true,
       approvalStatus: true,
+      commissionPercentage: true,
     },
   },
   deliveryPartnerProfile: {

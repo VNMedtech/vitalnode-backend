@@ -8,11 +8,13 @@ import {
 } from "../../fixtures/user.payloads.js";
 import { countActiveSessionsForUser } from "../../factories/auth.factory.js";
 import {
+  createApprovedSeller,
   createDeliveryPartnerUser,
   createUserWithPassword,
   loginDeliveryPartnerViaApi,
   loginViaApi,
   registerBuyerViaApi,
+  registerSellerViaApi,
 } from "../../factories/user.factory.js";
 import {
   disconnectTestPrisma,
@@ -61,6 +63,33 @@ describe("Users — Profile, Password & Security", () => {
       buyerType: "DOCTOR",
       nmcRegistrationNumber: payload.nmcRegistrationNumber,
     });
+  });
+
+  it("1b. returns sellerProfile commissionPercentage on GET /users/me", async () => {
+    const pending = await registerSellerViaApi(app);
+    const pendingRes = await userRequest(
+      app,
+      pending.auth.accessToken,
+    ).getProfile();
+
+    expect(pendingRes.status).toBe(200);
+    expect(pendingRes.body.data.sellerProfile).toMatchObject({
+      approvalStatus: "PENDING_APPROVAL",
+      commissionPercentage: null,
+      businessName: pending.payload.businessName,
+    });
+
+    const { login } = await createApprovedSeller(app, getTestPrisma());
+    const approvedRes = await userRequest(
+      app,
+      login.auth.accessToken,
+    ).getProfile();
+
+    expect(approvedRes.status).toBe(200);
+    expect(approvedRes.body.data.sellerProfile.approvalStatus).toBe("ACTIVE");
+    expect(Number(approvedRes.body.data.sellerProfile.commissionPercentage)).toBe(
+      10,
+    );
   });
 
   it("2. updates profile successfully", async () => {
