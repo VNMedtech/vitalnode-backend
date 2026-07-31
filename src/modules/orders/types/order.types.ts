@@ -157,6 +157,11 @@ export interface OrderSummaryDto {
   buyerId: string;
   sellerId: string;
   deliveryPartnerId: string | null;
+  /**
+   * Recipient name from `shippingAddressSnapshot`.
+   * Null for delivery partners until SHIPPED (same gate as detail shipping).
+   */
+  customerName: string | null;
   /** Present after seller/admin confirm; null while PLACED / unpaid. */
   shipment: ShipmentDto | null;
 }

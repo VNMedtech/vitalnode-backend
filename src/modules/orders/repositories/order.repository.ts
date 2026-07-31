@@ -50,6 +50,8 @@ const orderSummarySelect = {
   placedAt: true,
   createdAt: true,
   updatedAt: true,
+  /** Needed to expose `customerName` on list summaries (gated for DPs). */
+  shippingAddressSnapshot: true,
   shipment: {
     select: shipmentSelect,
   },

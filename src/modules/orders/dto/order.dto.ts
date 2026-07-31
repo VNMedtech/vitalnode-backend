@@ -27,6 +27,7 @@ const DELIVERY_PARTNER_CUSTOMER_VISIBLE_STATUSES: ReadonlySet<OrderStatus> =
     OrderStatus.SHIPPED,
     OrderStatus.DELIVERED,
     OrderStatus.PENDING_SETTLEMENT,
+    OrderStatus.SETTLED,
     OrderStatus.DELIVERY_FAILED,
   ]);
 
@@ -256,7 +257,26 @@ function toShipmentDto(
 export type ToOrderSummaryDtoOptions = {
   /** When true, null out commercial pricing fields for delivery partners. */
   redactPricingForDeliveryPartner?: boolean;
+  /** When true, omit customerName until the order is SHIPPED (or later). */
+  redactBuyerShippingForDeliveryPartner?: boolean;
 };
+
+function resolveCustomerName(
+  record: OrderSummaryRecord,
+  options: ToOrderSummaryDtoOptions,
+): string | null {
+  if (
+    options.redactBuyerShippingForDeliveryPartner &&
+    !isCustomerDetailsVisibleToDeliveryPartner(record.orderStatus)
+  ) {
+    return null;
+  }
+  if (record.shippingAddressSnapshot == null) {
+    return null;
+  }
+  const name = parseAddressSnapshot(record.shippingAddressSnapshot).name.trim();
+  return name || null;
+}
 
 export function toOrderSummaryDto(
   record: OrderSummaryRecord,
@@ -275,6 +295,7 @@ export function toOrderSummaryDto(
     buyerId: record.buyerId,
     sellerId: record.sellerId,
     deliveryPartnerId: record.deliveryPartnerId,
+    customerName: resolveCustomerName(record, options),
     shipment: toShipmentDto(record.shipment),
   };
 }
@@ -294,10 +315,14 @@ export function toOrderDetailDto(
     !options.redactBuyerShippingForDeliveryPartner ||
     isCustomerDetailsVisibleToDeliveryPartner(record.orderStatus);
   const redactPricing = options.redactPricingForDeliveryPartner === true;
-  const pricingOptions = { redactPricingForDeliveryPartner: redactPricing };
+  const summaryOptions: ToOrderSummaryDtoOptions = {
+    redactPricingForDeliveryPartner: redactPricing,
+    redactBuyerShippingForDeliveryPartner:
+      options.redactBuyerShippingForDeliveryPartner,
+  };
 
   return {
-    ...toOrderSummaryDto(record, pricingOptions),
+    ...toOrderSummaryDto(record, summaryOptions),
     shippingAddressSnapshot: showCustomerShipping
       ? parseAddressSnapshot(record.shippingAddressSnapshot)
       : null,
@@ -305,7 +330,7 @@ export function toOrderDetailDto(
     seller: toSellerContactDto(record.seller),
     deliveryPartner: toDeliveryPartnerContactDto(record.deliveryPartner),
     shipment: toShipmentDto(record.shipment),
-    items: record.items.map((item) => toOrderItemDto(item, pricingOptions)),
+    items: record.items.map((item) => toOrderItemDto(item, summaryOptions)),
     payment: redactPricing ? null : toPaymentSummary(record.payment),
     proofs: record.proofs.map(toProofDto),
   };

@@ -100,6 +100,7 @@ export class OrderService {
       items: records.map((record) =>
         toOrderSummaryDto(record, {
           redactPricingForDeliveryPartner: redactPricing,
+          redactBuyerShippingForDeliveryPartner: redactPricing,
         }),
       ),
       meta: buildPaginationMeta(query.page, query.limit, total),
@@ -130,6 +131,7 @@ export class OrderService {
       items: records.map((record) =>
         toOrderSummaryDto(record, {
           redactPricingForDeliveryPartner: true,
+          redactBuyerShippingForDeliveryPartner: true,
         }),
       ),
       meta: buildPaginationMeta(query.page, query.limit, total),

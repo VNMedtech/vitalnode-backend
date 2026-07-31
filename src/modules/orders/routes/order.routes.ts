@@ -140,6 +140,8 @@ orderRouter.get(
  *     description: |
  *       Delivery-partner only. Commercial pricing fields (`totalAmount`,
  *       `subtotal`) are null — partners never receive usable price data.
+ *       `customerName` is included once the order is SHIPPED (or later);
+ *       earlier statuses return null for that field.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -199,6 +201,8 @@ orderRouter.get(
  *       Buyer, seller, admin, or delivery partner list scoped by permissions.
  *       Delivery partners receive redacted pricing (`totalAmount` / `subtotal`
  *       are null). Buyers, sellers, and admins receive full pricing.
+ *       List items include `customerName` from the shipping snapshot; for
+ *       delivery partners it is null until SHIPPED (same gate as detail).
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -299,9 +303,9 @@ orderRouter.post(
  *       `deliveryPartner` contact when assigned.
  *
  *       Delivery-partner privacy: when the actor is a delivery partner and
- *       status is before SHIPPED, `shippingAddressSnapshot` is null.
- *       Customer shipping is returned for SHIPPED and later statuses.
- *       Seller pickup contact is always included on detail.
+ *       status is before SHIPPED, `shippingAddressSnapshot` and `customerName`
+ *       are null. Customer shipping is returned for SHIPPED and later statuses
+ *       (including SETTLED). Seller pickup contact is always included on detail.
  *       Includes nested `shipment` (method, status, trackingUrl, etc.) when present.
  *
  *       Delivery-partner pricing privacy: `totalAmount`, `subtotal`, item

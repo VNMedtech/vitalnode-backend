@@ -11,7 +11,7 @@ The notifications module uses an **event-driven architecture** with two channels
 
 Domain services emit events through `notificationDispatcher.emit()`. Handlers are registered at startup via `registerNotificationHandlers()` in `app.ts`.
 
-**Admin portal note:** In-app rows are written for buyers, sellers, and delivery partners — not admin users. The admin dashboard header uses `AdminAttentionBell` (client-side polling of pending sellers / pending products / `PLACED` orders) rather than `GET /notifications`.
+**Admin portal note:** In-app rows are written for buyers, sellers, and delivery partners — not admin users. The admin dashboard header uses `AdminAttentionBell` (client-side polling of pending sellers / pending products / `CONFIRMED` orders that need fulfillment method, DP assignment, or tracking; Orders deep-link uses `?fulfillment=needs_attention`) rather than `GET /notifications`.
 
 ---
 

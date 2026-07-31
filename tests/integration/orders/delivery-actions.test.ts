@@ -36,6 +36,12 @@ describe("Orders — Section 5: Delivery Actions", () => {
     const prisma = getTestPrisma();
     const context = await setupOutForDeliveryOrder(app, prisma);
 
+    const order = await prisma.order.findUniqueOrThrow({
+      where: { id: context.orderId },
+      select: { shippingAddressSnapshot: true },
+    });
+    const snapshot = order.shippingAddressSnapshot as { name: string };
+
     const res = await orderRequest(
       app,
       context.deliveryPartner.deliveryPartnerToken,
@@ -44,8 +50,34 @@ describe("Orders — Section 5: Delivery Actions", () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: context.orderId }),
+        expect.objectContaining({
+          id: context.orderId,
+          customerName: snapshot.name,
+        }),
       ]),
+    );
+  });
+
+  it("hides customerName on assigned list before SHIPPED", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const context = await setupAssignedOrder(app, prisma);
+
+    const res = await orderRequest(
+      app,
+      context.deliveryPartner.deliveryPartnerToken,
+    ).listAssigned();
+
+    expect(res.status).toBe(200);
+    const row = res.body.data.find(
+      (item: { id: string }) => item.id === context.orderId,
+    );
+    expect(row).toEqual(
+      expect.objectContaining({
+        id: context.orderId,
+        orderStatus: "CONFIRMED",
+        customerName: null,
+      }),
     );
   });
 
@@ -88,6 +120,7 @@ describe("Orders — Section 5: Delivery Actions", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.orderStatus).toBe("CONFIRMED");
     expect(res.body.data.shippingAddressSnapshot).toBeNull();
+    expect(res.body.data.customerName).toBeNull();
     expect(res.body.data.pickupAddressSnapshot).toEqual(
       expect.objectContaining({
         id: pickup.id,
@@ -127,6 +160,7 @@ describe("Orders — Section 5: Delivery Actions", () => {
     ).getById(context.orderId);
 
     expect(res.status).toBe(200);
+    expect(res.body.data.customerName).toBe(snapshot.name);
     expect(res.body.data.shippingAddressSnapshot).toEqual(
       expect.objectContaining({
         name: snapshot.name,
