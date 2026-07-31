@@ -18,7 +18,7 @@ import {
   getTestPrisma,
   resetDatabase,
 } from "../../utils/db.js";
-import { productRequest } from "../../utils/request.helpers.js";
+import { inventoryRequest, productRequest } from "../../utils/request.helpers.js";
 import { getTestApp } from "../../utils/testApp.js";
 import { TEST_PDF_BUFFER, TEST_PNG_BUFFER } from "../../utils/upload.helpers.js";
 
@@ -236,6 +236,43 @@ describe("Products — Catalog & Approval Workflow", () => {
     expect(res.body.data[0].id).toBe(setup.productId);
     expect(res.body.data[0].status).toBe("APPROVED");
     expect(res.body.data[0].categories[0].id).toBe(setup.categoryId);
+    expect(res.body.data[0].inventory).toEqual(
+      expect.objectContaining({
+        availableQuantity: expect.any(Number),
+      }),
+    );
+  });
+
+  it("6b. keeps out-of-stock products on marketplace list and detail", async () => {
+    const prisma = getTestPrisma();
+    const setup = await setupMarketplaceProduct(app, prisma, {
+      inventoryQuantity: 3,
+    });
+
+    await inventoryRequest(app, setup.sellerToken).update(
+      setup.productId,
+      { availableQuantity: 0, reason: "Sold out" },
+      "products-oos-marketplace-1",
+    );
+
+    const listRes = await productRequest(app).listMarketplace({
+      categoryId: setup.categoryId,
+    });
+    expect(listRes.status).toBe(200);
+    const listed = listRes.body.data.find(
+      (p: { id: string }) => p.id === setup.productId,
+    );
+    expect(listed).toMatchObject({
+      status: "OUT_OF_STOCK",
+      inventory: { availableQuantity: 0 },
+    });
+
+    const detailRes = await productRequest(app).getMarketplaceById(
+      setup.productId,
+    );
+    expect(detailRes.status).toBe(200);
+    expect(detailRes.body.data.status).toBe("OUT_OF_STOCK");
+    expect(detailRes.body.data.inventory.availableQuantity).toBe(0);
   });
 
   it("7. returns marketplace product details by id with attribute fields", async () => {

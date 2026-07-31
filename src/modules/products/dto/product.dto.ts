@@ -124,6 +124,9 @@ function toProductListItemDto(
       businessName: record.seller.businessName,
     },
     primaryImageUrl: sortedMedia[0]?.fileUrl ?? null,
+    inventory: record.inventory
+      ? { availableQuantity: record.inventory.availableQuantity }
+      : null,
     averageRating: reviewStats?.averageRating ?? null,
     reviewCount: reviewStats?.reviewCount ?? 0,
     createdAt: record.createdAt,

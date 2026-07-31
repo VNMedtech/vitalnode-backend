@@ -44,9 +44,11 @@ export const productRouter = Router();
  *     tags: [Products]
  *     summary: Marketplace product listing
  *     description: |
- *       Public endpoint. Returns paginated approved products from active sellers
+ *       Public endpoint. Returns paginated approved and out-of-stock products from active sellers
  *       in active categories. Supports search, filters, and sorting.
- *       Default sort (when sortBy and sortOrder are omitted): pricing ascending.
+ *       In-stock (APPROVED) listings appear before out-of-stock.
+ *       List items include `inventory.availableQuantity`.
+ *       Default sort (when sortBy and sortOrder are omitted): status ascending, then pricing ascending.
  *     parameters:
  *       - in: query
  *         name: page
@@ -127,7 +129,7 @@ productRouter.get(
  *     tags: [Products]
  *     summary: Compare marketplace products
  *     description: |
- *       Public endpoint. Compares 2 to 4 approved, marketplace-visible products side by side.
+ *       Public endpoint. Compares 2 to 4 marketplace-visible products (approved or out of stock) side by side.
  *       Products must share at least one category (non-empty intersection across the full set).
  *       Returns core commerce rows plus the union of template attribute keys across the
  *       selected products (shared keys first, then product-specific), aligned to the
@@ -986,7 +988,7 @@ productRouter.get(
  *     tags: [Products]
  *     summary: Get marketplace product details
  *     description: |
- *       Public endpoint. Returns approved product details visible in the marketplace.
+ *       Public endpoint. Returns approved and out-of-stock product details visible in the marketplace.
  *       Returns 404 for non-approved, disabled, or unavailable products.
  *     parameters:
  *       - in: path
@@ -1099,6 +1101,10 @@ productRouter.get(
  *         seller:
  *           $ref: '#/components/schemas/ProductSellerSummary'
  *         primaryImageUrl: { type: string, nullable: true }
+ *         inventory:
+ *           allOf:
+ *             - $ref: '#/components/schemas/ProductInventorySummary'
+ *             - nullable: true
  *         averageRating: { type: string, nullable: true, example: "4.5" }
  *         reviewCount: { type: integer, example: 12 }
  *         createdAt: { type: string, format: date-time }

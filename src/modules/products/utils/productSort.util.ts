@@ -5,6 +5,8 @@ export interface ProductSortOptions {
   sortBy?: ProductSortField;
   sortOrder?: "asc" | "desc";
   useMarketplaceDefaultSort?: boolean;
+  /** Marketplace: APPROVED before OUT_OF_STOCK (alphabetical). */
+  preferInStockFirst?: boolean;
 }
 
 function mapSortField(
@@ -40,15 +42,22 @@ export function usesMarketplaceDefaultSort(
 export function buildProductOrderBy(
   options: ProductSortOptions,
 ): Prisma.ProductOrderByWithRelationInput | Prisma.ProductOrderByWithRelationInput[] {
-  if (options.useMarketplaceDefaultSort) {
-    return [{ pricing: "asc" }];
+  const primary: Prisma.ProductOrderByWithRelationInput = options.useMarketplaceDefaultSort
+    ? { pricing: "asc" }
+    : (() => {
+        const sortBy = options.sortBy ?? "newest";
+        const sortOrder = resolveExplicitSortOrder(sortBy, options.sortOrder);
+        const sortField = mapSortField(sortBy);
+        return { [sortField]: sortOrder };
+      })();
+
+  if (options.preferInStockFirst) {
+    return [{ status: "asc" }, primary];
   }
 
-  const sortBy = options.sortBy ?? "newest";
-  const sortOrder = resolveExplicitSortOrder(sortBy, options.sortOrder);
-  const sortField = mapSortField(sortBy);
+  if (options.useMarketplaceDefaultSort) {
+    return [primary];
+  }
 
-  return {
-    [sortField]: sortOrder,
-  };
+  return primary;
 }

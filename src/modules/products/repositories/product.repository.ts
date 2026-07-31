@@ -5,8 +5,15 @@ import type {
 } from "../../../../generated/prisma/client.js";
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
-import type { ProductSortField } from "../constants/product.constants.js";
+import {
+  PRODUCT_PUBLIC_STATUSES,
+  type ProductSortField,
+} from "../constants/product.constants.js";
 import { buildProductOrderBy } from "../utils/productSort.util.js";
+
+const marketplacePublicStatusFilter = {
+  in: [...PRODUCT_PUBLIC_STATUSES] as PrismaProductStatus[],
+};
 
 const categorySummarySelect = {
   id: true,
@@ -70,6 +77,11 @@ const productListSelect = {
   status: true,
   createdAt: true,
   updatedAt: true,
+  inventory: {
+    select: {
+      availableQuantity: true,
+    },
+  },
   categories: {
     select: productCategorySelect,
   },
@@ -223,7 +235,7 @@ function buildProductWhere(
     ...(Object.keys(priceFilter).length > 0 ? { pricing: priceFilter } : {}),
     ...(marketplaceOnly
       ? {
-          status: ProductStatus.APPROVED,
+          status: marketplacePublicStatusFilter,
           seller: {
             approvalStatus: SellerApprovalStatus.ACTIVE,
             user: {
@@ -350,7 +362,7 @@ export class ProductRepository {
       where: {
         id,
         deletedAt: null,
-        status: ProductStatus.APPROVED,
+        status: marketplacePublicStatusFilter,
         seller: {
           approvalStatus: SellerApprovalStatus.ACTIVE,
           user: {
@@ -376,7 +388,7 @@ export class ProductRepository {
       where: {
         id: { in: ids },
         deletedAt: null,
-        status: ProductStatus.APPROVED,
+        status: marketplacePublicStatusFilter,
         seller: {
           approvalStatus: SellerApprovalStatus.ACTIVE,
           user: {
@@ -409,13 +421,21 @@ export class ProductRepository {
   }
 
   findManyPaginated(options: FindProductsOptions) {
-    const { page, limit, sortBy, sortOrder, useMarketplaceDefaultSort } = options;
+    const {
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      useMarketplaceDefaultSort,
+      marketplaceOnly,
+    } = options;
     const skip = (page - 1) * limit;
     const where = buildProductWhere(options);
     const orderBy = buildProductOrderBy({
       sortBy,
       sortOrder,
       useMarketplaceDefaultSort,
+      preferInStockFirst: marketplaceOnly,
     });
 
     return this.prisma.product.findMany({

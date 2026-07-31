@@ -10,7 +10,7 @@ import {
   getTestPrisma,
   resetDatabase,
 } from "../../utils/db.js";
-import { inventoryRequest } from "../../utils/request.helpers.js";
+import { inventoryRequest, productRequest } from "../../utils/request.helpers.js";
 import { getTestApp } from "../../utils/testApp.js";
 
 describe("Inventory — Stock Management", () => {
@@ -173,5 +173,36 @@ describe("Inventory — Stock Management", () => {
     });
 
     expect(product.status).toBe("OUT_OF_STOCK");
+  });
+
+  it("9. keeps out-of-stock products visible on marketplace list and detail", async () => {
+    const prisma = getTestPrisma();
+    const setup = await setupMarketplaceProduct(app, prisma, {
+      inventoryQuantity: 5,
+    });
+
+    await inventoryRequest(app, setup.sellerToken).update(
+      setup.productId,
+      { availableQuantity: 0, reason: "Sold out" },
+      "zero-stock-marketplace-1",
+    );
+
+    const listRes = await productRequest(app).listMarketplace();
+    expect(listRes.status).toBe(200);
+    expect(
+      listRes.body.data.some((p: { id: string; status: string }) =>
+        p.id === setup.productId && p.status === "OUT_OF_STOCK",
+      ),
+    ).toBe(true);
+    const listed = listRes.body.data.find(
+      (p: { id: string }) => p.id === setup.productId,
+    );
+    expect(listed?.inventory?.availableQuantity).toBe(0);
+
+    const detailRes = await productRequest(app).getMarketplaceById(
+      setup.productId,
+    );
+    expect(detailRes.status).toBe(200);
+    expect(detailRes.body.data.status).toBe("OUT_OF_STOCK");
   });
 });

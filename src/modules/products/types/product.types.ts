@@ -62,6 +62,7 @@ export interface ProductListItemDto {
   template: ProductTemplateSummaryDto | null;
   seller: ProductSellerSummaryDto;
   primaryImageUrl: string | null;
+  inventory: ProductInventorySummaryDto | null;
   averageRating: string | null;
   reviewCount: number;
   createdAt: Date;

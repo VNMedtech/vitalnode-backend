@@ -30,6 +30,25 @@ describe("productSort.util", () => {
       ).toEqual([{ pricing: "asc" }]);
     });
 
+    it("puts in-stock before out-of-stock on marketplace default sort", () => {
+      expect(
+        buildProductOrderBy({
+          useMarketplaceDefaultSort: true,
+          preferInStockFirst: true,
+        }),
+      ).toEqual([{ status: "asc" }, { pricing: "asc" }]);
+    });
+
+    it("puts in-stock first ahead of explicit price sort", () => {
+      expect(
+        buildProductOrderBy({
+          sortBy: "price",
+          sortOrder: "desc",
+          preferInStockFirst: true,
+        }),
+      ).toEqual([{ status: "asc" }, { pricing: "desc" }]);
+    });
+
     it("maps explicit price ascending sort", () => {
       expect(
         buildProductOrderBy({ sortBy: "price", sortOrder: "asc" }),

@@ -10,7 +10,7 @@ import {
   getTestPrisma,
   resetDatabase,
 } from "../../utils/db.js";
-import { productRequest } from "../../utils/request.helpers.js";
+import { inventoryRequest, productRequest } from "../../utils/request.helpers.js";
 import { getTestApp } from "../../utils/testApp.js";
 
 describe("Products — Compare", () => {
@@ -184,6 +184,37 @@ describe("Products — Compare", () => {
       "00000000-0000-4000-8000-000000000099",
     ]);
     expect(res.status).toBe(404);
+  });
+
+  it("allows comparing an out-of-stock marketplace product", async () => {
+    const prisma = getTestPrisma();
+    const first = await setupMarketplaceProduct(app, prisma, {
+      product: { productName: "In Stock Compare" },
+      inventoryQuantity: 5,
+    });
+    const second = await setupMarketplaceProduct(app, prisma, {
+      product: { productName: "Out of Stock Compare" },
+      inventoryQuantity: 2,
+    });
+
+    await productRequest(app, second.sellerToken).update(second.productId, {
+      categoryIds: [first.categoryId],
+    });
+
+    await inventoryRequest(app, second.sellerToken).update(
+      second.productId,
+      { availableQuantity: 0, reason: "Sold out" },
+      "compare-oos-1",
+    );
+
+    const res = await productRequest(app).compare([
+      first.productId,
+      second.productId,
+    ]);
+    expect(res.status).toBe(200);
+    expect(res.body.data.productIds).toEqual(
+      expect.arrayContaining([first.productId, second.productId]),
+    );
   });
 
   it("returns 400 for invalid productIds count, duplicates, and UUID format", async () => {

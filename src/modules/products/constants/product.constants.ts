@@ -47,8 +47,10 @@ export const PRODUCT_NOTIFICATION_TYPES = {
   REJECTED: "PRODUCT_REJECTED",
 } as const;
 
+/** Statuses visible on the public marketplace (list + detail + compare). */
 export const PRODUCT_PUBLIC_STATUSES: readonly ProductStatus[] = [
   ProductStatus.APPROVED,
+  ProductStatus.OUT_OF_STOCK,
 ];
 
 export const PRODUCT_COMPARE_MIN_COUNT = 2;
