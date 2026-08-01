@@ -2,6 +2,7 @@ import {
   OrderStatus,
   type Prisma,
 } from "../../../../generated/prisma/client.js";
+import { toDeliveryPartnerReviewDto } from "../../deliveryPartnerReviews/dto/deliveryPartnerReview.dto.js";
 import type {
   OrderDetailRecord,
   OrderSummaryRecord,
@@ -305,6 +306,8 @@ export type ToOrderDetailDtoOptions = {
   redactBuyerShippingForDeliveryPartner?: boolean;
   /** When true, null out commercial pricing / payment for delivery partners. */
   redactPricingForDeliveryPartner?: boolean;
+  /** When true, include the buyer's delivery-partner review (buyer role only). */
+  includeDeliveryPartnerReview?: boolean;
 };
 
 export function toOrderDetailDto(
@@ -333,6 +336,10 @@ export function toOrderDetailDto(
     items: record.items.map((item) => toOrderItemDto(item, summaryOptions)),
     payment: redactPricing ? null : toPaymentSummary(record.payment),
     proofs: record.proofs.map(toProofDto),
+    deliveryPartnerReview:
+      options.includeDeliveryPartnerReview && record.deliveryPartnerReview
+        ? toDeliveryPartnerReviewDto(record.deliveryPartnerReview)
+        : null,
   };
 }
 
