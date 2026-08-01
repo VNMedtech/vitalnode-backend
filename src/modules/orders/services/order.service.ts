@@ -11,6 +11,7 @@ import {
 import { UserRole } from "../../../shared/enums/userRole.enum.js";
 import { buildPaginationMeta } from "../../../shared/responses/api.response.js";
 import { BuyerRepository } from "../../buyers/repositories/buyer.repository.js";
+import { DeliveryPartnerReviewService } from "../../deliveryPartnerReviews/services/deliveryPartnerReview.service.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
 import {
   DELIVERY_PARTNER_COMPLETED_STATUSES,
@@ -38,6 +39,8 @@ export class OrderService {
   private readonly orderRepo = new OrderRepository(prisma);
   private readonly buyerRepo = new BuyerRepository(prisma);
   private readonly sellerRepo = new SellerRepository(prisma);
+  private readonly deliveryPartnerReviewService =
+    new DeliveryPartnerReviewService();
 
   private async resolveBuyerId(actorUserId: string): Promise<string> {
     const buyer = await this.buyerRepo.findIdByUserId(actorUserId);
@@ -142,7 +145,10 @@ export class OrderService {
     actorUserId: string,
   ): Promise<DeliveryPartnerAssignedStatsDto> {
     const deliveryPartnerId = await this.resolveDeliveryPartnerId(actorUserId);
-    const groups = await this.orderRepo.countAssignedByStatus(deliveryPartnerId);
+    const [groups, ratingStats] = await Promise.all([
+      this.orderRepo.countAssignedByStatus(deliveryPartnerId),
+      this.deliveryPartnerReviewService.getPartnerRatingStats(deliveryPartnerId),
+    ]);
 
     let ongoing = 0;
     let completed = 0;
@@ -165,8 +171,8 @@ export class OrderService {
       ongoing,
       completed,
       failed,
-      rating: null,
-      ratingCount: null,
+      rating: ratingStats.rating,
+      ratingCount: ratingStats.ratingCount,
     };
   }
 
@@ -212,6 +218,7 @@ export class OrderService {
     return toOrderDetailDto(record, {
       redactBuyerShippingForDeliveryPartner: forDeliveryPartner,
       redactPricingForDeliveryPartner: forDeliveryPartner,
+      includeDeliveryPartnerReview: role === UserRole.BUYER,
     });
   }
 }

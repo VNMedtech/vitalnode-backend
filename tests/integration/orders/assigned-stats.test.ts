@@ -61,7 +61,7 @@ describe("Orders — Delivery Partner Assigned Stats", () => {
           completed: 0,
           failed: 0,
           rating: null,
-          ratingCount: null,
+          ratingCount: 0,
         },
       }),
     );
@@ -119,7 +119,7 @@ describe("Orders — Delivery Partner Assigned Stats", () => {
       completed: 1,
       failed: 1,
       rating: null,
-      ratingCount: null,
+      ratingCount: 0,
     });
   });
 
@@ -141,7 +141,7 @@ describe("Orders — Delivery Partner Assigned Stats", () => {
       completed: 0,
       failed: 0,
       rating: null,
-      ratingCount: null,
+      ratingCount: 0,
     });
   });
 
@@ -169,8 +169,82 @@ describe("Orders — Delivery Partner Assigned Stats", () => {
       completed: 1,
       failed: 0,
       rating: null,
-      ratingCount: null,
+      ratingCount: 0,
     });
+  });
+
+  it("returns average rating and count from non-disabled partner reviews", async () => {
+    const app = getApp();
+    const prisma = getTestPrisma();
+    const first = await setupDeliveredOrder(app, prisma);
+    const partnerId = first.deliveryPartner.deliveryPartnerId;
+    const token = first.deliveryPartner.deliveryPartnerToken;
+
+    const firstOrder = await prisma.order.findUniqueOrThrow({
+      where: { id: first.orderId },
+      select: { buyerId: true },
+    });
+
+    await prisma.deliveryPartnerReview.create({
+      data: {
+        orderId: first.orderId,
+        deliveryPartnerId: partnerId,
+        buyerId: firstOrder.buyerId,
+        rating: 5,
+        comment: "Great delivery",
+        commentStatus: "PENDING",
+      },
+    });
+
+    const second = await assignFreshOrderToPartner(app, partnerId);
+    const handoverRes = await orderRequest(
+      app,
+      second.sellerToken,
+    ).uploadHandoverProof(second.orderId, ORDER_PROOF_FILE);
+    expect(handoverRes.status).toBe(200);
+    const shipRes = await orderRequest(app, second.sellerToken).markShipped(
+      second.orderId,
+    );
+    expect(shipRes.status).toBe(200);
+    await orderRequest(app, token).uploadDeliveryProof(
+      second.orderId,
+      ORDER_PROOF_FILE,
+    );
+    const deliveredRes = await orderRequest(app, token).markDelivered(
+      second.orderId,
+    );
+    expect(deliveredRes.status).toBe(200);
+
+    const secondOrder = await prisma.order.findUniqueOrThrow({
+      where: { id: second.orderId },
+      select: { buyerId: true },
+    });
+
+    await prisma.deliveryPartnerReview.create({
+      data: {
+        orderId: second.orderId,
+        deliveryPartnerId: partnerId,
+        buyerId: secondOrder.buyerId,
+        rating: 3,
+        comment: null,
+        commentStatus: null,
+      },
+    });
+
+    const beforeDisable = await orderRequest(app, token).getAssignedStats();
+    expect(beforeDisable.status).toBe(200);
+    expect(beforeDisable.body.data.rating).toBe(4);
+    expect(beforeDisable.body.data.ratingCount).toBe(2);
+
+    await prisma.deliveryPartnerReview.update({
+      where: { orderId: first.orderId },
+      data: { commentStatus: "DISABLED" },
+    });
+
+    const afterDisable = await orderRequest(app, token).getAssignedStats();
+    expect(afterDisable.status).toBe(200);
+    expect(afterDisable.body.data.rating).toBe(3);
+    expect(afterDisable.body.data.ratingCount).toBe(1);
   });
 
   it("rejects non–delivery-partner tokens", async () => {

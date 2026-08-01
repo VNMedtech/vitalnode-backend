@@ -22,6 +22,7 @@ export * as salesReports from "./sales-reports/index.js";
 export * as auditLogs from "./auditLogs/index.js";
 export * as audit from "./audit/index.js";
 export * as reviews from "./reviews/index.js";
+export * as deliveryPartnerReviews from "./deliveryPartnerReviews/index.js";
 export * as settlements from "./settlements/index.js";
 export * as invoices from "./invoices/index.js";
 export * as admin from "./admin/index.js";

@@ -154,6 +154,12 @@ enum ReviewStatus {
   DISABLED
 }
 
+enum DeliveryPartnerCommentStatus {
+  PENDING
+  APPROVED
+  DISABLED
+}
+
 // =============================================================================
 // USER DOMAIN
 // =============================================================================
@@ -202,12 +208,13 @@ model BuyerProfile {
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
-  addresses Address[]
-  cart      Cart?
-  orders    Order[]
-  invoices  Invoice[]
-  reviews   ProductReview[]
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  addresses              Address[]
+  cart                   Cart?
+  orders                 Order[]
+  invoices               Invoice[]
+  reviews                ProductReview[]
+  deliveryPartnerReviews DeliveryPartnerReview[]
 }
 
 model SellerProfile {
@@ -288,9 +295,10 @@ model DeliveryPartnerProfile {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Restrict)
-  orders    Order[]
-  shipments Shipment[]
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  orders                 Order[]
+  shipments              Shipment[]
+  deliveryPartnerReviews DeliveryPartnerReview[]
 }
 
 // =============================================================================
@@ -531,6 +539,26 @@ model ProductReview {
   @@index([status])
 }
 
+model DeliveryPartnerReview {
+  id                String                         @id @default(uuid())
+  orderId           String                         @unique
+  deliveryPartnerId String
+  buyerId           String
+  rating            Int
+  comment           String?
+  commentStatus     DeliveryPartnerCommentStatus?
+  createdAt         DateTime                       @default(now())
+  updatedAt         DateTime                       @updatedAt
+
+  order           Order                  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  deliveryPartner DeliveryPartnerProfile @relation(fields: [deliveryPartnerId], references: [id], onDelete: Restrict)
+  buyer           BuyerProfile           @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+
+  @@index([deliveryPartnerId])
+  @@index([buyerId])
+  @@index([commentStatus])
+}
+
 // =============================================================================
 // CART DOMAIN
 // =============================================================================
@@ -587,16 +615,17 @@ model Order {
   createdAt                    DateTime     @default(now())
   updatedAt                    DateTime     @updatedAt
 
-  buyer           BuyerProfile            @relation(fields: [buyerId], references: [id], onDelete: Restrict)
-  seller          SellerProfile           @relation(fields: [sellerId], references: [id], onDelete: Restrict)
-  deliveryPartner DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id], onDelete: Restrict)
-  settlementBatch SettlementBatch?        @relation(fields: [settlementBatchId], references: [id], onDelete: Restrict)
-  pickupAddress   SellerAddress?          @relation(fields: [pickupAddressId], references: [id], onDelete: Restrict)
-  items           OrderItem[]
-  payment         Payment?
-  proofs          OrderProof[]
-  invoice         Invoice?
-  shipment        Shipment?
+  buyer                 BuyerProfile            @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+  seller                SellerProfile           @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  deliveryPartner       DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id], onDelete: Restrict)
+  settlementBatch       SettlementBatch?        @relation(fields: [settlementBatchId], references: [id], onDelete: Restrict)
+  pickupAddress         SellerAddress?          @relation(fields: [pickupAddressId], references: [id], onDelete: Restrict)
+  items                 OrderItem[]
+  payment               Payment?
+  proofs                OrderProof[]
+  invoice               Invoice?
+  shipment              Shipment?
+  deliveryPartnerReview DeliveryPartnerReview?
 
   @@index([buyerId])
   @@index([sellerId])
