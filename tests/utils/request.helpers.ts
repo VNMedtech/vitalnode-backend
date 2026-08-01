@@ -15,6 +15,7 @@ const CART_BASE = "/api/v1/cart";
 const ORDERS_BASE = "/api/v1/orders";
 const PAYMENTS_BASE = "/api/v1/payments";
 const REVIEWS_BASE = "/api/v1/reviews";
+const DELIVERY_PARTNER_REVIEWS_BASE = "/api/v1/delivery-partner-reviews";
 const ANALYTICS_BASE = "/api/v1/analytics";
 const ADMIN_BASE = "/api/v1/admin";
 const BUYERS_BASE = "/api/v1/buyers";
@@ -395,6 +396,43 @@ export function reviewRequest(app: Express, accessToken = "") {
 
     disable: (reviewId: string) =>
       auth(request(app).post(`${REVIEWS_BASE}/${reviewId}/disable`)),
+  };
+}
+
+export function deliveryPartnerReviewRequest(app: Express, accessToken = "") {
+  const auth = (req: Test) =>
+    accessToken ? req.set("Authorization", `Bearer ${accessToken}`) : req;
+
+  return {
+    create: (body: Record<string, unknown>) =>
+      auth(request(app).post(DELIVERY_PARTNER_REVIEWS_BASE)).send(body),
+
+    update: (reviewId: string, body: Record<string, unknown>) =>
+      auth(request(app).patch(`${DELIVERY_PARTNER_REVIEWS_BASE}/${reviewId}`)).send(
+        body,
+      ),
+
+    listAdmin: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(DELIVERY_PARTNER_REVIEWS_BASE)).query(query),
+
+    listMine: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${DELIVERY_PARTNER_REVIEWS_BASE}/mine`)).query(
+        query,
+      ),
+
+    approve: (reviewId: string) =>
+      auth(
+        request(app).post(
+          `${DELIVERY_PARTNER_REVIEWS_BASE}/${reviewId}/approve`,
+        ),
+      ),
+
+    disable: (reviewId: string) =>
+      auth(
+        request(app).post(
+          `${DELIVERY_PARTNER_REVIEWS_BASE}/${reviewId}/disable`,
+        ),
+      ),
   };
 }
 

@@ -102,6 +102,12 @@ export const permissions = {
     delete: "reviews:delete",
     manage: "reviews:manage",
   },
+  deliveryPartnerReviews: {
+    create: "deliveryPartnerReviews:create",
+    update: "deliveryPartnerReviews:update",
+    read: "deliveryPartnerReviews:read",
+    manage: "deliveryPartnerReviews:manage",
+  },
   admin: {
     manage: "admin:manage",
   },
@@ -157,6 +163,9 @@ export const rolePermissions: Record<UserRole, readonly Permission[]> = {
     permissions.reviews.create,
     permissions.reviews.update,
     permissions.reviews.delete,
+    permissions.deliveryPartnerReviews.create,
+    permissions.deliveryPartnerReviews.update,
+    permissions.deliveryPartnerReviews.read,
   ],
   /** Maximum seller permissions — only granted when approvalStatus is ACTIVE. */
   [UserRole.SELLER]: [
@@ -195,6 +204,7 @@ export const rolePermissions: Record<UserRole, readonly Permission[]> = {
     permissions.uploads.create,
     permissions.notifications.read,
     permissions.deliveryPartners.read,
+    permissions.deliveryPartnerReviews.read,
   ],
 };
 

@@ -30,6 +30,7 @@ import {
   sellerSettlementRouter,
 } from "../modules/settlements/routes/sellerSettlement.routes.js";
 import { reviewRouter } from "../modules/reviews/routes/review.routes.js";
+import { deliveryPartnerReviewRouter } from "../modules/deliveryPartnerReviews/routes/deliveryPartnerReview.routes.js";
 
 export const apiRouter = Router();
 
@@ -54,6 +55,7 @@ apiRouter.use("/analytics", adminSalesReportsRouter);
 apiRouter.use("/sales-reports", salesReportsRouter);
 apiRouter.use("/audit-logs", auditRouter);
 apiRouter.use("/reviews", reviewRouter);
+apiRouter.use("/delivery-partner-reviews", deliveryPartnerReviewRouter);
 apiRouter.use("/admin", adminRouter);
 apiRouter.use("/seller/earnings", sellerEarningsRouter);
 apiRouter.use("/seller/settlements", sellerSettlementRouter);

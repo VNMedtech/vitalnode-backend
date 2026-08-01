@@ -5,6 +5,7 @@ import type {
   ShipmentBookingSource,
   ShipmentStatus,
 } from "../../../../generated/prisma/client.js";
+import type { DeliveryPartnerReviewDto } from "../../deliveryPartnerReviews/types/deliveryPartnerReview.types.js";
 import type { OrderSortField } from "../constants/order.constants.js";
 
 export interface CreateOrderInput {
@@ -218,6 +219,11 @@ export interface OrderDetailDto extends OrderSummaryDto {
   /** Null when redacted for delivery partners (or when no payment exists). */
   payment: OrderPaymentSummary | null;
   proofs: OrderProofDto[];
+  /**
+   * Buyer's delivery-partner review for this order, when present.
+   * Included for the owning buyer only; null for other roles.
+   */
+  deliveryPartnerReview: DeliveryPartnerReviewDto | null;
 }
 
 export interface CheckoutResultDto {
@@ -234,8 +240,8 @@ export interface DeliveryPartnerAssignedStatsDto {
   ongoing: number;
   completed: number;
   failed: number;
-  /** Always null until partner ratings are implemented. */
+  /** Average of non-DISABLED reviews, one decimal; null when no ratings. */
   rating: number | null;
-  /** Always null until partner ratings are implemented. */
+  /** Count of non-DISABLED reviews (0 when none). */
   ratingCount: number | null;
 }

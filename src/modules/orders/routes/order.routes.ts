@@ -95,7 +95,9 @@ orderRouter.post(
  *         CANCELLED, REFUNDED)
  *       - `completed` — DELIVERED, PENDING_SETTLEMENT, SETTLED
  *       - `failed` — DELIVERY_FAILED
- *       - `rating` / `ratingCount` — always `null` until partner ratings exist
+ *       - `rating` — average of non-DISABLED delivery partner reviews (one decimal),
+ *         or `null` when there are no included reviews
+ *       - `ratingCount` — count of non-DISABLED reviews (`0` when none)
  *
  *       Buyers, sellers, and admins without a delivery partner profile receive 403.
  *     security:
@@ -112,13 +114,13 @@ orderRouter.post(
  *                 message: { type: string }
  *                 data:
  *                   type: object
- *                   required: [ongoing, completed, failed, rating]
+ *                   required: [ongoing, completed, failed, rating, ratingCount]
  *                   properties:
  *                     ongoing: { type: integer, minimum: 0 }
  *                     completed: { type: integer, minimum: 0 }
  *                     failed: { type: integer, minimum: 0 }
- *                     rating: { type: number, nullable: true, example: null }
- *                     ratingCount: { type: integer, nullable: true, example: null }
+ *                     rating: { type: number, nullable: true, example: 4.5 }
+ *                     ratingCount: { type: integer, minimum: 0, example: 12 }
  *       401:
  *         description: Unauthorized
  *       403:

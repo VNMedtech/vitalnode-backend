@@ -126,6 +126,19 @@ const orderDetailSelect = {
       createdAt: "asc" as const,
     },
   },
+  deliveryPartnerReview: {
+    select: {
+      id: true,
+      orderId: true,
+      deliveryPartnerId: true,
+      buyerId: true,
+      rating: true,
+      comment: true,
+      commentStatus: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
 } satisfies Prisma.OrderSelect;
 
 export type OrderSummaryRecord = Prisma.OrderGetPayload<{
