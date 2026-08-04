@@ -1,0 +1,68 @@
+name: Deploy API (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch/tag/sha)"
+        required: false
+        default: "main"
+
+concurrency:
+  group: deploy-api-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Production EC2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Configure SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${{ secrets.EC2_PORT || '22' }}" "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload release to EC2 temp directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            --exclude ".git" \
+            --exclude "node_modules" \
+            --exclude ".env" \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.EC2_PORT || '22' }}" \
+            ./ \
+            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/vitalnode-server-release/"
+
+      - name: Deploy on EC2 (install, build, migrate, restart)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "${{ secrets.EC2_PORT || '22' }}" "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+          set -euo pipefail
+
+          # Sync uploaded release into the live app directory.
+          sudo rsync -a --delete /tmp/vitalnode-server-release/ /opt/vitalnode/server/
+          sudo chown -R vitalnode:vitalnode /opt/vitalnode/server
+
+          # Install deps, build with memory cap, and apply prod migrations.
+          sudo -u vitalnode -H bash -lc 'cd /opt/vitalnode/server && npm ci'
+          sudo -u vitalnode -H bash -lc 'set -a; source /etc/vitalnode/prod.env; set +a; export NODE_OPTIONS=--max-old-space-size=1536; cd /opt/vitalnode/server && npm run build'
+          sudo -u vitalnode -H bash -lc 'set -a; source /etc/vitalnode/prod.env; set +a; cd /opt/vitalnode/server && npm run db:migrate:deploy'
+
+          sudo systemctl restart vitalnode-api
+          sleep 3
+          sudo systemctl is-active --quiet vitalnode-api
+          curl -fsS https://api.vitalnode.in/ready
+          EOF
