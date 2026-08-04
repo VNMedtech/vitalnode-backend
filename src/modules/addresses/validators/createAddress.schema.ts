@@ -22,12 +22,17 @@ export const createAddressBodySchema = z
       .trim()
       .min(1, "Address line 1 is required")
       .max(ADDRESS_LINE_MAX_LENGTH),
-    addressLine2: z
-      .string()
-      .trim()
-      .min(1)
-      .max(ADDRESS_LINE_MAX_LENGTH)
-      .optional(),
+    // Empty string from clients is treated as omitted (optional field).
+    addressLine2: z.preprocess(
+      (value) =>
+        typeof value === "string" && value.trim() === "" ? undefined : value,
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(ADDRESS_LINE_MAX_LENGTH)
+        .optional(),
+    ),
     city: z
       .string()
       .trim()

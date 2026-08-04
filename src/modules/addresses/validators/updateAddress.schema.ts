@@ -24,13 +24,18 @@ export const updateAddressBodySchema = z
       .min(1)
       .max(ADDRESS_LINE_MAX_LENGTH)
       .optional(),
-    addressLine2: z
-      .string()
-      .trim()
-      .min(1)
-      .max(ADDRESS_LINE_MAX_LENGTH)
-      .nullable()
-      .optional(),
+    // Empty string from clients is treated as null (clear optional field).
+    addressLine2: z.preprocess(
+      (value) =>
+        typeof value === "string" && value.trim() === "" ? null : value,
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(ADDRESS_LINE_MAX_LENGTH)
+        .nullable()
+        .optional(),
+    ),
     city: z
       .string()
       .trim()
