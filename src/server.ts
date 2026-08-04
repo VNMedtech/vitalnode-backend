@@ -8,6 +8,10 @@ import { runStartupChecks } from "./config/startupChecks.js";
 import { disconnectPrisma } from "./infrastructure/prisma/client.js";
 import { logger } from "./infrastructure/logger/logger.js";
 import {
+  startExpireAuthSessionsJob,
+  stopExpireAuthSessionsJob,
+} from "./jobs/cleanup/expireAuthSessions.job.js";
+import {
   startExpireIdempotencyKeysJob,
   stopExpireIdempotencyKeysJob,
 } from "./jobs/cleanup/expireIdempotencyKeys.job.js";
@@ -16,9 +20,17 @@ import {
   stopExpirePendingOrdersJob,
 } from "./jobs/cleanup/expirePendingOrders.job.js";
 import {
+  startExpirePasswordResetTokensJob,
+  stopExpirePasswordResetTokensJob,
+} from "./jobs/cleanup/expirePasswordResetTokens.job.js";
+import {
   startExpireReadNotificationsJob,
   stopExpireReadNotificationsJob,
 } from "./jobs/cleanup/expireReadNotifications.job.js";
+import {
+  startExpireWebhookEventsJob,
+  stopExpireWebhookEventsJob,
+} from "./jobs/cleanup/expireWebhookEvents.job.js";
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -36,6 +48,9 @@ function registerShutdownHandlers(): void {
     stopExpirePendingOrdersJob();
     stopExpireReadNotificationsJob();
     stopExpireIdempotencyKeysJob();
+    stopExpireAuthSessionsJob();
+    stopExpirePasswordResetTokensJob();
+    stopExpireWebhookEventsJob();
 
     const forceExitTimer = setTimeout(() => {
       logger.error("Graceful shutdown timed out; forcing exit");
@@ -83,6 +98,9 @@ export function startServer(): Server {
   startExpirePendingOrdersJob();
   startExpireReadNotificationsJob();
   startExpireIdempotencyKeysJob();
+  startExpireAuthSessionsJob();
+  startExpirePasswordResetTokensJob();
+  startExpireWebhookEventsJob();
   registerShutdownHandlers();
   return server;
 }

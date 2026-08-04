@@ -115,6 +115,34 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(3_600_000),
+  /** Hard-delete auth sessions revoked/expired beyond this retention (days). */
+  AUTH_SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  /** How often the auth-session cleanup sweep runs (ms). */
+  AUTH_SESSION_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3_600_000),
+  /** Retain used/expired password reset tokens for this many minutes before purge. */
+  PASSWORD_RESET_TOKEN_RETENTION_MINUTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(30),
+  /** How often the password-reset-token cleanup sweep runs (ms). */
+  PASSWORD_RESET_TOKEN_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(900_000),
+  /** Hard-delete processed webhook events older than this many days. */
+  WEBHOOK_EVENT_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  /** How often the webhook-event cleanup sweep runs (ms). */
+  WEBHOOK_EVENT_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(86_400_000),
 });
 
 export interface EnvConfig {
@@ -175,6 +203,12 @@ export interface EnvConfig {
   readNotificationSweepIntervalMs: number;
   idempotencyTtlMs: number;
   idempotencySweepIntervalMs: number;
+  authSessionTtlDays: number;
+  authSessionSweepIntervalMs: number;
+  passwordResetTokenRetentionMinutes: number;
+  passwordResetTokenSweepIntervalMs: number;
+  webhookEventTtlDays: number;
+  webhookEventSweepIntervalMs: number;
 }
 
 function parseEnvConfig(): EnvConfig {
@@ -292,6 +326,14 @@ function parseEnvConfig(): EnvConfig {
     readNotificationSweepIntervalMs: env.READ_NOTIFICATION_SWEEP_INTERVAL_MS,
     idempotencyTtlMs: env.IDEMPOTENCY_TTL_MS,
     idempotencySweepIntervalMs: env.IDEMPOTENCY_SWEEP_INTERVAL_MS,
+    authSessionTtlDays: env.AUTH_SESSION_TTL_DAYS,
+    authSessionSweepIntervalMs: env.AUTH_SESSION_SWEEP_INTERVAL_MS,
+    passwordResetTokenRetentionMinutes:
+      env.PASSWORD_RESET_TOKEN_RETENTION_MINUTES,
+    passwordResetTokenSweepIntervalMs:
+      env.PASSWORD_RESET_TOKEN_SWEEP_INTERVAL_MS,
+    webhookEventTtlDays: env.WEBHOOK_EVENT_TTL_DAYS,
+    webhookEventSweepIntervalMs: env.WEBHOOK_EVENT_SWEEP_INTERVAL_MS,
   };
 }
 

@@ -100,6 +100,40 @@ Idempotency keys replay cached responses only until `expiresAt`. After expiry th
 
 Job: `src/jobs/cleanup/expireIdempotencyKeys.job.ts` (started from `startServer`). Lookups ignore expired rows (and delete them so the unique constraint can be reused).
 
+## Auth session cleanup
+
+Expired refresh-token sessions are rejected at auth time and are also hard-deleted by a background cleanup sweep to prevent table growth.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `AUTH_SESSION_TTL_DAYS` | `7` | Retention window for revoked sessions (expired sessions are always eligible for purge) |
+| `AUTH_SESSION_SWEEP_INTERVAL_MS` | `3600000` | How often the server purges stale sessions (1 hour) |
+
+Job: `src/jobs/cleanup/expireAuthSessions.job.ts` (started from `startServer`).
+
+## Password reset token cleanup
+
+Password reset tokens are single-use and short-lived. The cleanup sweep hard-deletes expired tokens and used tokens past retention.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES` | `30` | Token validity window used during issuance |
+| `PASSWORD_RESET_TOKEN_RETENTION_MINUTES` | `30` | Retention window for used tokens before purge |
+| `PASSWORD_RESET_TOKEN_SWEEP_INTERVAL_MS` | `900000` | How often the server purges stale tokens (15 minutes) |
+
+Job: `src/jobs/cleanup/expirePasswordResetTokens.job.ts` (started from `startServer`).
+
+## Webhook event cleanup
+
+Processed webhook events are retained temporarily for debugging/audit and then hard-deleted by a retention sweep.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `WEBHOOK_EVENT_TTL_DAYS` | `30` | Retention window for processed webhook events |
+| `WEBHOOK_EVENT_SWEEP_INTERVAL_MS` | `86400000` | How often the server purges processed stale events (24 hours) |
+
+Job: `src/jobs/cleanup/expireWebhookEvents.job.ts` (started from `startServer`).
+
 ## Tests
 
 ```bash

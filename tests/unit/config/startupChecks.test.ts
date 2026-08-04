@@ -74,6 +74,12 @@ function createProductionConfig(
     readNotificationSweepIntervalMs: 86_400_000,
     idempotencyTtlMs: 86_400_000,
     idempotencySweepIntervalMs: 3_600_000,
+    authSessionTtlDays: 7,
+    authSessionSweepIntervalMs: 3_600_000,
+    passwordResetTokenRetentionMinutes: 30,
+    passwordResetTokenSweepIntervalMs: 900_000,
+    webhookEventTtlDays: 30,
+    webhookEventSweepIntervalMs: 86_400_000,
     ...overrides,
   };
 }

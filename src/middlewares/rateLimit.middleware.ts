@@ -74,7 +74,8 @@ export function extractAuthRateLimitIdentifier(req: Request): string | undefined
 
 export function buildAuthRateLimitKey(req: Request): string {
   const identifier = extractAuthRateLimitIdentifier(req);
-  return identifier ? `${req.ip}::${identifier}` : req.ip;
+  const ipAddress = req.ip || req.socket.remoteAddress || "unknown-ip";
+  return identifier ? `${ipAddress}::${identifier}` : ipAddress;
 }
 
 export function createRateLimiter(
@@ -83,7 +84,8 @@ export function createRateLimiter(
 ) {
   const limiterName = options.limiterName ?? "global";
   const keyGenerator: RateLimitKeyGenerator =
-    options.keyGenerator ?? ((req) => req.ip);
+    options.keyGenerator ??
+    ((req) => req.ip || req.socket.remoteAddress || "unknown-ip");
 
   return rateLimit({
     windowMs: env.rateLimitWindowMs,
