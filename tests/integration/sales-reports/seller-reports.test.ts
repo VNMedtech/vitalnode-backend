@@ -26,6 +26,8 @@ describe("Sales Reports — Seller", () => {
     expect(res.body.data.totalOrders).toBe(1);
     expect(res.body.data.completedOrders).toBe(0);
     expect(res.body.data.cancelledOrders).toBe(0);
+    expect(res.body.data.inProgressOrders).toBe(1);
+    expect(Number(res.body.data.inProgressAmount)).toBeGreaterThan(0);
     expect(Number(res.body.data.revenue)).toBeGreaterThan(0);
     expect(res.body.data.topProducts).toHaveLength(1);
     expect(res.body.data.topProducts[0].productId).toBe(context.productId);

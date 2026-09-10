@@ -53,6 +53,8 @@ export function toSellerSalesSummaryDto(
     totalOrders: orderMetrics.totalOrders,
     completedOrders: orderMetrics.completedOrders,
     cancelledOrders: orderMetrics.cancelledOrders,
+    inProgressOrders: orderMetrics.inProgressOrders,
+    inProgressAmount: decimalToString(orderMetrics.inProgressAmount),
     revenue: decimalToString(revenueMetrics.revenueInPeriod),
     topProducts: topProducts.map(toTopProductDto),
     period: toAnalyticsPeriodDto(from, to),

@@ -12,6 +12,8 @@ export interface SellerSalesSummaryDto {
   totalOrders: number;
   completedOrders: number;
   cancelledOrders: number;
+  inProgressOrders: number;
+  inProgressAmount: string;
   revenue: string;
   topProducts: TopProductDto[];
   period: AnalyticsPeriodDto | null;

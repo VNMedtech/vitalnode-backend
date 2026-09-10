@@ -118,34 +118,36 @@ export function toSellerPendingSettlementDetailDto(
 
 export function toSellerEarningsSummaryDto(
   summary: {
-    grossRevenue: Prisma.Decimal;
-    commissionPaid: Prisma.Decimal;
-    netEarnings: Prisma.Decimal;
-    pendingOrderCount: number;
-    pendingGross: Prisma.Decimal;
-    pendingCommission: Prisma.Decimal;
-    pendingNet: Prisma.Decimal;
-    completedBatchCount: number;
-    completedGross: Prisma.Decimal;
-    completedCommission: Prisma.Decimal;
-    completedNet: Prisma.Decimal;
+    grossSales: Prisma.Decimal;
+    commission: Prisma.Decimal;
+    lifetimeNet: Prisma.Decimal;
+    earnedOrderCount: number;
+    earnedGross: Prisma.Decimal;
+    earnedCommission: Prisma.Decimal;
+    earnedNet: Prisma.Decimal;
+    paidOutOrderCount: number;
+    paidOutBatchCount: number;
+    paidOutGross: Prisma.Decimal;
+    paidOutCommission: Prisma.Decimal;
+    paidOutNet: Prisma.Decimal;
   },
 ): SellerEarningsSummaryDto {
   return {
-    grossRevenue: decimalToString(summary.grossRevenue),
-    commissionPaid: decimalToString(summary.commissionPaid),
-    netEarnings: decimalToString(summary.netEarnings),
-    pendingSettlements: {
-      orderCount: summary.pendingOrderCount,
-      grossAmount: decimalToString(summary.pendingGross),
-      commissionAmount: decimalToString(summary.pendingCommission),
-      netAmount: decimalToString(summary.pendingNet),
+    grossSales: decimalToString(summary.grossSales),
+    commission: decimalToString(summary.commission),
+    lifetimeNet: decimalToString(summary.lifetimeNet),
+    earnedReceivable: {
+      orderCount: summary.earnedOrderCount,
+      grossAmount: decimalToString(summary.earnedGross),
+      commissionAmount: decimalToString(summary.earnedCommission),
+      netAmount: decimalToString(summary.earnedNet),
     },
-    completedSettlements: {
-      batchCount: summary.completedBatchCount,
-      grossAmount: decimalToString(summary.completedGross),
-      commissionAmount: decimalToString(summary.completedCommission),
-      netAmount: decimalToString(summary.completedNet),
+    paidOut: {
+      orderCount: summary.paidOutOrderCount,
+      batchCount: summary.paidOutBatchCount,
+      grossAmount: decimalToString(summary.paidOutGross),
+      commissionAmount: decimalToString(summary.paidOutCommission),
+      netAmount: decimalToString(summary.paidOutNet),
     },
   };
 }

@@ -26,7 +26,10 @@ export const sellerEarningsRouter = Router();
  *   get:
  *     tags: [Settlements]
  *     summary: Seller earnings summary
- *     description: Approved seller only. Pending and settled earnings snapshot.
+ *     description: >
+ *       Approved seller only. Lifetime delivered sales with earned (receivable)
+ *       vs paid-out (disbursed) buckets. Earned includes all PENDING_SETTLEMENT
+ *       orders whether or not they are already in a PENDING settlement batch.
  *     security:
  *       - bearerAuth: []
  *     responses:

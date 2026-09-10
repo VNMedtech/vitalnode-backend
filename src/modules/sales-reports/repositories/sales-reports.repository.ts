@@ -13,6 +13,8 @@ export interface SellerOrderMetricsRecord {
   totalOrders: number;
   completedOrders: number;
   cancelledOrders: number;
+  inProgressOrders: number;
+  inProgressAmount: Prisma.Decimal;
   ordersInPeriod: number;
   byStatus: Record<string, number>;
 }
@@ -59,6 +61,14 @@ const COMPLETED_ORDER_STATUSES: OrderStatus[] = [
 const CANCELLED_ORDER_STATUSES: OrderStatus[] = [
   OrderStatus.CANCELLED,
   OrderStatus.REFUNDED,
+];
+
+/** Paid orders still in fulfillment (not delivered / cancelled / unpaid). */
+const IN_PROGRESS_ORDER_STATUSES: OrderStatus[] = [
+  OrderStatus.PLACED,
+  OrderStatus.CONFIRMED,
+  OrderStatus.SHIPPED,
+  OrderStatus.DELIVERY_FAILED,
 ];
 
 function buildPlacedAtFilter(
@@ -134,6 +144,7 @@ export class SalesReportsRepository {
       totalOrders,
       completedOrders,
       cancelledOrders,
+      inProgressAgg,
       ordersInPeriod,
       statusGroups,
     ] = await Promise.all([
@@ -149,6 +160,14 @@ export class SalesReportsRepository {
           sellerId,
           orderStatus: { in: CANCELLED_ORDER_STATUSES },
         },
+      }),
+      this.db.order.aggregate({
+        where: {
+          sellerId,
+          orderStatus: { in: IN_PROGRESS_ORDER_STATUSES },
+        },
+        _count: { _all: true },
+        _sum: { totalAmount: true },
       }),
       hasPeriod
         ? this.db.order.count({ where: periodWhere })
@@ -175,6 +194,9 @@ export class SalesReportsRepository {
       totalOrders,
       completedOrders,
       cancelledOrders,
+      inProgressOrders: inProgressAgg._count._all,
+      inProgressAmount:
+        inProgressAgg._sum.totalAmount ?? new Prisma.Decimal(0),
       ordersInPeriod: hasPeriod ? ordersInPeriod : totalOrders,
       byStatus,
     };
