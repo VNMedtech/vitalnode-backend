@@ -43,8 +43,17 @@ export interface SellerRevenueSummaryDto {
 }
 
 export interface PlatformSalesReportDto {
+  /** Paid GMV (net of completed refunds) — SUM(SUCCESS Payment.amount) on placed orders (period by Order.placedAt). */
   totalRevenue: string;
-  sellerRevenue: string;
+  /** Accrued platform commission — SUM(Order.commissionAmount) on delivered orders (period by Order.deliveredAt). */
+  platformCommission: string;
+  /** Seller net receivable — SUM(Order.sellerReceivableAmount) on the same delivered set. */
+  sellerNet: string;
+  /**
+   * Paid unresolved — reportable paid volume on placed orders with no delivery earnings yet
+   * (in fulfillment, cancelled/failed after pay, etc.). Period by Order.placedAt.
+   */
+  unresolvedAmount: string;
   orderVolume: number;
   productVolume: number;
   period: AnalyticsPeriodDto | null;

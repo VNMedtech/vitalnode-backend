@@ -17,7 +17,13 @@ describe("Sales Reports — Admin", () => {
 
     expect(res.status).toBe(200);
     expect(Number(res.body.data.totalRevenue)).toBeGreaterThan(0);
-    expect(Number(res.body.data.sellerRevenue)).toBeGreaterThan(0);
+    expect(res.body.data.platformCommission).toEqual(expect.any(String));
+    expect(res.body.data.sellerNet).toEqual(expect.any(String));
+    expect(res.body.data.unresolvedAmount).toEqual(expect.any(String));
+    // Paid-only fixture may not be delivered yet — nets can be zero; unresolved holds GMV.
+    expect(Number(res.body.data.platformCommission)).toBeGreaterThanOrEqual(0);
+    expect(Number(res.body.data.sellerNet)).toBeGreaterThanOrEqual(0);
+    expect(Number(res.body.data.unresolvedAmount)).toBeGreaterThanOrEqual(0);
     expect(res.body.data.orderVolume).toBe(1);
     expect(res.body.data.productVolume).toBe(2);
   });
@@ -64,8 +70,8 @@ describe("Sales Reports — Admin", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.period).not.toBeNull();
     expect(res.body.data.orderVolume).toBe(1);
-    expect(Number(res.body.data.sellerRevenue)).toBeLessThanOrEqual(
-      Number(res.body.data.totalRevenue),
-    );
+    expect(Number(res.body.data.sellerNet)).toBeGreaterThanOrEqual(0);
+    expect(Number(res.body.data.platformCommission)).toBeGreaterThanOrEqual(0);
+    expect(Number(res.body.data.unresolvedAmount)).toBeGreaterThanOrEqual(0);
   });
 });

@@ -98,7 +98,9 @@ export function toPlatformSalesReportDto(
 ): PlatformSalesReportDto {
   return {
     totalRevenue: decimalToString(record.totalRevenue),
-    sellerRevenue: decimalToString(record.sellerRevenue),
+    platformCommission: decimalToString(record.platformCommission),
+    sellerNet: decimalToString(record.sellerNet),
+    unresolvedAmount: decimalToString(record.unresolvedAmount),
     orderVolume: record.orderVolume,
     productVolume: record.productVolume,
     period: toAnalyticsPeriodDto(from, to),

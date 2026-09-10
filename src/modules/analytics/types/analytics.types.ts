@@ -12,7 +12,11 @@ export interface DashboardSummaryDto {
   totalOrders: number;
   totalRevenue: string;
   totalPlatformCommission: string;
+  /** Unbatched PENDING_SETTLEMENT order nets (ready to put in a batch). */
   pendingSettlementsNet: string;
+  /** PENDING settlement batch nets (batched, not yet disbursed). */
+  inBatchSettlementsNet: string;
+  /** DISBURSED settlement batch nets. */
   completedSettlementsNet: string;
   lowStockProducts: number;
   generatedAt: string;
@@ -61,6 +65,7 @@ export interface ProductStatisticsDto {
 export interface OrderStatisticsDto {
   totalOrders: number;
   placedOrders: number;
+  /** AVG(totalAmount) for placed orders with reportable paid payment (net of completed refunds). */
   averageOrderValue: string;
   byStatus: Record<string, number>;
   ordersInPeriod: number;
@@ -98,12 +103,21 @@ export interface CommissionBySellerDto {
 export interface CommissionStatisticsDto {
   totalPlatformCommission: string;
   commissionInPeriod: string;
+  /** Unbatched PENDING_SETTLEMENT orders (settlementBatchId IS NULL). */
   pendingSettlements: {
     orderCount: number;
     grossAmount: string;
     commissionAmount: string;
     netAmount: string;
   };
+  /** PENDING settlement batches (created, not yet disbursed). */
+  inBatchSettlements: {
+    batchCount: number;
+    grossAmount: string;
+    commissionAmount: string;
+    netAmount: string;
+  };
+  /** DISBURSED settlement batches. */
   completedSettlements: {
     batchCount: number;
     grossAmount: string;

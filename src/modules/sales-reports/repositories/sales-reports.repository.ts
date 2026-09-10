@@ -1,10 +1,13 @@
 import {
   OrderStatus,
   Prisma,
-  type PaymentStatus,
   type PrismaClient,
 } from "../../../../generated/prisma/client.js";
 import { POST_DELIVERY_ORDER_STATUSES } from "../../../shared/constants/orderSettlement.constants.js";
+import {
+  reportablePaidPaymentSqlPay,
+  reportablePaidPaymentWhere,
+} from "../../payments/utils/reportablePayment.util.js";
 import type { SalesReportsRevenueGroupBy } from "../constants/sales-reports.constants.js";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -41,7 +44,10 @@ export interface RevenueBucketRecord {
 
 export interface PlatformSalesRecord {
   totalRevenue: Prisma.Decimal;
-  sellerRevenue: Prisma.Decimal;
+  platformCommission: Prisma.Decimal;
+  sellerNet: Prisma.Decimal;
+  /** SUCCESS payment volume on placed orders that are not delivery-finalized yet. */
+  unresolvedAmount: Prisma.Decimal;
   orderVolume: number;
   productVolume: number;
 }
@@ -120,7 +126,7 @@ function buildSuccessfulPaymentWhere(
   const placedAtFilter = buildPlacedAtFilter(from, to);
 
   return {
-    paymentStatus: "SUCCESS" as PaymentStatus,
+    ...reportablePaidPaymentWhere,
     order: {
       placedAt: { not: null },
       ...(sellerId ? { sellerId } : {}),
@@ -258,7 +264,7 @@ export class SalesReportsRepository {
       INNER JOIN "Payment" pay ON pay."orderId" = o.id
       INNER JOIN "Product" p ON p.id = oi."productId"
       WHERE o."sellerId" = ${sellerId}
-        AND pay."paymentStatus" = 'SUCCESS'::"PaymentStatus"
+        AND ${reportablePaidPaymentSqlPay}
         AND o."placedAt" IS NOT NULL
         AND o."placedAt" >= ${fromDate}
         AND o."placedAt" <= ${toDate}
@@ -286,16 +292,16 @@ export class SalesReportsRepository {
       }>
     >`
       SELECT
-        DATE_TRUNC(${truncUnit}, pay."createdAt") AS "periodStart",
+        DATE_TRUNC(${truncUnit}, o."placedAt") AS "periodStart",
         COALESCE(SUM(pay.amount), 0) AS revenue,
         COUNT(*)::bigint AS "paymentCount"
       FROM "Payment" pay
       INNER JOIN "Order" o ON o.id = pay."orderId"
-      WHERE pay."paymentStatus" = 'SUCCESS'::"PaymentStatus"
+      WHERE ${reportablePaidPaymentSqlPay}
         AND o."sellerId" = ${sellerId}
         AND o."placedAt" IS NOT NULL
-        AND pay."createdAt" >= ${fromDate}
-        AND pay."createdAt" <= ${toDate}
+        AND o."placedAt" >= ${fromDate}
+        AND o."placedAt" <= ${toDate}
       GROUP BY 1
       ORDER BY 1 ASC
     `;
@@ -313,11 +319,13 @@ export class SalesReportsRepository {
   ): Promise<PlatformSalesRecord> {
     const hasPeriod = from !== undefined || to !== undefined;
     const allTimePaymentWhere: Prisma.PaymentWhereInput = {
-      paymentStatus: "SUCCESS" as PaymentStatus,
+      ...reportablePaidPaymentWhere,
       order: { placedAt: { not: null } },
     };
     const periodPaymentWhere = buildSuccessfulPaymentWhere(undefined, from, to);
     const placedAtFilter = buildPlacedAtFilter(from, to);
+    // Earnings (commission / seller net) use deliveredAt — finalized on delivery.
+    const deliveredAtFilter = buildPlacedAtFilter(from, to);
 
     const orderWhere: Prisma.OrderWhereInput | undefined = placedAtFilter
       ? { placedAt: placedAtFilter }
@@ -325,17 +333,29 @@ export class SalesReportsRepository {
         ? { placedAt: { not: null } }
         : undefined;
 
-    const commissionOrderWhere: Prisma.OrderWhereInput = {
+    const deliveredEarningsWhere: Prisma.OrderWhereInput = {
       commissionAmount: { not: null },
-      placedAt: { not: null },
-      ...(placedAtFilter ? { placedAt: placedAtFilter } : {}),
+      sellerReceivableAmount: { not: null },
+      ...(deliveredAtFilter
+        ? { deliveredAt: deliveredAtFilter }
+        : { deliveredAt: { not: null } }),
+    };
+
+    // Same placedAt axis as GMV: captured payments not yet in delivery earnings.
+    const unresolvedPaymentWhere: Prisma.PaymentWhereInput = {
+      ...reportablePaidPaymentWhere,
+      order: {
+        placedAt: { not: null },
+        commissionAmount: null,
+        ...(placedAtFilter ? { placedAt: placedAtFilter } : {}),
+      },
     };
 
     const [
       totalRevenueAggregate,
       periodRevenueAggregate,
-      allTimeCommissionAggregate,
-      periodCommissionAggregate,
+      earningsAggregate,
+      unresolvedAggregate,
       orderVolume,
       productVolumeAggregate,
     ] = await Promise.all([
@@ -350,15 +370,15 @@ export class SalesReportsRepository {
           })
         : Promise.resolve({ _sum: { amount: null } }),
       this.db.order.aggregate({
-        where: {
-          commissionAmount: { not: null },
-          placedAt: { not: null },
+        where: deliveredEarningsWhere,
+        _sum: {
+          commissionAmount: true,
+          sellerReceivableAmount: true,
         },
-        _sum: { commissionAmount: true },
       }),
-      this.db.order.aggregate({
-        where: commissionOrderWhere,
-        _sum: { commissionAmount: true },
+      this.db.payment.aggregate({
+        where: unresolvedPaymentWhere,
+        _sum: { amount: true },
       }),
       orderWhere
         ? this.db.order.count({ where: orderWhere })
@@ -382,14 +402,16 @@ export class SalesReportsRepository {
     const totalRevenue = hasPeriod
       ? periodRevenueAggregate._sum.amount ?? zero
       : totalRevenueAggregate._sum.amount ?? zero;
-    const platformCommission = hasPeriod
-      ? periodCommissionAggregate._sum.commissionAmount ?? zero
-      : allTimeCommissionAggregate._sum.commissionAmount ?? zero;
-    const sellerRevenue = Prisma.Decimal.max(totalRevenue.sub(platformCommission), zero);
+    const platformCommission =
+      earningsAggregate._sum.commissionAmount ?? zero;
+    const sellerNet = earningsAggregate._sum.sellerReceivableAmount ?? zero;
+    const unresolvedAmount = unresolvedAggregate._sum.amount ?? zero;
 
     return {
       totalRevenue,
-      sellerRevenue,
+      platformCommission,
+      sellerNet,
+      unresolvedAmount,
       orderVolume,
       productVolume: productVolumeAggregate._sum.quantity ?? 0,
     };
@@ -418,7 +440,7 @@ export class SalesReportsRepository {
         FROM "SellerProfile" sp
         LEFT JOIN "Order" o ON o."sellerId" = sp.id
         LEFT JOIN "Payment" pay ON pay."orderId" = o.id
-          AND pay."paymentStatus" = 'SUCCESS'::"PaymentStatus"
+          AND ${reportablePaidPaymentSqlPay}
         LEFT JOIN "OrderItem" oi ON oi."orderId" = o.id
         GROUP BY sp.id, sp."businessName"
         ORDER BY "totalRevenue" DESC, sp."businessName" ASC
@@ -440,7 +462,7 @@ export class SalesReportsRepository {
         AND o."placedAt" >= ${fromDate}
         AND o."placedAt" <= ${toDate}
       LEFT JOIN "Payment" pay ON pay."orderId" = o.id
-        AND pay."paymentStatus" = 'SUCCESS'::"PaymentStatus"
+        AND ${reportablePaidPaymentSqlPay}
       LEFT JOIN "OrderItem" oi ON oi."orderId" = o.id
       GROUP BY sp.id, sp."businessName"
       ORDER BY "totalRevenue" DESC, sp."businessName" ASC

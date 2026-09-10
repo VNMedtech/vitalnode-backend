@@ -54,6 +54,7 @@ export function toDashboardSummaryDto(
     totalRevenue: decimalToString(record.totalRevenue),
     totalPlatformCommission: decimalToString(record.totalPlatformCommission),
     pendingSettlementsNet: decimalToString(record.pendingSettlementsNet),
+    inBatchSettlementsNet: decimalToString(record.inBatchSettlementsNet),
     completedSettlementsNet: decimalToString(record.completedSettlementsNet),
     lowStockProducts: record.lowStockProducts,
     generatedAt: new Date().toISOString(),
@@ -181,6 +182,14 @@ export function toCommissionStatisticsDto(
         record.pendingSettlements.commissionAmount,
       ),
       netAmount: decimalToString(record.pendingSettlements.netAmount),
+    },
+    inBatchSettlements: {
+      batchCount: record.inBatchSettlements.batchCount,
+      grossAmount: decimalToString(record.inBatchSettlements.grossAmount),
+      commissionAmount: decimalToString(
+        record.inBatchSettlements.commissionAmount,
+      ),
+      netAmount: decimalToString(record.inBatchSettlements.netAmount),
     },
     completedSettlements: {
       batchCount: record.completedSettlements.batchCount,

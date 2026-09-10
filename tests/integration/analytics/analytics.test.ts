@@ -30,6 +30,9 @@ describe("Analytics — Admin dashboard endpoints", () => {
         totalProducts: expect.any(Number),
         totalOrders: expect.any(Number),
         totalRevenue: expect.any(String),
+        pendingSettlementsNet: expect.any(String),
+        inBatchSettlementsNet: expect.any(String),
+        completedSettlementsNet: expect.any(String),
         lowStockProducts: expect.any(Number),
         generatedAt: expect.any(String),
       }),
@@ -77,6 +80,18 @@ describe("Analytics — Admin dashboard endpoints", () => {
       expect.objectContaining({
         totalPlatformCommission: expect.any(String),
         commissionInPeriod: expect.any(String),
+        pendingSettlements: expect.objectContaining({
+          orderCount: expect.any(Number),
+          netAmount: expect.any(String),
+        }),
+        inBatchSettlements: expect.objectContaining({
+          batchCount: expect.any(Number),
+          netAmount: expect.any(String),
+        }),
+        completedSettlements: expect.objectContaining({
+          batchCount: expect.any(Number),
+          netAmount: expect.any(String),
+        }),
         commissionBySeller: expect.any(Array),
       }),
     );
