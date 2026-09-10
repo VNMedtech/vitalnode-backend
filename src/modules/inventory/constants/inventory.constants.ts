@@ -1,4 +1,12 @@
+import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
+
 export const INVENTORY_AUDIT_ENTITY_TYPE = "INVENTORY" as const;
+
+/** Product statuses eligible for low-stock / out-of-stock alerts. */
+export const INVENTORY_ALERT_PRODUCT_STATUSES: readonly ProductStatus[] = [
+  ProductStatus.APPROVED,
+  ProductStatus.OUT_OF_STOCK,
+];
 
 export const INVENTORY_ACTIONS = {
   UPDATED: "INVENTORY_UPDATED",

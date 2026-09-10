@@ -4,10 +4,19 @@ import {
   type ProductStatus as PrismaProductStatus,
 } from "../../../../generated/prisma/client.js";
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
-import type { InventoryAlertFilter } from "../constants/inventory.constants.js";
+import {
+  INVENTORY_ALERT_PRODUCT_STATUSES,
+  type InventoryAlertFilter,
+} from "../constants/inventory.constants.js";
 import type { InventoryRecord, LowStockAlertRecord } from "../dto/inventory.dto.js";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
+
+/** Only commerce-live products should appear in stock alerts. */
+const alertEligibleProductStatusSql = Prisma.sql`
+  AND p.status::text IN (${Prisma.join(INVENTORY_ALERT_PRODUCT_STATUSES)})
+`;
+
 
 const inventoryDetailSelect = {
   id: true,
@@ -153,6 +162,7 @@ export class InventoryRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" <= p.moq
           ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
         ORDER BY i."availableQuantity" ASC, i."updatedAt" DESC
@@ -175,6 +185,7 @@ export class InventoryRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" = 0
           ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
         ORDER BY i."updatedAt" DESC
@@ -196,6 +207,7 @@ export class InventoryRepository {
       FROM "Product" p
       INNER JOIN "Inventory" i ON i."productId" = p.id
       WHERE p."deletedAt" IS NULL
+        ${alertEligibleProductStatusSql}
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
         ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
@@ -217,6 +229,7 @@ export class InventoryRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" <= p.moq
           ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
       `.then((rows) => Number(rows[0]?.count ?? 0));
@@ -228,6 +241,7 @@ export class InventoryRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" = 0
           ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}
       `.then((rows) => Number(rows[0]?.count ?? 0));
@@ -238,6 +252,7 @@ export class InventoryRepository {
       FROM "Product" p
       INNER JOIN "Inventory" i ON i."productId" = p.id
       WHERE p."deletedAt" IS NULL
+        ${alertEligibleProductStatusSql}
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
         ${sellerId ? Prisma.sql`AND p."sellerId" = ${sellerId}` : Prisma.empty}

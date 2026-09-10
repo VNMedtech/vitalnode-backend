@@ -16,9 +16,15 @@ import type {
   AnalyticsInventoryAlertFilter,
   AnalyticsRevenueGroupBy,
 } from "../constants/analytics.constants.js";
+import { INVENTORY_ALERT_PRODUCT_STATUSES } from "../../inventory/constants/inventory.constants.js";
 import type { LowStockAlertRecord } from "../../inventory/dto/inventory.dto.js";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
+
+const alertEligibleProductStatusSql = Prisma.sql`
+  AND p.status::text IN (${Prisma.join(INVENTORY_ALERT_PRODUCT_STATUSES)})
+`;
+
 
 export interface DashboardSummaryRecord {
   totalUsers: number;
@@ -553,6 +559,7 @@ export class AnalyticsRepository {
       FROM "Product" p
       INNER JOIN "Inventory" i ON i."productId" = p.id
       WHERE p."deletedAt" IS NULL
+        ${alertEligibleProductStatusSql}
         AND i."availableQuantity" <= p.moq
     `.then((rows) => Number(rows[0]?.count ?? 0));
   }
@@ -579,6 +586,7 @@ export class AnalyticsRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" <= p.moq
         ORDER BY i."availableQuantity" ASC, i."updatedAt" DESC
         LIMIT ${limit}
@@ -600,6 +608,7 @@ export class AnalyticsRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" = 0
         ORDER BY i."updatedAt" DESC
         LIMIT ${limit}
@@ -620,6 +629,7 @@ export class AnalyticsRepository {
       FROM "Product" p
       INNER JOIN "Inventory" i ON i."productId" = p.id
       WHERE p."deletedAt" IS NULL
+        ${alertEligibleProductStatusSql}
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
       ORDER BY i."availableQuantity" ASC, i."updatedAt" DESC
@@ -639,6 +649,7 @@ export class AnalyticsRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" <= p.moq
       `.then((rows) => Number(rows[0]?.count ?? 0));
     }
@@ -649,6 +660,7 @@ export class AnalyticsRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" = 0
       `.then((rows) => Number(rows[0]?.count ?? 0));
     }
@@ -658,6 +670,7 @@ export class AnalyticsRepository {
       FROM "Product" p
       INNER JOIN "Inventory" i ON i."productId" = p.id
       WHERE p."deletedAt" IS NULL
+        ${alertEligibleProductStatusSql}
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
     `.then((rows) => Number(rows[0]?.count ?? 0));

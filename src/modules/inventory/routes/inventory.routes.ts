@@ -31,6 +31,7 @@ export const inventoryRouter = Router();
  *     description: |
  *       Sellers see alerts for their own products. Admins see all products
  *       where available quantity is at or below MOQ (low stock or out of stock).
+ *       Only `APPROVED` and `OUT_OF_STOCK` products are included.
  *     security:
  *       - bearerAuth: []
  *     parameters:
