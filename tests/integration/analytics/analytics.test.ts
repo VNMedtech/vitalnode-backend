@@ -30,6 +30,7 @@ describe("Analytics — Admin dashboard endpoints", () => {
         totalProducts: expect.any(Number),
         totalOrders: expect.any(Number),
         totalRevenue: expect.any(String),
+        unresolvedAmount: expect.any(String),
         pendingSettlementsNet: expect.any(String),
         inBatchSettlementsNet: expect.any(String),
         completedSettlementsNet: expect.any(String),
@@ -38,6 +39,9 @@ describe("Analytics — Admin dashboard endpoints", () => {
       }),
     );
     expect(dashboard.body.data.totalOrders).toBeGreaterThanOrEqual(1);
+    expect(Number(dashboard.body.data.unresolvedAmount)).toBeGreaterThanOrEqual(
+      0,
+    );
 
     const users = await analyticsRequest(app, adminToken).users();
     expect(users.status).toBe(200);

@@ -38,6 +38,11 @@ export interface DashboardSummaryRecord {
   pendingProducts: number;
   totalOrders: number;
   totalRevenue: Prisma.Decimal;
+  /**
+   * Paid GMV not yet in delivery earnings — reportable payments on placed orders
+   * with commissionAmount IS NULL.
+   */
+  unresolvedAmount: Prisma.Decimal;
   totalPlatformCommission: Prisma.Decimal;
   /** Unbatched PENDING_SETTLEMENT order nets (settlementBatchId IS NULL). */
   pendingSettlementsNet: Prisma.Decimal;
@@ -168,6 +173,7 @@ export class AnalyticsRepository {
       pendingProducts,
       totalOrders,
       revenueAggregate,
+      unresolvedAggregate,
       commissionAggregate,
       pendingSettlementAggregate,
       inBatchSettlementAggregate,
@@ -199,6 +205,16 @@ export class AnalyticsRepository {
         where: {
           ...reportablePaidPaymentWhere,
           order: { placedAt: { not: null } },
+        },
+        _sum: { amount: true },
+      }),
+      this.db.payment.aggregate({
+        where: {
+          ...reportablePaidPaymentWhere,
+          order: {
+            placedAt: { not: null },
+            commissionAmount: null,
+          },
         },
         _sum: { amount: true },
       }),
@@ -234,6 +250,8 @@ export class AnalyticsRepository {
       pendingProducts,
       totalOrders,
       totalRevenue: revenueAggregate._sum.amount ?? new Prisma.Decimal(0),
+      unresolvedAmount:
+        unresolvedAggregate._sum.amount ?? new Prisma.Decimal(0),
       totalPlatformCommission:
         commissionAggregate._sum.commissionAmount ?? new Prisma.Decimal(0),
       pendingSettlementsNet:

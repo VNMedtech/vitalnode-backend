@@ -11,6 +11,11 @@ export interface DashboardSummaryDto {
   pendingProducts: number;
   totalOrders: number;
   totalRevenue: string;
+  /**
+   * Paid GMV not yet in delivery earnings — reportable payments on placed orders
+   * with commissionAmount IS NULL (in fulfillment, cancelled/failed after pay, etc.).
+   */
+  unresolvedAmount: string;
   totalPlatformCommission: string;
   /** Unbatched PENDING_SETTLEMENT order nets (ready to put in a batch). */
   pendingSettlementsNet: string;

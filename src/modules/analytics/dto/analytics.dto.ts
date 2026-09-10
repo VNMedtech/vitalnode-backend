@@ -52,6 +52,7 @@ export function toDashboardSummaryDto(
     pendingProducts: record.pendingProducts,
     totalOrders: record.totalOrders,
     totalRevenue: decimalToString(record.totalRevenue),
+    unresolvedAmount: decimalToString(record.unresolvedAmount),
     totalPlatformCommission: decimalToString(record.totalPlatformCommission),
     pendingSettlementsNet: decimalToString(record.pendingSettlementsNet),
     inBatchSettlementsNet: decimalToString(record.inBatchSettlementsNet),
