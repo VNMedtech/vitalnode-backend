@@ -122,6 +122,8 @@ function toProductListItemDto(
     seller: {
       id: record.seller.id,
       businessName: record.seller.businessName,
+      commissionPercentage:
+        record.seller.commissionPercentage?.toString() ?? null,
     },
     primaryImageUrl: sortedMedia[0]?.fileUrl ?? null,
     inventory: record.inventory

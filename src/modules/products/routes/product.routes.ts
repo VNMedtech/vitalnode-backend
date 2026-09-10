@@ -1081,6 +1081,11 @@ productRouter.get(
  *       properties:
  *         id: { type: string, format: uuid }
  *         businessName: { type: string, example: MedEquip Solutions }
+ *         commissionPercentage:
+ *           type: string
+ *           nullable: true
+ *           example: "10.00"
+ *           description: Seller platform commission rate (0–100); null until approved.
  *     ProductMedia:
  *       type: object
  *       properties:
