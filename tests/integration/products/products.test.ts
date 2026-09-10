@@ -322,6 +322,57 @@ describe("Products — Catalog & Approval Workflow", () => {
     expect(res.body.data.status).toBe("DISABLED");
   });
 
+  it("9b. allows seller to re-enable a disabled product", async () => {
+    const prisma = getTestPrisma();
+    const setup = await setupMarketplaceProduct(app, prisma);
+
+    const disableRes = await productRequest(app, setup.sellerToken).disable(
+      setup.productId,
+    );
+    expect(disableRes.status).toBe(200);
+    expect(disableRes.body.data.status).toBe("DISABLED");
+
+    const enableRes = await productRequest(app, setup.sellerToken).enable(
+      setup.productId,
+    );
+    expect(enableRes.status).toBe(200);
+    expect(enableRes.body.data.status).toBe("APPROVED");
+
+    const marketplaceRes = await productRequest(app).getMarketplaceById(
+      setup.productId,
+    );
+    expect(marketplaceRes.status).toBe(200);
+
+    let audit = null;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      audit = await prisma.auditLog.findFirst({
+        where: {
+          entityId: setup.productId,
+          action: "PRODUCT_ENABLE",
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      if (audit) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    expect(audit).toBeTruthy();
+    expect(audit?.metadata).toMatchObject({
+      previousStatus: "DISABLED",
+      newStatus: "APPROVED",
+    });
+  });
+
+  it("9c. rejects seller enable when product is not disabled", async () => {
+    const prisma = getTestPrisma();
+    const setup = await setupMarketplaceProduct(app, prisma);
+
+    const res = await productRequest(app, setup.sellerToken).enable(
+      setup.productId,
+    );
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(/Cannot enable product while status is APPROVED/i);
+  });
+
   it("10. hides pending products from marketplace", async () => {
     const prisma = getTestPrisma();
     const { login: adminLogin } = await createAdminViaApi(app, prisma);

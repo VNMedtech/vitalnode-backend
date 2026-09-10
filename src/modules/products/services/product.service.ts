@@ -614,6 +614,43 @@ export class ProductService {
     return toProductDetailDto(updated);
   }
 
+  async enableProduct(
+    actorUserId: string,
+    productId: string,
+  ): Promise<ProductDetailDto> {
+    const sellerId = await this.requireApprovedSeller(actorUserId);
+    const existing = await this.getOwnedProductOrThrow(productId, sellerId);
+    const currentStatus = existing.status as ProductStatus;
+
+    if (currentStatus !== ProductStatus.DISABLED) {
+      throw new ConflictError(
+        `Cannot enable product while status is ${currentStatus}`,
+      );
+    }
+
+    assertTransitionAllowed(currentStatus, ProductStatus.APPROVED);
+
+    const updated = await this.repo.updateStatus(
+      productId,
+      ProductStatus.APPROVED,
+    );
+
+    auditLogger.log({
+      actorUserId,
+      action: PRODUCT_ACTIONS.ENABLE,
+      entityType: PRODUCT_AUDIT_ENTITY_TYPE,
+      entityId: productId,
+      metadata: {
+        previousStatus: currentStatus,
+        newStatus: ProductStatus.APPROVED,
+        sellerId,
+        productName: existing.productName,
+      },
+    });
+
+    return toProductDetailDto(updated);
+  }
+
   async disableAdminProduct(
     actorUserId: string,
     productId: string,
