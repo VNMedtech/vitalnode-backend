@@ -10,4 +10,5 @@ export { renderDeliveryAssignedEmail } from "./delivery-assigned.template.js";
 export { renderOrderShippedEmail } from "./order-shipped.template.js";
 export { renderOrderDeliveredEmail } from "./order-delivered.template.js";
 export { renderDeliveryFailedEmail } from "./delivery-failed.template.js";
+export { renderOrderRedeliveryEmail } from "./order-redelivery.template.js";
 export { escapeHtml, greeting, renderEmailLayout } from "./layout.template.js";

@@ -154,6 +154,20 @@ export interface DeliveryFailedEvent {
   }>;
 }
 
+export interface OrderRedeliveryEvent {
+  eventType: typeof NOTIFICATION_EVENTS.ORDER_REDELIVERY;
+  correlationId: string;
+  inApp: InAppNotificationPayload[];
+  emails: Array<{
+    to: string;
+    recipientName?: string;
+    orderNumber: string;
+    attemptNumber: number;
+    orderUrl?: string;
+    role: "BUYER" | "SELLER";
+  }>;
+}
+
 export interface SettlementBatchCreatedEvent {
   eventType: typeof NOTIFICATION_EVENTS.SETTLEMENT_BATCH_CREATED;
   correlationId: string;
@@ -178,5 +192,6 @@ export type NotificationEvent =
   | OrderShippedEvent
   | OrderDeliveredEvent
   | DeliveryFailedEvent
+  | OrderRedeliveryEvent
   | SettlementBatchCreatedEvent
   | SettlementBatchDisbursedEvent;

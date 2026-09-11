@@ -105,6 +105,14 @@ export interface DeliveryFailedEmailData {
   role: "BUYER" | "SELLER";
 }
 
+export interface OrderRedeliveryEmailData {
+  recipientName?: string;
+  orderNumber: string;
+  attemptNumber: number;
+  orderUrl?: string;
+  role: "BUYER" | "SELLER";
+}
+
 export type TemplateDataMap = {
   [EMAIL_TEMPLATE_IDS.PASSWORD_RESET]: PasswordResetEmailData;
   [EMAIL_TEMPLATE_IDS.SELLER_APPROVED]: SellerApprovedEmailData;
@@ -118,4 +126,5 @@ export type TemplateDataMap = {
   [EMAIL_TEMPLATE_IDS.ORDER_SHIPPED]: OrderShippedEmailData;
   [EMAIL_TEMPLATE_IDS.ORDER_DELIVERED]: OrderDeliveredEmailData;
   [EMAIL_TEMPLATE_IDS.DELIVERY_FAILED]: DeliveryFailedEmailData;
+  [EMAIL_TEMPLATE_IDS.ORDER_REDELIVERY]: OrderRedeliveryEmailData;
 };

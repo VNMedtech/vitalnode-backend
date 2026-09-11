@@ -111,6 +111,13 @@ enum ProofType {
   DELIVERY
 }
 
+enum DeliveryAttemptStatus {
+  IN_PROGRESS
+  DELIVERED
+  FAILED
+  SUPERSEDED
+}
+
 enum PaymentStatus {
   PENDING
   SUCCESS
@@ -298,6 +305,7 @@ model DeliveryPartnerProfile {
   user                   User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   orders                 Order[]
   shipments              Shipment[]
+  deliveryAttempts       DeliveryAttempt[]
   deliveryPartnerReviews DeliveryPartnerReview[]
 }
 
@@ -625,6 +633,7 @@ model Order {
   proofs                OrderProof[]
   invoice               Invoice?
   shipment              Shipment?
+  deliveryAttempts      DeliveryAttempt[]
   deliveryPartnerReview DeliveryPartnerReview?
 
   @@index([buyerId])
@@ -664,6 +673,30 @@ model Shipment {
   @@index([deliveryPartnerId])
   @@index([awbNumber])
   @@index([externalShipmentId])
+}
+
+/// Historical logistics attempt for an order. Live config stays on Shipment.
+model DeliveryAttempt {
+  id                String                 @id @default(uuid())
+  orderId           String
+  attemptNumber     Int
+  method            FulfillmentMethod
+  deliveryPartnerId String?
+  carrier           String?
+  awb               String?
+  trackingUrl       String?
+  status            DeliveryAttemptStatus
+  failureReason     String?
+  failedAt          DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  order           Order                   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  deliveryPartner DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, attemptNumber])
+  @@index([orderId])
+  @@index([status])
 }
 
 model OrderItem {

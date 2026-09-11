@@ -13,6 +13,7 @@ import type {
   OrderConfirmedEmailData,
   OrderDeliveredEmailData,
   OrderPlacedEmailData,
+  OrderRedeliveryEmailData,
   OrderShippedEmailData,
   PasswordResetEmailData,
   ProductApprovedEmailData,
@@ -191,6 +192,19 @@ export class EmailService {
     data: DeliveryFailedEmailData,
   ): Promise<{ messageId: string }> {
     const rendered = templateService.render(EMAIL_TEMPLATE_IDS.DELIVERY_FAILED, data);
+    return this.sendEmail({
+      to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+    });
+  }
+
+  async sendOrderRedeliveryEmail(
+    to: string,
+    data: OrderRedeliveryEmailData,
+  ): Promise<{ messageId: string }> {
+    const rendered = templateService.render(EMAIL_TEMPLATE_IDS.ORDER_REDELIVERY, data);
     return this.sendEmail({
       to,
       subject: rendered.subject,

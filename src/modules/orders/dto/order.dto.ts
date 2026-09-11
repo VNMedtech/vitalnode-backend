@@ -10,6 +10,7 @@ import type {
 import type {
   AddressSnapshot,
   CheckoutResultDto,
+  DeliveryAttemptDto,
   OrderDeliveryPartnerContactDto,
   OrderDetailDto,
   OrderItemDto,
@@ -255,6 +256,20 @@ function toShipmentDto(
   };
 }
 
+function toDeliveryAttemptDto(
+  attempt: NonNullable<OrderDetailRecord["deliveryAttempts"]>[number],
+): DeliveryAttemptDto {
+  return {
+    id: attempt.id,
+    attemptNumber: attempt.attemptNumber,
+    method: attempt.method,
+    status: attempt.status,
+    failureReason: attempt.failureReason,
+    failedAt: attempt.failedAt,
+    createdAt: attempt.createdAt,
+  };
+}
+
 export type ToOrderSummaryDtoOptions = {
   /** When true, null out commercial pricing fields for delivery partners. */
   redactPricingForDeliveryPartner?: boolean;
@@ -336,6 +351,7 @@ export function toOrderDetailDto(
     items: record.items.map((item) => toOrderItemDto(item, summaryOptions)),
     payment: redactPricing ? null : toPaymentSummary(record.payment),
     proofs: record.proofs.map(toProofDto),
+    deliveryAttempts: (record.deliveryAttempts ?? []).map(toDeliveryAttemptDto),
     deliveryPartnerReview:
       options.includeDeliveryPartnerReview && record.deliveryPartnerReview
         ? toDeliveryPartnerReviewDto(record.deliveryPartnerReview)

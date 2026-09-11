@@ -313,6 +313,19 @@ export const markDeliveryFailed: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const redeliverOrder: RequestHandler = async (req, res, next) => {
+  try {
+    const actor = requireAuthenticatedUser(req);
+    const { id } = req.params as OrderIdParam;
+    const order = await orderStatusService.redeliver(actor.id, actor.role, id);
+    res
+      .status(200)
+      .json(successResponse(order, "Order redelivery initiated successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const assignDeliveryPartner: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);

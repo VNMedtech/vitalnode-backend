@@ -11,6 +11,7 @@ export const EMAIL_TEMPLATE_IDS = {
   ORDER_SHIPPED: "order-shipped",
   ORDER_DELIVERED: "order-delivered",
   DELIVERY_FAILED: "delivery-failed",
+  ORDER_REDELIVERY: "order-redelivery",
 } as const;
 
 export const EMAIL_SUBJECTS = {
@@ -26,6 +27,7 @@ export const EMAIL_SUBJECTS = {
   ORDER_SHIPPED: "Order shipped",
   ORDER_DELIVERED: "Order delivered",
   DELIVERY_FAILED: "Delivery failed",
+  ORDER_REDELIVERY: "New delivery attempt scheduled",
 } as const;
 
 export const EMAIL_BRAND = {

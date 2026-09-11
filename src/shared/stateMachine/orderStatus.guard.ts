@@ -17,7 +17,8 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   [OrderStatus.DELIVERED]: [OrderStatus.PENDING_SETTLEMENT],
   [OrderStatus.PENDING_SETTLEMENT]: [],
   [OrderStatus.SETTLED]: [],
-  [OrderStatus.DELIVERY_FAILED]: [],
+  // Only OrderStatusService.redeliver may use this edge (no generic status PATCH).
+  [OrderStatus.DELIVERY_FAILED]: [OrderStatus.CONFIRMED],
   [OrderStatus.CANCELLED]: [OrderStatus.REFUNDED],
   [OrderStatus.REFUNDED]: [],
 };

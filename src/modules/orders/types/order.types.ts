@@ -1,4 +1,5 @@
 import type {
+  DeliveryAttemptStatus,
   FulfillmentMethod,
   OrderStatus,
   ProofType,
@@ -63,6 +64,17 @@ export interface ShipmentDto {
   shippedAt: Date | null;
   deliveredAt: Date | null;
   failureReason: string | null;
+}
+
+/** Append-only logistics attempt history (order detail only). */
+export interface DeliveryAttemptDto {
+  id: string;
+  attemptNumber: number;
+  method: FulfillmentMethod;
+  status: DeliveryAttemptStatus;
+  failureReason: string | null;
+  failedAt: Date | null;
+  createdAt: Date;
 }
 
 export interface ListOrdersQuery {
@@ -219,6 +231,8 @@ export interface OrderDetailDto extends OrderSummaryDto {
   /** Null when redacted for delivery partners (or when no payment exists). */
   payment: OrderPaymentSummary | null;
   proofs: OrderProofDto[];
+  /** Chronological delivery attempt history (empty when none). */
+  deliveryAttempts: DeliveryAttemptDto[];
   /**
    * Buyer's delivery-partner review for this order, when present.
    * Included for the owning buyer only; null for other roles.

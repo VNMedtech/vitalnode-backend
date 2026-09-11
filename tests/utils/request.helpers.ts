@@ -710,6 +710,9 @@ export function orderRequest(app: Express, accessToken = "") {
     markDeliveryFailed: (id: string, body: { reason?: string } = {}) =>
       auth(request(app).post(`${ORDERS_BASE}/${id}/delivery-failed`)).send(body),
 
+    redeliver: (id: string) =>
+      auth(request(app).post(`${ORDERS_BASE}/${id}/redeliver`)),
+
     assignDeliveryPartner: (
       id: string,
       body: { deliveryPartnerId: string },

@@ -6,6 +6,7 @@ import {
   renderOrderConfirmedEmail,
   renderOrderDeliveredEmail,
   renderOrderPlacedEmail,
+  renderOrderRedeliveryEmail,
   renderOrderShippedEmail,
   renderPasswordResetEmail,
   renderProductApprovedEmail,
@@ -45,6 +46,8 @@ export class TemplateService {
         return renderOrderDeliveredEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_DELIVERED]);
       case EMAIL_TEMPLATE_IDS.DELIVERY_FAILED:
         return renderDeliveryFailedEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.DELIVERY_FAILED]);
+      case EMAIL_TEMPLATE_IDS.ORDER_REDELIVERY:
+        return renderOrderRedeliveryEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_REDELIVERY]);
       default: {
         const exhaustiveCheck: never = templateId;
         throw new Error(`Unsupported email template: ${exhaustiveCheck}`);
