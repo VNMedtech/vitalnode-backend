@@ -1,4 +1,5 @@
 import { PaymentStatus } from "../../../generated/prisma/client.js";
+import { ConflictError } from "../errors/app.errors.js";
 
 const ALLOWED_TRANSITIONS: Record<PaymentStatus, readonly PaymentStatus[]> = {
   [PaymentStatus.PENDING]: [PaymentStatus.SUCCESS, PaymentStatus.FAILED],
@@ -18,6 +19,8 @@ export function assertPaymentStatusTransition(
   to: PaymentStatus,
 ): void {
   if (!canTransitionPaymentStatus(from, to)) {
-    throw new Error(`Invalid payment status transition: ${from} -> ${to}`);
+    throw new ConflictError(
+      `Invalid payment status transition: ${from} -> ${to}`,
+    );
   }
 }

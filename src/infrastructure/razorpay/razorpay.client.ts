@@ -19,7 +19,11 @@ function sleep(ms: number): Promise<void> {
 function assertConfigured(): { keyId: string; keySecret: string } {
   const { keyId, keySecret } = env.razorpay;
   if (!keyId || !keySecret) {
-    throw new Error("Razorpay credentials are not configured");
+    throw new AppError(
+      "Razorpay credentials are not configured",
+      503,
+      "RAZORPAY_NOT_CONFIGURED",
+    );
   }
   return { keyId, keySecret };
 }
@@ -62,15 +66,22 @@ function mapRazorpayError(error: unknown, operation: string): AppError {
   const message = getRazorpayErrorMessage(error);
   const statusCode = getRazorpayStatusCode(error);
 
+  logger.error(
+    {
+      err: error,
+      provider: "razorpay",
+      operation,
+      razorpayMessage: message,
+      statusCode,
+    },
+    `Razorpay ${operation} failed`,
+  );
+
   if (statusCode !== undefined && statusCode >= 400 && statusCode < 500) {
-    return new ValidationError(`Razorpay ${operation} failed: ${message}`);
+    return new ValidationError(`Payment ${operation} rejected`);
   }
 
-  return new AppError(
-    `Razorpay ${operation} failed: ${message}`,
-    502,
-    "RAZORPAY_ERROR",
-  );
+  return new AppError(`Payment ${operation} failed`, 502, "RAZORPAY_ERROR");
 }
 
 export class RazorpayClient {
@@ -135,7 +146,11 @@ export class RazorpayClient {
       }
     }
 
-    throw new Error("Razorpay createOrder: unreachable");
+    throw new AppError(
+      "Razorpay createOrder: unreachable",
+      502,
+      "RAZORPAY_ERROR",
+    );
   }
 
   async createRefund(
@@ -178,7 +193,11 @@ export class RazorpayClient {
       }
     }
 
-    throw new Error("Razorpay createRefund: unreachable");
+    throw new AppError(
+      "Razorpay createRefund: unreachable",
+      502,
+      "RAZORPAY_ERROR",
+    );
   }
 }
 

@@ -1,5 +1,6 @@
 import { OrderStatus, PaymentStatus, RefundStatus } from "../../../generated/prisma/client.js";
 import { describe, expect, it } from "vitest";
+import { ConflictError } from "../../../src/shared/errors/app.errors.js";
 import {
   assertOrderStatusTransition,
   canTransitionOrderStatus,
@@ -41,7 +42,7 @@ function testTransitionMatrix<T extends string>(
         for (const to of invalidTargets) {
           it(`rejects ${from} -> ${to}`, () => {
             expect(canTransition(from, to)).toBe(false);
-            expect(() => assertTransition(from, to)).toThrow();
+            expect(() => assertTransition(from, to)).toThrow(ConflictError);
           });
         }
       }

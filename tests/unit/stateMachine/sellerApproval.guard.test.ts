@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SellerApprovalStatus } from "../../../src/shared/enums/sellerApprovalStatus.enum.js";
+import { ConflictError } from "../../../src/shared/errors/app.errors.js";
 import {
   SELLER_APPROVAL_TRANSITIONS,
   assertSellerApprovalTransition,
@@ -30,6 +31,9 @@ describe("Seller Approval State Machine", () => {
       for (const to of invalidTargets) {
         it(`rejects ${from} -> ${to}`, () => {
           expect(canTransitionSellerApproval(from, to)).toBe(false);
+          expect(() => assertSellerApprovalTransition(from, to)).toThrow(
+            ConflictError,
+          );
           expect(() => assertSellerApprovalTransition(from, to)).toThrow(
             `Invalid seller approval transition: ${from} -> ${to}`,
           );

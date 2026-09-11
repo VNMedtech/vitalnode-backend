@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ProductStatus } from "../../../src/shared/enums/productStatus.enum.js";
+import { ConflictError } from "../../../src/shared/errors/app.errors.js";
 import {
   PRODUCT_STATUS_TRANSITIONS,
   assertProductStatusTransition,
@@ -30,6 +31,9 @@ describe("Product Status State Machine", () => {
       for (const to of invalidTargets) {
         it(`rejects ${from} -> ${to}`, () => {
           expect(canTransitionProductStatus(from, to)).toBe(false);
+          expect(() => assertProductStatusTransition(from, to)).toThrow(
+            ConflictError,
+          );
           expect(() => assertProductStatusTransition(from, to)).toThrow(
             `Invalid product status transition: ${from} -> ${to}`,
           );

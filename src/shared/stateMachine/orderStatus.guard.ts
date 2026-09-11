@@ -1,4 +1,5 @@
 import { OrderStatus } from "../../../generated/prisma/client.js";
+import { ConflictError } from "../errors/app.errors.js";
 
 const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   [OrderStatus.PENDING_PAYMENT]: [
@@ -35,6 +36,6 @@ export function assertOrderStatusTransition(
   to: OrderStatus,
 ): void {
   if (!canTransitionOrderStatus(from, to)) {
-    throw new Error(`Invalid order status transition: ${from} -> ${to}`);
+    throw new ConflictError(`Invalid order status transition: ${from} -> ${to}`);
   }
 }

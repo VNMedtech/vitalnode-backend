@@ -1,4 +1,5 @@
 import { SellerApprovalStatus } from "../enums/sellerApprovalStatus.enum.js";
+import { ConflictError } from "../errors/app.errors.js";
 
 export const SELLER_APPROVAL_TRANSITIONS: Readonly<
   Record<SellerApprovalStatus, readonly SellerApprovalStatus[]>
@@ -24,7 +25,7 @@ export function assertSellerApprovalTransition(
   to: SellerApprovalStatus,
 ): void {
   if (!canTransitionSellerApproval(from, to)) {
-    throw new Error(
+    throw new ConflictError(
       `Invalid seller approval transition: ${from} -> ${to}`,
     );
   }

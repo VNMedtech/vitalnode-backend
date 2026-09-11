@@ -13,6 +13,8 @@ export interface ApiErrorResponse {
   success: false;
   message: string;
   errors: FieldError[];
+  /** Present when the error was thrown as an AppError (or mapped to one). */
+  code?: string;
 }
 
 export interface PaginatedMeta {
@@ -45,11 +47,13 @@ export function successResponse<T>(
 export function errorResponse(
   message: string,
   errors: FieldError[] = [],
+  code?: string,
 ): ApiErrorResponse {
   return {
     success: false,
     message,
     errors,
+    ...(code !== undefined ? { code } : {}),
   };
 }
 
