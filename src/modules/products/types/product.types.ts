@@ -41,6 +41,8 @@ export interface ProductAttributeFieldDto {
 export interface ProductSellerSummaryDto {
   id: string;
   businessName: string;
+  /** Seller platform commission rate (0–100); null until admin approval. */
+  commissionPercentage: string | null;
 }
 
 export interface ProductInventorySummaryDto {

@@ -16,9 +16,19 @@ import type {
   AnalyticsInventoryAlertFilter,
   AnalyticsRevenueGroupBy,
 } from "../constants/analytics.constants.js";
+import { INVENTORY_ALERT_PRODUCT_STATUSES } from "../../inventory/constants/inventory.constants.js";
 import type { LowStockAlertRecord } from "../../inventory/dto/inventory.dto.js";
+import {
+  reportablePaidPaymentSqlP,
+  reportablePaidPaymentWhere,
+} from "../../payments/utils/reportablePayment.util.js";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
+
+const alertEligibleProductStatusSql = Prisma.sql`
+  AND p.status::text IN (${Prisma.join(INVENTORY_ALERT_PRODUCT_STATUSES)})
+`;
+
 
 export interface DashboardSummaryRecord {
   totalUsers: number;
@@ -28,8 +38,17 @@ export interface DashboardSummaryRecord {
   pendingProducts: number;
   totalOrders: number;
   totalRevenue: Prisma.Decimal;
+  /**
+   * Paid GMV not yet in delivery earnings — reportable payments on placed orders
+   * with commissionAmount IS NULL.
+   */
+  unresolvedAmount: Prisma.Decimal;
   totalPlatformCommission: Prisma.Decimal;
+  /** Unbatched PENDING_SETTLEMENT order nets (settlementBatchId IS NULL). */
   pendingSettlementsNet: Prisma.Decimal;
+  /** PENDING settlement batch nets (created, not yet disbursed). */
+  inBatchSettlementsNet: Prisma.Decimal;
+  /** DISBURSED settlement batch nets. */
   completedSettlementsNet: Prisma.Decimal;
   lowStockProducts: number;
 }
@@ -154,8 +173,10 @@ export class AnalyticsRepository {
       pendingProducts,
       totalOrders,
       revenueAggregate,
+      unresolvedAggregate,
       commissionAggregate,
       pendingSettlementAggregate,
+      inBatchSettlementAggregate,
       completedSettlementAggregate,
       lowStockProducts,
     ] = await Promise.all([
@@ -181,7 +202,20 @@ export class AnalyticsRepository {
       }),
       this.db.order.count(),
       this.db.payment.aggregate({
-        where: { paymentStatus: "SUCCESS" as PaymentStatus },
+        where: {
+          ...reportablePaidPaymentWhere,
+          order: { placedAt: { not: null } },
+        },
+        _sum: { amount: true },
+      }),
+      this.db.payment.aggregate({
+        where: {
+          ...reportablePaidPaymentWhere,
+          order: {
+            placedAt: { not: null },
+            commissionAmount: null,
+          },
+        },
         _sum: { amount: true },
       }),
       this.db.order.aggregate({
@@ -198,6 +232,10 @@ export class AnalyticsRepository {
         _sum: { sellerReceivableAmount: true },
       }),
       this.db.settlementBatch.aggregate({
+        where: { status: SettlementBatchStatus.PENDING },
+        _sum: { netAmount: true },
+      }),
+      this.db.settlementBatch.aggregate({
         where: { status: SettlementBatchStatus.DISBURSED },
         _sum: { netAmount: true },
       }),
@@ -212,11 +250,15 @@ export class AnalyticsRepository {
       pendingProducts,
       totalOrders,
       totalRevenue: revenueAggregate._sum.amount ?? new Prisma.Decimal(0),
+      unresolvedAmount:
+        unresolvedAggregate._sum.amount ?? new Prisma.Decimal(0),
       totalPlatformCommission:
         commissionAggregate._sum.commissionAmount ?? new Prisma.Decimal(0),
       pendingSettlementsNet:
         pendingSettlementAggregate._sum.sellerReceivableAmount ??
         new Prisma.Decimal(0),
+      inBatchSettlementsNet:
+        inBatchSettlementAggregate._sum.netAmount ?? new Prisma.Decimal(0),
       completedSettlementsNet:
         completedSettlementAggregate._sum.netAmount ?? new Prisma.Decimal(0),
       lowStockProducts,
@@ -431,7 +473,10 @@ export class AnalyticsRepository {
         this.db.order.count(),
         this.db.order.count({ where: { placedAt: { not: null } } }),
         this.db.order.aggregate({
-          where: { placedAt: { not: null } },
+          where: {
+            placedAt: { not: null },
+            payment: { is: reportablePaidPaymentWhere },
+          },
           _avg: { totalAmount: true },
         }),
         this.db.order.groupBy({
@@ -463,9 +508,19 @@ export class AnalyticsRepository {
     from?: Date,
     to?: Date,
   ): Promise<RevenueStatisticsRecord> {
-    const createdAtFilter = buildCreatedAtFilter(from, to);
+    // Period GMV uses Order.placedAt (same axis as platform sales Paid GMV).
+    const placedAtFilter = buildPlacedAtFilter(from, to);
+    const reportablePlacedWhere: Prisma.PaymentWhereInput = {
+      ...reportablePaidPaymentWhere,
+      order: { placedAt: { not: null } },
+    };
     const periodPaymentWhere: Prisma.PaymentWhereInput | undefined =
-      createdAtFilter ? { createdAt: createdAtFilter } : undefined;
+      placedAtFilter
+        ? {
+            ...reportablePaidPaymentWhere,
+            order: { placedAt: placedAtFilter },
+          }
+        : undefined;
 
     const [
       totalRevenueAggregate,
@@ -475,20 +530,17 @@ export class AnalyticsRepository {
       pendingPayments,
     ] = await Promise.all([
       this.db.payment.aggregate({
-        where: { paymentStatus: "SUCCESS" as PaymentStatus },
+        where: reportablePlacedWhere,
         _sum: { amount: true },
       }),
       periodPaymentWhere
         ? this.db.payment.aggregate({
-            where: {
-              ...periodPaymentWhere,
-              paymentStatus: "SUCCESS" as PaymentStatus,
-            },
+            where: periodPaymentWhere,
             _sum: { amount: true },
           })
         : Promise.resolve({ _sum: { amount: null } }),
       this.db.payment.count({
-        where: { paymentStatus: "SUCCESS" as PaymentStatus },
+        where: reportablePlacedWhere,
       }),
       this.db.payment.count({
         where: { paymentStatus: "FAILED" as PaymentStatus },
@@ -529,13 +581,15 @@ export class AnalyticsRepository {
       }>
     >`
       SELECT
-        DATE_TRUNC(${truncUnit}, p."createdAt") AS "periodStart",
+        DATE_TRUNC(${truncUnit}, o."placedAt") AS "periodStart",
         COALESCE(SUM(p.amount), 0) AS revenue,
         COUNT(*)::bigint AS "paymentCount"
       FROM "Payment" p
-      WHERE p."paymentStatus" = 'SUCCESS'::"PaymentStatus"
-        AND p."createdAt" >= ${fromDate}
-        AND p."createdAt" <= ${toDate}
+      INNER JOIN "Order" o ON o.id = p."orderId"
+      WHERE ${reportablePaidPaymentSqlP}
+        AND o."placedAt" IS NOT NULL
+        AND o."placedAt" >= ${fromDate}
+        AND o."placedAt" <= ${toDate}
       GROUP BY 1
       ORDER BY 1 ASC
     `;
@@ -553,6 +607,7 @@ export class AnalyticsRepository {
       FROM "Product" p
       INNER JOIN "Inventory" i ON i."productId" = p.id
       WHERE p."deletedAt" IS NULL
+        ${alertEligibleProductStatusSql}
         AND i."availableQuantity" <= p.moq
     `.then((rows) => Number(rows[0]?.count ?? 0));
   }
@@ -579,6 +634,7 @@ export class AnalyticsRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" <= p.moq
         ORDER BY i."availableQuantity" ASC, i."updatedAt" DESC
         LIMIT ${limit}
@@ -600,6 +656,7 @@ export class AnalyticsRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" = 0
         ORDER BY i."updatedAt" DESC
         LIMIT ${limit}
@@ -620,6 +677,7 @@ export class AnalyticsRepository {
       FROM "Product" p
       INNER JOIN "Inventory" i ON i."productId" = p.id
       WHERE p."deletedAt" IS NULL
+        ${alertEligibleProductStatusSql}
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
       ORDER BY i."availableQuantity" ASC, i."updatedAt" DESC
@@ -639,6 +697,7 @@ export class AnalyticsRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" <= p.moq
       `.then((rows) => Number(rows[0]?.count ?? 0));
     }
@@ -649,6 +708,7 @@ export class AnalyticsRepository {
         FROM "Product" p
         INNER JOIN "Inventory" i ON i."productId" = p.id
         WHERE p."deletedAt" IS NULL
+          ${alertEligibleProductStatusSql}
           AND i."availableQuantity" = 0
       `.then((rows) => Number(rows[0]?.count ?? 0));
     }
@@ -658,6 +718,7 @@ export class AnalyticsRepository {
       FROM "Product" p
       INNER JOIN "Inventory" i ON i."productId" = p.id
       WHERE p."deletedAt" IS NULL
+        ${alertEligibleProductStatusSql}
         AND i."availableQuantity" > 0
         AND i."availableQuantity" <= p.moq
     `.then((rows) => Number(rows[0]?.count ?? 0));
@@ -670,6 +731,8 @@ export class AnalyticsRepository {
       totalCommission,
       periodCommission,
       pendingAgg,
+      inBatchAgg,
+      inBatchBatchCount,
       completedAgg,
       completedBatchCount,
       sellerGroups,
@@ -696,6 +759,17 @@ export class AnalyticsRepository {
           commissionAmount: true,
           sellerReceivableAmount: true,
         },
+      }),
+      this.db.settlementBatch.aggregate({
+        where: { status: SettlementBatchStatus.PENDING },
+        _sum: {
+          grossAmount: true,
+          commissionAmount: true,
+          netAmount: true,
+        },
+      }),
+      this.db.settlementBatch.count({
+        where: { status: SettlementBatchStatus.PENDING },
       }),
       this.db.settlementBatch.aggregate({
         where: { status: SettlementBatchStatus.DISBURSED },
@@ -740,6 +814,13 @@ export class AnalyticsRepository {
           pendingAgg._sum.commissionAmount ?? new Prisma.Decimal(0),
         netAmount:
           pendingAgg._sum.sellerReceivableAmount ?? new Prisma.Decimal(0),
+      },
+      inBatchSettlements: {
+        batchCount: inBatchBatchCount,
+        grossAmount: inBatchAgg._sum.grossAmount ?? new Prisma.Decimal(0),
+        commissionAmount:
+          inBatchAgg._sum.commissionAmount ?? new Prisma.Decimal(0),
+        netAmount: inBatchAgg._sum.netAmount ?? new Prisma.Decimal(0),
       },
       completedSettlements: {
         batchCount: completedBatchCount,

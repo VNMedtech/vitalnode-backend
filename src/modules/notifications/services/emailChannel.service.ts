@@ -276,6 +276,32 @@ export class EmailChannelService {
         );
         return;
 
+      case "ORDER_REDELIVERY":
+        await Promise.all(
+          event.emails.map((email) =>
+            withRetry(
+              () =>
+                emailService.sendOrderRedeliveryEmail(email.to, {
+                  recipientName: email.recipientName,
+                  orderNumber: email.orderNumber,
+                  attemptNumber: email.attemptNumber,
+                  orderUrl: email.orderUrl,
+                  role: email.role,
+                }),
+              {
+                operation: "email.order_redelivery",
+                context: {
+                  eventType: event.eventType,
+                  correlationId: event.correlationId,
+                  to: email.to,
+                  role: email.role,
+                },
+              },
+            ),
+          ),
+        );
+        return;
+
       case "SETTLEMENT_BATCH_CREATED":
       case "SETTLEMENT_BATCH_DISBURSED":
         return;

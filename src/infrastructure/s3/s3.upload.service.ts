@@ -4,6 +4,7 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getS3Client } from "./s3.client.js";
 import { s3Config } from "./s3.config.js";
+import { mapS3Error } from "./s3.errors.js";
 
 export interface S3UploadInput {
   key: string;
@@ -21,21 +22,25 @@ export interface S3UploadResult {
 export async function uploadObjectToS3(
   input: S3UploadInput,
 ): Promise<S3UploadResult> {
-  const client = getS3Client();
+  try {
+    const client = getS3Client();
 
-  const result = await client.send(
-    new PutObjectCommand({
-      Bucket: s3Config.bucket,
-      Key: input.key,
-      Body: input.body,
-      ContentType: input.contentType,
-      ContentLength: input.contentLength,
-    }),
-  );
+    const result = await client.send(
+      new PutObjectCommand({
+        Bucket: s3Config.bucket,
+        Key: input.key,
+        Body: input.body,
+        ContentType: input.contentType,
+        ContentLength: input.contentLength,
+      }),
+    );
 
-  return {
-    key: input.key,
-    bucket: s3Config.bucket,
-    etag: result.ETag,
-  };
+    return {
+      key: input.key,
+      bucket: s3Config.bucket,
+      etag: result.ETag,
+    };
+  } catch (error) {
+    throw mapS3Error(error, "upload");
+  }
 }

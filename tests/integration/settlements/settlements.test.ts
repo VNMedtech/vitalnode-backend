@@ -157,6 +157,19 @@ describe("Settlements — Admin and Seller", () => {
 
     const batchId = createRes.body.data.id as string;
 
+    // Batch create must not drop earned totals (order still PENDING_SETTLEMENT).
+    const midEarningsRes =
+      await sellerSettlementRequest(app, sellerToken).earningsSummary();
+    expect(midEarningsRes.status).toBe(200);
+    expect(midEarningsRes.body.data.earnedReceivable.orderCount).toBe(1);
+    expect(midEarningsRes.body.data.earnedReceivable.netAmount).toBe(
+      order.sellerReceivableAmount?.toString(),
+    );
+    expect(midEarningsRes.body.data.paidOut.orderCount).toBe(0);
+    expect(midEarningsRes.body.data.lifetimeNet).toBe(
+      order.sellerReceivableAmount?.toString(),
+    );
+
     const adminListRes = await adminSettlementRequest(app, adminToken).list({
       page: "1",
       limit: "20",
@@ -203,9 +216,17 @@ describe("Settlements — Admin and Seller", () => {
     const earningsRes =
       await sellerSettlementRequest(app, sellerToken).earningsSummary();
     expect(earningsRes.status).toBe(200);
-    expect(earningsRes.body.data.completedSettlements.batchCount).toBe(1);
-    expect(earningsRes.body.data.grossRevenue).toBe(
+    expect(earningsRes.body.data.paidOut.batchCount).toBe(1);
+    expect(earningsRes.body.data.paidOut.orderCount).toBe(1);
+    expect(earningsRes.body.data.earnedReceivable.orderCount).toBe(0);
+    expect(earningsRes.body.data.grossSales).toBe(
       order.grossAmount?.toString(),
+    );
+    expect(earningsRes.body.data.lifetimeNet).toBe(
+      order.sellerReceivableAmount?.toString(),
+    );
+    expect(earningsRes.body.data.paidOut.netAmount).toBe(
+      order.sellerReceivableAmount?.toString(),
     );
   });
 

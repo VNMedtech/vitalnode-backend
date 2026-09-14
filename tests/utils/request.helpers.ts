@@ -312,6 +312,9 @@ export function productRequest(app: Express, accessToken = "") {
     disable: (id: string) =>
       auth(request(app).delete(`${PRODUCTS_BASE}/${id}`)),
 
+    enable: (id: string) =>
+      auth(request(app).post(`${PRODUCTS_BASE}/${id}/enable`)),
+
     disableAdmin: (id: string) =>
       auth(request(app).post(`${PRODUCTS_BASE}/admin/${id}/disable`)),
 
@@ -706,6 +709,9 @@ export function orderRequest(app: Express, accessToken = "") {
 
     markDeliveryFailed: (id: string, body: { reason?: string } = {}) =>
       auth(request(app).post(`${ORDERS_BASE}/${id}/delivery-failed`)).send(body),
+
+    redeliver: (id: string) =>
+      auth(request(app).post(`${ORDERS_BASE}/${id}/redeliver`)),
 
     assignDeliveryPartner: (
       id: string,

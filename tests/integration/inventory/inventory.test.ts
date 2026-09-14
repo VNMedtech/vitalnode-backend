@@ -1,10 +1,14 @@
 import type { Express } from "express";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { setupMarketplaceProduct } from "../../factories/commerce.factory.js";
+import {
+  createCategoryViaApi,
+  setupMarketplaceProduct,
+} from "../../factories/commerce.factory.js";
 import {
   createAdminViaApi,
   createApprovedSeller,
 } from "../../factories/user.factory.js";
+import { productCreationPayload } from "../../fixtures/product.payloads.js";
 import {
   disconnectTestPrisma,
   getTestPrisma,
@@ -113,6 +117,62 @@ describe("Inventory — Stock Management", () => {
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].productId).toBe(setup.productId);
     expect(res.body.data[0].inventoryStatus).toBe("LOW_STOCK");
+  });
+
+  it("4c. excludes rejected products from low stock alerts", async () => {
+    const prisma = getTestPrisma();
+    const { login: adminLogin } = await createAdminViaApi(app, prisma);
+    const seller = await createApprovedSeller(app, prisma);
+    const { category } = await createCategoryViaApi(
+      app,
+      adminLogin.auth.accessToken,
+    );
+
+    const createRes = await productRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).create(
+      productCreationPayload(category.id, {
+        productName: "Rejected Low Stock Widget",
+        moq: 5,
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const rejectedId = createRes.body.data.id as string;
+
+    await prisma.inventory.update({
+      where: { productId: rejectedId },
+      data: { availableQuantity: 1 },
+    });
+
+    const rejectRes = await productRequest(
+      app,
+      adminLogin.auth.accessToken,
+    ).reject(rejectedId, { reason: "Incomplete documentation" });
+    expect(rejectRes.status).toBe(200);
+    expect(rejectRes.body.data.status).toBe("REJECTED");
+
+    const sellerAlerts = await inventoryRequest(
+      app,
+      seller.login.auth.accessToken,
+    ).listLowStockAlerts({ alertStatus: "ALL" });
+    expect(sellerAlerts.status).toBe(200);
+    expect(
+      sellerAlerts.body.data.some(
+        (a: { productId: string }) => a.productId === rejectedId,
+      ),
+    ).toBe(false);
+
+    const adminAlerts = await inventoryRequest(
+      app,
+      adminLogin.auth.accessToken,
+    ).listLowStockAlerts({ alertStatus: "ALL" });
+    expect(adminAlerts.status).toBe(200);
+    expect(
+      adminAlerts.body.data.some(
+        (a: { productId: string }) => a.productId === rejectedId,
+      ),
+    ).toBe(false);
   });
 
   it("5. requires idempotency key for inventory updates", async () => {

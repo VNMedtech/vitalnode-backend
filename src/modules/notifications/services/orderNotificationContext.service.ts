@@ -10,6 +10,7 @@ import type {
   OrderConfirmedEvent,
   OrderDeliveredEvent,
   OrderPlacedEvent,
+  OrderRedeliveryEvent,
   OrderShippedEvent,
 } from "../types/notificationEvent.types.js";
 
@@ -529,6 +530,63 @@ export class OrderNotificationContextService {
           ),
           orderNumber: order.orderNumber,
           reason: reasonForEmail,
+          orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
+          role: "SELLER",
+        },
+      ],
+    };
+  }
+
+  async buildOrderRedeliveryEvent(
+    orderId: string,
+    attemptNumber: number,
+  ): Promise<OrderRedeliveryEvent | null> {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: orderPartySelect,
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    return {
+      eventType: NOTIFICATION_EVENTS.ORDER_REDELIVERY,
+      correlationId: orderId,
+      inApp: [
+        {
+          userId: order.buyer.userId,
+          type: NOTIFICATION_TYPES.ORDER_REDELIVERY,
+          title: "New delivery attempt",
+          message: `A new delivery attempt (#${attemptNumber}) is being arranged for your order ${order.orderNumber}.`,
+        },
+        {
+          userId: order.seller.userId,
+          type: NOTIFICATION_TYPES.ORDER_REDELIVERY,
+          title: "New delivery attempt",
+          message: `Order ${order.orderNumber} re-entered fulfillment for delivery attempt #${attemptNumber}.`,
+        },
+      ],
+      emails: [
+        {
+          to: order.buyer.user.email,
+          recipientName: buildRecipientName(
+            order.buyer.user.firstName,
+            order.buyer.user.lastName,
+          ),
+          orderNumber: order.orderNumber,
+          attemptNumber,
+          orderUrl: buildPortalUrl(AuthPortal.STORE, `/orders/${orderId}`),
+          role: "BUYER",
+        },
+        {
+          to: order.seller.user.email,
+          recipientName: buildRecipientName(
+            order.seller.user.firstName,
+            order.seller.user.lastName,
+          ),
+          orderNumber: order.orderNumber,
+          attemptNumber,
           orderUrl: buildPortalUrl(AuthPortal.SELLER, `/seller/orders/${orderId}`),
           role: "SELLER",
         },

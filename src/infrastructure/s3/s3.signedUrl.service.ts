@@ -5,21 +5,26 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getS3Client } from "./s3.client.js";
 import { s3Config } from "./s3.config.js";
+import { mapS3Error } from "./s3.errors.js";
 
 export async function generateSignedDownloadUrl(
   key: string,
   expiresInSeconds = s3Config.signedUrlExpiresInSeconds,
 ): Promise<string> {
-  const client = getS3Client();
+  try {
+    const client = getS3Client();
 
-  return getSignedUrl(
-    client,
-    new GetObjectCommand({
-      Bucket: s3Config.bucket,
-      Key: key,
-    }),
-    { expiresIn: expiresInSeconds },
-  );
+    return await getSignedUrl(
+      client,
+      new GetObjectCommand({
+        Bucket: s3Config.bucket,
+        Key: key,
+      }),
+      { expiresIn: expiresInSeconds },
+    );
+  } catch (error) {
+    throw mapS3Error(error, "signedUrl");
+  }
 }
 
 export function buildS3ObjectUrl(key: string): string {

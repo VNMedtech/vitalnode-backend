@@ -197,7 +197,9 @@ analyticsRouter.get(
  *   get:
  *     tags: [Analytics]
  *     summary: Inventory alerts
- *     description: Paginated low-stock and out-of-stock products across the marketplace.
+ *     description: |
+ *       Paginated low-stock and out-of-stock products across the marketplace.
+ *       Only `APPROVED` and `OUT_OF_STOCK` products are included.
  *     security:
  *       - bearerAuth: []
  *     parameters:

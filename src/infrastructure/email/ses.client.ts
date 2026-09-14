@@ -62,12 +62,11 @@ function normalizeRecipients(to: string | string[]): string[] {
 }
 
 function mapSesError(error: unknown): AppError {
-  const message = error instanceof Error ? error.message : "Unknown email delivery error";
   const name = error instanceof Error ? error.name : "SesError";
 
   logger.error({ err: error, provider: "aws-ses", errorName: name }, "SES send failed");
 
-  return new AppError(`Failed to send email: ${message}`, 502, "EMAIL_SEND_FAILED");
+  return new AppError("Failed to send email", 502, "EMAIL_SEND_FAILED");
 }
 
 export class SesEmailClient {

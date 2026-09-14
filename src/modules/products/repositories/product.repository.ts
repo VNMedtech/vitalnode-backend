@@ -23,6 +23,7 @@ const categorySummarySelect = {
 const sellerSummarySelect = {
   id: true,
   businessName: true,
+  commissionPercentage: true,
 } satisfies Prisma.SellerProfileSelect;
 
 const templateSummarySelect = {

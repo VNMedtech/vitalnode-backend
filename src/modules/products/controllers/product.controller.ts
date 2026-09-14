@@ -174,6 +174,19 @@ export const disableProduct: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const enableProduct: RequestHandler = async (req, res, next) => {
+  try {
+    const actorUserId = requireAuthenticatedUserId(req);
+    const { id } = req.params as ProductIdParam;
+    const product = await productService.enableProduct(actorUserId, id);
+    res
+      .status(200)
+      .json(successResponse(product, "Product enabled successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const approveProduct: RequestHandler = async (req, res, next) => {
   try {
     const actorUserId = requireAuthenticatedUserId(req);

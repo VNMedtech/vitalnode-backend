@@ -350,81 +350,66 @@ export class SettlementRepository {
   }
 
   async getSellerEarningsSummary(sellerId: string) {
-    const [pendingAgg, completedAgg, completedBatchCount, settledAgg] =
-      await Promise.all([
-        this.prisma.order.aggregate({
-          where: {
-            sellerId,
-            orderStatus: PENDING_SETTLEMENT_ORDER_STATUS,
-            settlementBatchId: null,
-          },
-          _count: { _all: true },
-          _sum: {
-            grossAmount: true,
-            commissionAmount: true,
-            sellerReceivableAmount: true,
-          },
-        }),
-        this.prisma.settlementBatch.aggregate({
-          where: {
-            sellerId,
-            status: SettlementBatchStatus.DISBURSED,
-          },
-          _sum: {
-            grossAmount: true,
-            commissionAmount: true,
-            netAmount: true,
-          },
-        }),
-        this.prisma.settlementBatch.count({
-          where: {
-            sellerId,
-            status: SettlementBatchStatus.DISBURSED,
-          },
-        }),
-        this.prisma.order.aggregate({
-          where: {
-            sellerId,
-            orderStatus: OrderStatus.SETTLED,
-          },
-          _sum: {
-            grossAmount: true,
-            commissionAmount: true,
-            sellerReceivableAmount: true,
-          },
-        }),
-      ]);
+    // Earned = all delivered-not-disbursed orders (batched or not).
+    // Paid out = SETTLED orders; batchCount from DISBURSED batches.
+    const [earnedAgg, paidOutAgg, paidOutBatchCount] = await Promise.all([
+      this.prisma.order.aggregate({
+        where: {
+          sellerId,
+          orderStatus: PENDING_SETTLEMENT_ORDER_STATUS,
+        },
+        _count: { _all: true },
+        _sum: {
+          grossAmount: true,
+          commissionAmount: true,
+          sellerReceivableAmount: true,
+        },
+      }),
+      this.prisma.order.aggregate({
+        where: {
+          sellerId,
+          orderStatus: OrderStatus.SETTLED,
+        },
+        _count: { _all: true },
+        _sum: {
+          grossAmount: true,
+          commissionAmount: true,
+          sellerReceivableAmount: true,
+        },
+      }),
+      this.prisma.settlementBatch.count({
+        where: {
+          sellerId,
+          status: SettlementBatchStatus.DISBURSED,
+        },
+      }),
+    ]);
 
-    const pendingGross = pendingAgg._sum.grossAmount ?? new Prisma.Decimal(0);
-    const pendingCommission =
-      pendingAgg._sum.commissionAmount ?? new Prisma.Decimal(0);
-    const pendingNet =
-      pendingAgg._sum.sellerReceivableAmount ?? new Prisma.Decimal(0);
+    const earnedGross = earnedAgg._sum.grossAmount ?? new Prisma.Decimal(0);
+    const earnedCommission =
+      earnedAgg._sum.commissionAmount ?? new Prisma.Decimal(0);
+    const earnedNet =
+      earnedAgg._sum.sellerReceivableAmount ?? new Prisma.Decimal(0);
 
-    const completedGross =
-      completedAgg._sum.grossAmount ?? new Prisma.Decimal(0);
-    const completedCommission =
-      completedAgg._sum.commissionAmount ?? new Prisma.Decimal(0);
-    const completedNet = completedAgg._sum.netAmount ?? new Prisma.Decimal(0);
-
-    const settledGross = settledAgg._sum.grossAmount ?? new Prisma.Decimal(0);
-    const settledCommission =
-      settledAgg._sum.commissionAmount ?? new Prisma.Decimal(0);
-    const settledNet =
-      settledAgg._sum.sellerReceivableAmount ?? new Prisma.Decimal(0);
+    const paidOutGross = paidOutAgg._sum.grossAmount ?? new Prisma.Decimal(0);
+    const paidOutCommission =
+      paidOutAgg._sum.commissionAmount ?? new Prisma.Decimal(0);
+    const paidOutNet =
+      paidOutAgg._sum.sellerReceivableAmount ?? new Prisma.Decimal(0);
 
     return {
-      grossRevenue: pendingGross.add(settledGross),
-      commissionPaid: pendingCommission.add(settledCommission),
-      netEarnings: pendingNet.add(settledNet),
-      pendingOrderCount: pendingAgg._count._all,
-      pendingGross,
-      pendingCommission,
-      pendingNet,
-      completedBatchCount,
-      completedGross,
-      completedCommission,
-      completedNet,
+      grossSales: earnedGross.add(paidOutGross),
+      commission: earnedCommission.add(paidOutCommission),
+      lifetimeNet: earnedNet.add(paidOutNet),
+      earnedOrderCount: earnedAgg._count._all,
+      earnedGross,
+      earnedCommission,
+      earnedNet,
+      paidOutOrderCount: paidOutAgg._count._all,
+      paidOutBatchCount,
+      paidOutGross,
+      paidOutCommission,
+      paidOutNet,
     };
   }
 }

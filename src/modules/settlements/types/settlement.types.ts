@@ -63,22 +63,28 @@ export interface SellerPendingSettlementDetailDto {
   netAmount: string;
 }
 
+/** Amounts for a settlement bucket (gross / commission / seller net). */
+export interface SellerEarningsBucketDto {
+  orderCount: number;
+  grossAmount: string;
+  commissionAmount: string;
+  netAmount: string;
+}
+
+/**
+ * Seller finance snapshot.
+ *
+ * - `earnedReceivable`: delivered, not yet disbursed (all `PENDING_SETTLEMENT`,
+ *   whether unbatched or in a PENDING settlement batch).
+ * - `paidOut`: actually disbursed (`SETTLED` / `DISBURSED` batches).
+ * - Top-level totals are lifetime delivered = earned + paid out.
+ */
 export interface SellerEarningsSummaryDto {
-  grossRevenue: string;
-  commissionPaid: string;
-  netEarnings: string;
-  pendingSettlements: {
-    orderCount: number;
-    grossAmount: string;
-    commissionAmount: string;
-    netAmount: string;
-  };
-  completedSettlements: {
-    batchCount: number;
-    grossAmount: string;
-    commissionAmount: string;
-    netAmount: string;
-  };
+  grossSales: string;
+  commission: string;
+  lifetimeNet: string;
+  earnedReceivable: SellerEarningsBucketDto;
+  paidOut: SellerEarningsBucketDto & { batchCount: number };
 }
 
 export interface CreateSettlementBatchInput {

@@ -165,4 +165,25 @@ export class ShipmentRepository {
       select: shipmentSelect,
     });
   }
+
+  /** Reset live logistics for a new delivery attempt; keeps method (+ bookingSource). */
+  resetForRedelivery(orderId: string) {
+    return this.db.shipment.update({
+      where: { orderId },
+      data: {
+        status: ShipmentStatus.CREATED,
+        deliveryPartnerId: null,
+        carrier: null,
+        awbNumber: null,
+        trackingUrl: null,
+        labelUrl: null,
+        externalShipmentId: null,
+        bookedAt: null,
+        shippedAt: null,
+        deliveredAt: null,
+        failureReason: null,
+      },
+      select: shipmentSelect,
+    });
+  }
 }

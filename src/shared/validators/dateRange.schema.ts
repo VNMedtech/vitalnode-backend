@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ValidationError } from "../errors/app.errors.js";
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -16,7 +17,7 @@ export function parseQueryDateBound(
   if (DATE_ONLY_RE.test(value)) {
     const [year, month, day] = value.split("-").map(Number);
     if (year === undefined || month === undefined || day === undefined) {
-      throw new Error("Invalid date");
+      throw new ValidationError("Invalid date");
     }
     if (bound === "start") {
       return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
@@ -26,7 +27,7 @@ export function parseQueryDateBound(
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    throw new Error("Invalid date");
+    throw new ValidationError("Invalid date");
   }
   return date;
 }

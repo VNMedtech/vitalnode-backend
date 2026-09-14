@@ -1,4 +1,5 @@
 import { OrderStatus } from "../../../generated/prisma/client.js";
+import { ConflictError } from "../errors/app.errors.js";
 
 const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   [OrderStatus.PENDING_PAYMENT]: [
@@ -17,7 +18,8 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   [OrderStatus.DELIVERED]: [OrderStatus.PENDING_SETTLEMENT],
   [OrderStatus.PENDING_SETTLEMENT]: [],
   [OrderStatus.SETTLED]: [],
-  [OrderStatus.DELIVERY_FAILED]: [],
+  // Only OrderStatusService.redeliver may use this edge (no generic status PATCH).
+  [OrderStatus.DELIVERY_FAILED]: [OrderStatus.CONFIRMED],
   [OrderStatus.CANCELLED]: [OrderStatus.REFUNDED],
   [OrderStatus.REFUNDED]: [],
 };
@@ -34,6 +36,6 @@ export function assertOrderStatusTransition(
   to: OrderStatus,
 ): void {
   if (!canTransitionOrderStatus(from, to)) {
-    throw new Error(`Invalid order status transition: ${from} -> ${to}`);
+    throw new ConflictError(`Invalid order status transition: ${from} -> ${to}`);
   }
 }

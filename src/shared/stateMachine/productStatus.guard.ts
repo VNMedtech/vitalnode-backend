@@ -1,4 +1,5 @@
 import { ProductStatus } from "../enums/productStatus.enum.js";
+import { ConflictError } from "../errors/app.errors.js";
 
 export const PRODUCT_STATUS_TRANSITIONS: Readonly<
   Record<ProductStatus, readonly ProductStatus[]>
@@ -28,6 +29,8 @@ export function assertProductStatusTransition(
   to: ProductStatus,
 ): void {
   if (!canTransitionProductStatus(from, to)) {
-    throw new Error(`Invalid product status transition: ${from} -> ${to}`);
+    throw new ConflictError(
+      `Invalid product status transition: ${from} -> ${to}`,
+    );
   }
 }

@@ -53,6 +53,8 @@ export function toSellerSalesSummaryDto(
     totalOrders: orderMetrics.totalOrders,
     completedOrders: orderMetrics.completedOrders,
     cancelledOrders: orderMetrics.cancelledOrders,
+    inProgressOrders: orderMetrics.inProgressOrders,
+    inProgressAmount: decimalToString(orderMetrics.inProgressAmount),
     revenue: decimalToString(revenueMetrics.revenueInPeriod),
     topProducts: topProducts.map(toTopProductDto),
     period: toAnalyticsPeriodDto(from, to),
@@ -96,7 +98,9 @@ export function toPlatformSalesReportDto(
 ): PlatformSalesReportDto {
   return {
     totalRevenue: decimalToString(record.totalRevenue),
-    sellerRevenue: decimalToString(record.sellerRevenue),
+    platformCommission: decimalToString(record.platformCommission),
+    sellerNet: decimalToString(record.sellerNet),
+    unresolvedAmount: decimalToString(record.unresolvedAmount),
     orderVolume: record.orderVolume,
     productVolume: record.productVolume,
     period: toAnalyticsPeriodDto(from, to),

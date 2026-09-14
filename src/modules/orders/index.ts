@@ -22,3 +22,4 @@ export * from "./routes/order.routes.js";
 export * from "./types/order.types.js";
 export * from "./constants/order.constants.js";
 export * from "./repositories/shipment.repository.js";
+export * from "./repositories/deliveryAttempt.repository.js";

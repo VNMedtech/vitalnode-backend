@@ -35,6 +35,7 @@ import {
 import { toOrderDetailDto } from "../dto/order.dto.js";
 import { OrderRepository } from "../repositories/order.repository.js";
 import { OrderProofRepository } from "../repositories/orderProof.repository.js";
+import { DeliveryAttemptRepository } from "../repositories/deliveryAttempt.repository.js";
 import { ShipmentRepository } from "../repositories/shipment.repository.js";
 import { finalizeOrderEarningsOnDelivery } from "../../settlements/services/sellerCommission.service.js";
 import {
@@ -53,6 +54,7 @@ import type {
 import type { OrderDetailRecord } from "../repositories/order.repository.js";
 import type { SellerAddressRecord } from "../../sellerAddresses/repositories/sellerAddress.repository.js";
 import type { Prisma } from "../../../../generated/prisma/client.js";
+import type { ShipmentRecord } from "../repositories/shipment.repository.js";
 
 function buildPickupAddressSnapshot(
   address: SellerAddressRecord,
@@ -70,6 +72,22 @@ function buildPickupAddressSnapshot(
     postalCode: address.postalCode,
     latitude: address.latitude == null ? null : address.latitude.toString(),
     longitude: address.longitude == null ? null : address.longitude.toString(),
+  };
+}
+
+function shipmentAttemptSnapshot(
+  orderId: string,
+  shipment: ShipmentRecord,
+  deliveryPartnerId?: string | null,
+) {
+  return {
+    orderId,
+    method: shipment.method,
+    deliveryPartnerId:
+      shipment.deliveryPartnerId ?? deliveryPartnerId ?? null,
+    carrier: shipment.carrier,
+    awb: shipment.awbNumber,
+    trackingUrl: shipment.trackingUrl,
   };
 }
 function assertTransition(from: OrderStatus, to: OrderStatus): void {
@@ -719,6 +737,14 @@ export class OrderStatusService {
         shippedAt: new Date(),
       });
 
+      const attemptRepo = new DeliveryAttemptRepository(tx);
+      const liveShipment = await shipmentRepo.findByOrderId(orderId);
+      if (liveShipment) {
+        await attemptRepo.ensureAttemptOnShip(
+          shipmentAttemptSnapshot(orderId, liveShipment, partnerId),
+        );
+      }
+
       await recordCommerceAudit(tx, {
         actorUserId,
         action: ORDER_ACTIONS.STATUS_CHANGED,
@@ -844,6 +870,14 @@ export class OrderStatusService {
         status: ShipmentStatus.IN_TRANSIT,
         shippedAt: new Date(),
       });
+
+      const attemptRepo = new DeliveryAttemptRepository(tx);
+      const liveShipment = await shipmentRepo.findByOrderId(orderId);
+      if (liveShipment) {
+        await attemptRepo.ensureAttemptOnShip(
+          shipmentAttemptSnapshot(orderId, liveShipment),
+        );
+      }
 
       await recordCommerceAudit(tx, {
         actorUserId,
@@ -1095,6 +1129,9 @@ export class OrderStatusService {
         deliveredAt: new Date(),
       });
 
+      const attemptRepo = new DeliveryAttemptRepository(tx);
+      await attemptRepo.markDelivered(orderId);
+
       await finalizeOrderEarningsOnDelivery(
         tx,
         orderId,
@@ -1183,6 +1220,9 @@ export class OrderStatusService {
         orderId,
         deliveredAt: new Date(),
       });
+
+      const attemptRepo = new DeliveryAttemptRepository(tx);
+      await attemptRepo.markDelivered(orderId);
 
       await finalizeOrderEarningsOnDelivery(
         tx,
@@ -1312,6 +1352,12 @@ export class OrderStatusService {
         failureReason: reason,
       });
 
+      const attemptRepo = new DeliveryAttemptRepository(tx);
+      await attemptRepo.markFailed({
+        orderId,
+        failureReason: reason,
+      });
+
       await recordCommerceAudit(tx, {
         actorUserId,
         action: ORDER_ACTIONS.STATUS_CHANGED,
@@ -1344,6 +1390,110 @@ export class OrderStatusService {
           role === UserRole.DELIVERY_PARTNER,
         redactPricingForDeliveryPartner: role === UserRole.DELIVERY_PARTNER,
       });
+    });
+  }
+
+  async redeliver(
+    actorUserId: string,
+    role: UserRole,
+    orderId: string,
+  ): Promise<OrderDetailDto> {
+    if (role !== UserRole.ADMIN) {
+      throw new ForbiddenError("Only admin can initiate order redelivery");
+    }
+
+    const order = await this.orderRepo.findDetailById(orderId);
+    if (!order) {
+      throw new NotFoundError("Order not found");
+    }
+
+    const shipment = requireShipment(order);
+    const from = order.orderStatus;
+    const to = OrderStatus.CONFIRMED;
+    assertTransition(from, to);
+
+    if (from !== OrderStatus.DELIVERY_FAILED) {
+      throw new ConflictError(
+        "Redelivery can only be initiated from DELIVERY_FAILED",
+      );
+    }
+
+    return runInTransaction(async (tx) => {
+      const orderRepo = new OrderRepository(tx);
+      const shipmentRepo = new ShipmentRepository(tx);
+      const attemptRepo = new DeliveryAttemptRepository(tx);
+
+      const locked = await orderRepo.lockById(orderId);
+      if (!locked) {
+        throw new NotFoundError("Order not found");
+      }
+
+      if (locked.orderStatus !== OrderStatus.DELIVERY_FAILED) {
+        throw new ConflictError("Order status has changed");
+      }
+
+      assertOrderStatusTransition(OrderStatus.DELIVERY_FAILED, to);
+
+      await attemptRepo.supersedeOpen(orderId);
+
+      await shipmentRepo.resetForRedelivery(orderId);
+
+      await orderRepo.clearDeliveryPartner({
+        orderId,
+        expectedStatus: OrderStatus.DELIVERY_FAILED,
+      });
+
+      const updated = await orderRepo.updateStatus({
+        orderId,
+        expectedStatus: OrderStatus.DELIVERY_FAILED,
+        nextStatus: to,
+      });
+
+      if (updated.count !== 1) {
+        throw new ConflictError("Order status update failed");
+      }
+
+      const attemptNumber = await attemptRepo.nextAttemptNumber(orderId);
+      await attemptRepo.createInProgress({
+        orderId,
+        attemptNumber,
+        method: shipment.method,
+        deliveryPartnerId: null,
+        carrier: null,
+        awb: null,
+        trackingUrl: null,
+      });
+
+      await recordCommerceAudit(tx, {
+        actorUserId,
+        action: ORDER_ACTIONS.STATUS_CHANGED,
+        entityType: ORDER_AUDIT_ENTITY_TYPE,
+        entityId: orderId,
+        metadata: {
+          previousStatus: from,
+          newStatus: to,
+          redeliver: true,
+          attemptNumber,
+          fulfillmentMethod: shipment.method,
+          processedByRole: role,
+        },
+      });
+
+      const detail = await orderRepo.findDetailById(orderId);
+      if (!detail) {
+        throw new NotFoundError("Order not found");
+      }
+
+      const redeliveryEvent =
+        await orderNotificationContextService.buildOrderRedeliveryEvent(
+          orderId,
+          attemptNumber,
+        );
+      if (redeliveryEvent) {
+        notificationDispatcher.emit(redeliveryEvent);
+      }
+
+      return toOrderDetailDto(detail);
     });
   }
 }

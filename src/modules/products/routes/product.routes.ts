@@ -804,6 +804,42 @@ productRouter.delete(
 
 /**
  * @openapi
+ * /api/v1/products/{id}/enable:
+ *   post:
+ *     tags: [Products]
+ *     summary: Enable a product
+ *     description: |
+ *       Seller only. Transitions own product from `DISABLED` to `APPROVED`.
+ *       Invalid transitions return 409.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Product enabled successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden — approved seller only
+ *       404:
+ *         description: Product not found
+ *       409:
+ *         description: Invalid state transition
+ */
+productRouter.post(
+  "/:id/enable",
+  authenticate,
+  authorizePermission(permissions.products.update),
+  validate({ params: productIdParamSchema }),
+  productController.enableProduct,
+);
+
+/**
+ * @openapi
  * /api/v1/products/{id}/approve:
  *   post:
  *     tags: [Products]
@@ -1045,6 +1081,11 @@ productRouter.get(
  *       properties:
  *         id: { type: string, format: uuid }
  *         businessName: { type: string, example: MedEquip Solutions }
+ *         commissionPercentage:
+ *           type: string
+ *           nullable: true
+ *           example: "10.00"
+ *           description: Seller platform commission rate (0–100); null until approved.
  *     ProductMedia:
  *       type: object
  *       properties:

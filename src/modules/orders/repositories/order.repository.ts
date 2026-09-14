@@ -126,6 +126,20 @@ const orderDetailSelect = {
       createdAt: "asc" as const,
     },
   },
+  deliveryAttempts: {
+    select: {
+      id: true,
+      attemptNumber: true,
+      method: true,
+      status: true,
+      failureReason: true,
+      failedAt: true,
+      createdAt: true,
+    },
+    orderBy: {
+      attemptNumber: "asc" as const,
+    },
+  },
   deliveryPartnerReview: {
     select: {
       id: true,

@@ -6,6 +6,7 @@ import {
   renderOrderConfirmedEmail,
   renderOrderDeliveredEmail,
   renderOrderPlacedEmail,
+  renderOrderRedeliveryEmail,
   renderOrderShippedEmail,
   renderPasswordResetEmail,
   renderProductApprovedEmail,
@@ -14,6 +15,7 @@ import {
   renderSellerRejectedEmail,
 } from "../templates/index.js";
 import type { RenderedEmail, TemplateDataMap } from "../types/email.types.js";
+import { AppError } from "../../../shared/errors/app.errors.js";
 
 export class TemplateService {
   render<T extends keyof TemplateDataMap>(
@@ -45,9 +47,15 @@ export class TemplateService {
         return renderOrderDeliveredEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_DELIVERED]);
       case EMAIL_TEMPLATE_IDS.DELIVERY_FAILED:
         return renderDeliveryFailedEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.DELIVERY_FAILED]);
+      case EMAIL_TEMPLATE_IDS.ORDER_REDELIVERY:
+        return renderOrderRedeliveryEmail(data as TemplateDataMap[typeof EMAIL_TEMPLATE_IDS.ORDER_REDELIVERY]);
       default: {
         const exhaustiveCheck: never = templateId;
-        throw new Error(`Unsupported email template: ${exhaustiveCheck}`);
+        throw new AppError(
+          `Unsupported email template: ${exhaustiveCheck}`,
+          500,
+          "EMAIL_TEMPLATE_UNSUPPORTED",
+        );
       }
     }
   }

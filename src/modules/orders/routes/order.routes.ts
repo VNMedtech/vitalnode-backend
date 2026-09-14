@@ -722,6 +722,40 @@ orderRouter.post(
 
 /**
  * @openapi
+ * /api/v1/orders/{id}/redeliver:
+ *   post:
+ *     tags: [Orders]
+ *     summary: Restart fulfillment after delivery failure
+ *     description: |
+ *       Admin only. Transitions DELIVERY_FAILED → CONFIRMED for the same order.
+ *       Keeps shipment method; clears partner/tracking/failure fields; starts a
+ *       new DeliveryAttempt. Inventory, payment, and settlements are unchanged.
+ *       In-app resolution from DELIVERY_FAILED is redeliver only (no cancel/refund).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Redelivery initiated; order is CONFIRMED again
+ *       403:
+ *         description: Non-admin actor forbidden
+ *       409:
+ *         description: Order is not in DELIVERY_FAILED
+ */
+orderRouter.post(
+  "/:id/redeliver",
+  authenticate,
+  authorizePermission(permissions.orders.updateStatus),
+  validate({ params: orderIdParamSchema }),
+  orderController.redeliverOrder,
+);
+
+/**
+ * @openapi
  * /api/v1/orders/{id}/assign-delivery-partner:
  *   post:
  *     tags: [Orders]
