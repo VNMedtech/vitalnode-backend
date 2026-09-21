@@ -53,18 +53,20 @@ export const UPLOAD_TYPE_ALLOWED_ROLES: Record<
   UploadTypeValue,
   readonly UserRole[]
 > = {
-  [UPLOAD_TYPES.PRODUCT_IMAGE]: [UserRole.SELLER, UserRole.ADMIN],
-  [UPLOAD_TYPES.PRODUCT_DOCUMENT]: [UserRole.SELLER, UserRole.ADMIN],
-  [UPLOAD_TYPES.HANDOVER_PROOF]: [UserRole.SELLER, UserRole.ADMIN],
+  [UPLOAD_TYPES.PRODUCT_IMAGE]: [UserRole.SELLER, UserRole.ADMIN, UserRole.SUB_ADMIN],
+  [UPLOAD_TYPES.PRODUCT_DOCUMENT]: [UserRole.SELLER, UserRole.ADMIN, UserRole.SUB_ADMIN],
+  [UPLOAD_TYPES.HANDOVER_PROOF]: [UserRole.SELLER, UserRole.ADMIN, UserRole.SUB_ADMIN],
   [UPLOAD_TYPES.DELIVERY_PROOF]: [
     UserRole.DELIVERY_PARTNER,
     UserRole.ADMIN,
+    UserRole.SUB_ADMIN,
   ],
   [UPLOAD_TYPES.PROFILE_IMAGE]: [
     UserRole.BUYER,
     UserRole.SELLER,
     UserRole.DELIVERY_PARTNER,
     UserRole.ADMIN,
+    UserRole.SUB_ADMIN,
   ],
 };
 

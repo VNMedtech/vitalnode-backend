@@ -16,9 +16,25 @@ datasource db {
 
 enum UserRole {
   ADMIN
+  SUB_ADMIN
   BUYER
   SELLER
   DELIVERY_PARTNER
+}
+
+enum AdminModule {
+  USERS
+  PRODUCTS_APPROVE
+  PRODUCTS_MANAGE
+  TEMPLATES
+  ORDERS
+  SETTLEMENTS
+  INVENTORY
+  CATEGORIES
+  REVIEWS
+  DP_REVIEWS
+  AUDIT
+  REPORTS
 }
 
 enum UserStatus {
@@ -198,9 +214,22 @@ model User {
   authSessions           AuthSession[]
   passwordResetTokens    PasswordResetToken[]
   createdSettlementBatches SettlementBatch[]    @relation("SettlementBatchCreator")
+  subAdminModules          SubAdminModulePermission[]
 
   @@index([role])
   @@index([status])
+}
+
+model SubAdminModulePermission {
+  id        String      @id @default(uuid())
+  userId    String
+  module    AdminModule
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, module])
+  @@index([userId])
 }
 
 // =============================================================================

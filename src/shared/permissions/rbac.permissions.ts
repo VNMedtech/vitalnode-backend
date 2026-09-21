@@ -137,6 +137,14 @@ const allPermissions = Object.values(permissions).flatMap((group) =>
 
 export const rolePermissions: Record<UserRole, readonly Permission[]> = {
   [UserRole.ADMIN]: allPermissions,
+  [UserRole.SUB_ADMIN]: [
+    permissions.users.readProfile,
+    permissions.users.updateProfile,
+    permissions.users.changePassword,
+    permissions.notifications.read,
+    permissions.uploads.create,
+    permissions.uploads.delete,
+  ],
   [UserRole.BUYER]: [
     permissions.users.readProfile,
     permissions.users.updateProfile,

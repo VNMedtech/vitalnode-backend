@@ -518,7 +518,7 @@ productRouter.get(
 productRouter.get(
   "/admin",
   authenticate,
-  authorize([UserRole.ADMIN]),
+  authorize([UserRole.ADMIN, UserRole.SUB_ADMIN]),
   authorizePermission(permissions.products.read),
   validate({ query: listAdminProductsQuerySchema }),
   productController.listAdminProducts,
@@ -553,7 +553,7 @@ productRouter.get(
 productRouter.get(
   "/admin/:id",
   authenticate,
-  authorize([UserRole.ADMIN]),
+  authorize([UserRole.ADMIN, UserRole.SUB_ADMIN]),
   authorizePermission(permissions.products.read),
   validate({ params: productIdParamSchema }),
   productController.getAdminProductById,
@@ -617,7 +617,7 @@ productRouter.get(
 productRouter.patch(
   "/admin/:id",
   authenticate,
-  authorize([UserRole.ADMIN]),
+  authorize([UserRole.ADMIN, UserRole.SUB_ADMIN]),
   authorizePermission(permissions.products.update),
   productFileUpload,
   validate({
@@ -657,7 +657,7 @@ productRouter.patch(
 productRouter.post(
   "/admin/:id/disable",
   authenticate,
-  authorize([UserRole.ADMIN]),
+  authorize([UserRole.ADMIN, UserRole.SUB_ADMIN]),
   authorizePermission(permissions.products.delete),
   validate({ params: productIdParamSchema }),
   productController.disableAdminProduct,
@@ -693,7 +693,7 @@ productRouter.post(
 productRouter.post(
   "/admin/:id/enable",
   authenticate,
-  authorize([UserRole.ADMIN]),
+  authorize([UserRole.ADMIN, UserRole.SUB_ADMIN]),
   authorizePermission(permissions.products.update),
   validate({ params: productIdParamSchema }),
   productController.enableAdminProduct,

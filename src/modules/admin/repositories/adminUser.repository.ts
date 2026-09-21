@@ -134,6 +134,7 @@ function buildVerificationStatusWhere(
           { role: UserRole.BUYER },
           { role: UserRole.DELIVERY_PARTNER },
           { role: UserRole.ADMIN },
+          { role: UserRole.SUB_ADMIN },
           {
             role: UserRole.SELLER,
             sellerProfile: { approvalStatus: SellerApprovalStatus.ACTIVE },
@@ -150,7 +151,7 @@ function buildAdminUsersWhere(
 
   const where: Prisma.UserWhereInput = {
     deletedAt: null,
-    ...(role ? { role } : {}),
+    ...(role ? { role } : { role: { not: UserRole.SUB_ADMIN } }),
     ...(status ? { status } : {}),
     ...(from || to
       ? {

@@ -8,7 +8,7 @@ import {
 } from "../../../shared/errors/app.errors.js";
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
-import { UserRole } from "../../../shared/enums/userRole.enum.js";
+import { UserRole, isAdminPortalRole } from "../../../shared/enums/userRole.enum.js";
 import { buildPaginationMeta } from "../../../shared/responses/api.response.js";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
 import { CategoryRepository } from "../../categories/repositories/category.repository.js";
@@ -533,7 +533,7 @@ export class ProductService {
         ...(shouldReapprove
           ? { newStatus: ProductStatus.PENDING_APPROVAL }
           : {}),
-        ...(actorRole === UserRole.ADMIN ? { adminOverride: true } : {}),
+        ...(isAdminPortalRole(actorRole) ? { adminOverride: true } : {}),
       },
     });
   }

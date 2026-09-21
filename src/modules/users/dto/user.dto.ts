@@ -44,6 +44,7 @@ export const userProfileDtoSchema = z.object({
   buyerProfile: buyerProfileSummaryDtoSchema.nullable(),
   sellerProfile: sellerProfileSummaryDtoSchema.nullable(),
   deliveryPartnerProfile: deliveryPartnerProfileSummaryDtoSchema.nullable(),
+  adminModules: z.array(z.string()).optional(),
 });
 
 export type UserProfileDtoSchema = z.infer<typeof userProfileDtoSchema>;

@@ -1,4 +1,9 @@
-export { UserRole } from "./userRole.enum.js";
+export { UserRole, isAdminPortalRole } from "./userRole.enum.js";
+export {
+  ADMIN_MODULE_VALUES,
+  ADMIN_MODULE_CATALOG,
+  type AdminModule,
+} from "./adminModule.enum.js";
 export { UserStatus } from "./userStatus.enum.js";
 export { SellerApprovalStatus } from "./sellerApprovalStatus.enum.js";
 export { ProductStatus } from "./productStatus.enum.js";

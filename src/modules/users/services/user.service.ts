@@ -6,6 +6,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../../../shared/errors/app.errors.js";
+import { ADMIN_MODULE_VALUES } from "../../../shared/enums/adminModule.enum.js";
 import { UserRole } from "../../../shared/enums/userRole.enum.js";
 import { UserStatus } from "../../../shared/enums/userStatus.enum.js";
 import { hashPassword, verifyPassword } from "../../../utils/password.util.js";
@@ -46,6 +47,13 @@ function uniqueConstraintTargets(error: unknown): string[] {
 }
 
 function toUserProfileDto(record: UserProfileRecord): UserProfileDto {
+  const adminModules =
+    record.role === UserRole.ADMIN
+      ? [...ADMIN_MODULE_VALUES]
+      : record.role === UserRole.SUB_ADMIN
+        ? record.subAdminModules.map((row) => row.module)
+        : undefined;
+
   return {
     id: record.id,
     email: record.email,
@@ -67,6 +75,7 @@ function toUserProfileDto(record: UserProfileRecord): UserProfileDto {
         }
       : null,
     deliveryPartnerProfile: record.deliveryPartnerProfile,
+    ...(adminModules ? { adminModules } : {}),
   };
 }
 

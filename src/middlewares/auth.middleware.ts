@@ -12,6 +12,7 @@ import {
   isDisabledSellerFulfillmentRoute,
 } from "../shared/constants/disabledAccountFulfillment.constants.js";
 import { SellerApprovalStatus } from "../shared/enums/sellerApprovalStatus.enum.js";
+import type { AdminModule } from "../shared/enums/adminModule.enum.js";
 import { UserRole } from "../shared/enums/userRole.enum.js";
 import { UserStatus } from "../shared/enums/userStatus.enum.js";
 import { verifyAccessToken } from "../utils/jwt.util.js";
@@ -71,6 +72,11 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
             approvalStatus: true,
           },
         },
+        subAdminModules: {
+          select: {
+            module: true,
+          },
+        },
       },
     });
 
@@ -124,6 +130,13 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
       email: user.email,
       role,
       sellerApprovalStatus,
+      ...(role === UserRole.SUB_ADMIN
+        ? {
+            adminModules: user.subAdminModules.map(
+              (row) => row.module as AdminModule,
+            ),
+          }
+        : {}),
       ...(user.mustChangePassword ? { mustChangePassword: true } : {}),
     };
 

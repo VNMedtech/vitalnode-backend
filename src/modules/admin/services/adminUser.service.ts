@@ -50,7 +50,7 @@ function assertNotSelf(actorUserId: string, targetUserId: string): void {
 }
 
 function assertTargetIsNotAdmin(user: { role: string }): void {
-  if (user.role === UserRole.ADMIN) {
+  if (user.role === UserRole.ADMIN || user.role === UserRole.SUB_ADMIN) {
     throw new ForbiddenError("Administrator accounts cannot be modified through user management");
   }
 }

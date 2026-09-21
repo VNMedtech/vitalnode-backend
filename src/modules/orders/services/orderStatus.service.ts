@@ -17,7 +17,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../../shared/errors/app.errors.js";
-import { UserRole } from "../../../shared/enums/userRole.enum.js";
+import { UserRole, isAdminPortalRole } from "../../../shared/enums/userRole.enum.js";
 import {
   assertOrderStatusTransition,
   canTransitionOrderStatus,
@@ -192,7 +192,7 @@ export class OrderStatusService {
     role: UserRole,
     orderId: string,
   ): Promise<OrderDetailRecord> {
-    if (role === UserRole.ADMIN) {
+    if (isAdminPortalRole(role)) {
       const order = await this.orderRepo.findDetailById(orderId);
       if (!order) {
         throw new NotFoundError("Order not found");
@@ -318,7 +318,7 @@ export class OrderStatusService {
     orderId: string,
     input: SwitchFulfillmentMethodInput,
   ): Promise<OrderDetailDto> {
-    if (role !== UserRole.ADMIN) {
+    if (!isAdminPortalRole(role)) {
       throw new ForbiddenError("Only admin can set or switch fulfillment method");
     }
 
@@ -445,7 +445,7 @@ export class OrderStatusService {
     orderId: string,
     input: SaveTrackingInput,
   ): Promise<OrderDetailDto> {
-    if (role !== UserRole.ADMIN) {
+    if (!isAdminPortalRole(role)) {
       throw new ForbiddenError("Only admin can save or update tracking details");
     }
 
@@ -661,7 +661,7 @@ export class OrderStatusService {
       );
     }
 
-    if (file && role === UserRole.ADMIN && !hasHandoverProof) {
+    if (file && isAdminPortalRole(role) && !hasHandoverProof) {
       throw new ValidationError(
         "Handover proof must be uploaded by the seller before marking shipped",
       );
@@ -795,7 +795,7 @@ export class OrderStatusService {
       );
     }
 
-    if (file && role === UserRole.ADMIN && !hasHandoverProof) {
+    if (file && isAdminPortalRole(role) && !hasHandoverProof) {
       throw new ValidationError(
         "Handover proof must be uploaded by the seller before marking shipped",
       );
@@ -1018,7 +1018,7 @@ export class OrderStatusService {
       return this.markDeliveredInternalDp(actorUserId, orderId, file);
     }
 
-    if (role === UserRole.ADMIN) {
+    if (isAdminPortalRole(role)) {
       const order = await this.orderRepo.findDetailById(orderId);
       if (!order) {
         throw new NotFoundError("Order not found");
@@ -1287,7 +1287,7 @@ export class OrderStatusService {
       );
     }
 
-    if (role === UserRole.ADMIN) {
+    if (isAdminPortalRole(role)) {
       const order = await this.orderRepo.findDetailById(orderId);
       if (!order) {
         throw new NotFoundError("Order not found");
@@ -1398,7 +1398,7 @@ export class OrderStatusService {
     role: UserRole,
     orderId: string,
   ): Promise<OrderDetailDto> {
-    if (role !== UserRole.ADMIN) {
+    if (!isAdminPortalRole(role)) {
       throw new ForbiddenError("Only admin can initiate order redelivery");
     }
 

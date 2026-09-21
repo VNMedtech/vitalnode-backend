@@ -45,6 +45,11 @@ const userProfileSelect = {
       postalCode: true,
     },
   },
+  subAdminModules: {
+    select: {
+      module: true,
+    },
+  },
 } satisfies Prisma.UserSelect;
 
 export type UserProfileRecord = Prisma.UserGetPayload<{

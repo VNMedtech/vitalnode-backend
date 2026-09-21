@@ -263,4 +263,36 @@ describe("Permission system", () => {
       ).toBe(true);
     });
   });
+
+  describe("sub-admin module checks", () => {
+    it("grants full module access and denies unassigned modules", () => {
+      expect(
+        userHasPermission(
+          { role: UserRole.SUB_ADMIN, adminModules: ["CATEGORIES"] },
+          permissions.categories.create,
+        ),
+      ).toBe(true);
+      expect(
+        userHasPermission(
+          { role: UserRole.SUB_ADMIN, adminModules: ["CATEGORIES"] },
+          permissions.orders.assignDelivery,
+        ),
+      ).toBe(false);
+      expect(
+        userHasPermission(
+          { role: UserRole.SUB_ADMIN, adminModules: ["CATEGORIES"] },
+          permissions.admin.manage,
+        ),
+      ).toBe(false);
+    });
+
+    it("keeps profile access even without extra modules", () => {
+      expect(
+        userHasPermission(
+          { role: UserRole.SUB_ADMIN, adminModules: [] },
+          permissions.users.readProfile,
+        ),
+      ).toBe(true);
+    });
+  });
 });
