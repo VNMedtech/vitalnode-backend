@@ -34,6 +34,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies and build in CI
+        env:
+          # prisma generate loads prisma.config.ts which requires DATABASE_URL;
+          # no real DB connection is needed for client generation.
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public
         run: |
           set -euo pipefail
           npm ci
