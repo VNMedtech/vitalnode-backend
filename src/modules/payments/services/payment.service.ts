@@ -90,6 +90,7 @@ export class PaymentService {
         break;
       }
       case UserRole.ADMIN:
+      case UserRole.SUB_ADMIN:
         order = await this.orderRepo.findDetailById(orderId);
         break;
       default:

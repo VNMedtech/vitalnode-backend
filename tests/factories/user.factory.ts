@@ -210,6 +210,51 @@ export async function createDeliveryPartnerUser(
   });
 }
 
+export async function createSubAdminViaPrisma(
+  prisma: PrismaClient,
+  overrides: {
+    email?: string;
+    password?: string;
+    modules?: Array<
+      | "USERS"
+      | "PRODUCTS_APPROVE"
+      | "PRODUCTS_MANAGE"
+      | "TEMPLATES"
+      | "ORDERS"
+      | "SETTLEMENTS"
+      | "INVENTORY"
+      | "CATEGORIES"
+      | "REVIEWS"
+      | "DP_REVIEWS"
+      | "AUDIT"
+      | "REPORTS"
+    >;
+  } = {},
+) {
+  const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const email = overrides.email ?? `subadmin-${unique}@example.com`;
+  const password = overrides.password ?? DEFAULT_PASSWORD;
+  const modules = overrides.modules ?? ["CATEGORIES"];
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      passwordHash: await hashPassword(password),
+      role: UserRole.SUB_ADMIN,
+      status: UserStatus.ACTIVE,
+      firstName: "Sub",
+      lastName: "Admin",
+      mustChangePassword: false,
+      subAdminModules: {
+        create: modules.map((module) => ({ module })),
+      },
+    },
+    include: { subAdminModules: true },
+  });
+
+  return { user, email, password, modules };
+}
+
 export async function loginDeliveryPartnerViaApi(
   app: Express,
   email: string,

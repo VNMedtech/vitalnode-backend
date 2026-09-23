@@ -17,7 +17,7 @@ import {
   ValidationError,
 } from "../../../shared/errors/app.errors.js";
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
-import { UserRole } from "../../../shared/enums/userRole.enum.js";
+import { UserRole, isAdminPortalRole } from "../../../shared/enums/userRole.enum.js";
 import { canTransitionOrderStatus } from "../../../shared/stateMachine/orderStatus.guard.js";
 import { withIdempotency } from "../../../shared/idempotency/withIdempotency.js";
 import { runInTransaction } from "../../../shared/transactions/runInTransaction.js";
@@ -88,7 +88,7 @@ export class OrderCancellationService {
     buyerId?: string,
     sellerId?: string,
   ): void {
-    if (role === UserRole.ADMIN) {
+    if (isAdminPortalRole(role)) {
       return;
     }
 

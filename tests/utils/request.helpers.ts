@@ -856,6 +856,36 @@ export function adminUserRequest(app: Express, accessToken: string) {
   };
 }
 
+export function subAdminRequest(app: Express, accessToken: string) {
+  const auth = (req: Test) =>
+    req.set("Authorization", `Bearer ${accessToken}`);
+
+  return {
+    modules: () => auth(request(app).get(`${ADMIN_BASE}/sub-admins/modules`)),
+
+    list: (query: Record<string, string | number | undefined> = {}) =>
+      auth(request(app).get(`${ADMIN_BASE}/sub-admins`)).query(query),
+
+    create: (body: Record<string, unknown>) =>
+      auth(request(app).post(`${ADMIN_BASE}/sub-admins`)).send(body),
+
+    getById: (id: string) =>
+      auth(request(app).get(`${ADMIN_BASE}/sub-admins/${id}`)),
+
+    update: (id: string, body: Record<string, unknown>) =>
+      auth(request(app).patch(`${ADMIN_BASE}/sub-admins/${id}`)).send(body),
+
+    disable: (id: string, body: Record<string, unknown> = {}) =>
+      auth(request(app).patch(`${ADMIN_BASE}/sub-admins/${id}/disable`)).send(body),
+
+    enable: (id: string, body: Record<string, unknown> = {}) =>
+      auth(request(app).patch(`${ADMIN_BASE}/sub-admins/${id}/enable`)).send(body),
+
+    delete: (id: string) =>
+      auth(request(app).delete(`${ADMIN_BASE}/sub-admins/${id}`)),
+  };
+}
+
 export function sellerProbeRequest(app: Express, accessToken: string): Test {
   return request(app)
     .post("/api/v1/test/seller-operational")

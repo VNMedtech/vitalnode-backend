@@ -63,6 +63,24 @@ export const uploadDocument: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const uploadVideo: RequestHandler = async (req, res, next) => {
+  try {
+    const actor = requireAuthenticatedUser(req);
+    const { uploadType } = req.body as { uploadType: string };
+    const upload = await uploadService.uploadVideo(
+      actor.id,
+      actor.role,
+      uploadType as Parameters<UploadService["uploadVideo"]>[2],
+      req.file,
+    );
+    res
+      .status(201)
+      .json(successResponse(upload, "Video uploaded successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getFileMetadata: RequestHandler = async (req, res, next) => {
   try {
     const actor = requireAuthenticatedUser(req);

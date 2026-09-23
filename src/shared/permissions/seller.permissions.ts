@@ -4,11 +4,13 @@
  */
 import { SellerApprovalStatus } from "../enums/sellerApprovalStatus.enum.js";
 import { UserRole } from "../enums/userRole.enum.js";
+import type { AdminModule } from "../enums/adminModule.enum.js";
 import {
   permissions,
   roleHasPermission,
   type Permission,
 } from "./rbac.permissions.js";
+import { subAdminHasPermission } from "./adminModules.permissions.js";
 
 /** Permissions every seller account may hold regardless of approval status. */
 export const sellerAccountPermissions = [
@@ -114,6 +116,8 @@ export function sellerHasPermission(
 export interface PermissionSubject {
   role: UserRole;
   sellerApprovalStatus?: SellerApprovalStatus;
+  /** Present when role is SUB_ADMIN — drives module-gated permission checks. */
+  adminModules?: readonly AdminModule[];
 }
 
 export function userHasPermission(
@@ -125,6 +129,10 @@ export function userHasPermission(
       return false;
     }
     return sellerHasPermission(subject.sellerApprovalStatus, permission);
+  }
+
+  if (subject.role === UserRole.SUB_ADMIN) {
+    return subAdminHasPermission(subject.adminModules, permission);
   }
 
   return roleHasPermission(subject.role, permission);

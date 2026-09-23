@@ -204,6 +204,7 @@ export class OrderService {
         break;
       }
       case UserRole.ADMIN:
+      case UserRole.SUB_ADMIN:
         record = await this.orderRepo.findDetailById(orderId);
         break;
       default:

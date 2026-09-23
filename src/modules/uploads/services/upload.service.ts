@@ -14,7 +14,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../../shared/errors/app.errors.js";
-import { UserRole } from "../../../shared/enums/userRole.enum.js";
+import { UserRole, isAdminPortalRole } from "../../../shared/enums/userRole.enum.js";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
 import {
   UPLOAD_ACTIONS,
@@ -46,7 +46,7 @@ function assertCanAccessUpload(
   actorRole: UserRole,
   ownerUserId: string,
 ): void {
-  if (actorRole === UserRole.ADMIN) {
+  if (isAdminPortalRole(actorRole)) {
     return;
   }
 
@@ -76,6 +76,23 @@ export class UploadService {
   }
 
   async uploadDocument(
+    actorUserId: string,
+    actorRole: UserRole,
+    uploadType: UploadTypeValue,
+    file: Express.Multer.File | undefined,
+  ): Promise<UploadDto> {
+    assertUploadTypeAllowedForRole(uploadType, actorRole);
+    const category = resolveUploadCategory(uploadType);
+    const record = await this.createUploadRecord(
+      actorUserId,
+      uploadType,
+      category,
+      file,
+    );
+    return toUploadDto(record, env.aws.signedUrlExpiresInSeconds);
+  }
+
+  async uploadVideo(
     actorUserId: string,
     actorRole: UserRole,
     uploadType: UploadTypeValue,

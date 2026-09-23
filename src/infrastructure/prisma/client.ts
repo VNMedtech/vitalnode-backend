@@ -48,11 +48,21 @@ function createPrismaClient(): PrismaClient {
   return client;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+export const prisma = (() => {
+  const existing = globalForPrisma.prisma;
+  const hasCompanyModels =
+    Boolean(existing?.whyVitalnodeSection) && Boolean(existing?.companyMember);
 
-if (env.nodeEnv !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+  if (existing && hasCompanyModels) {
+    return existing;
+  }
+
+  const client = createPrismaClient();
+  if (env.nodeEnv !== "production") {
+    globalForPrisma.prisma = client;
+  }
+  return client;
+})();
 
 export async function disconnectPrisma(): Promise<void> {
   await prisma.$disconnect();

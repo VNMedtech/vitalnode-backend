@@ -1,3 +1,4 @@
+import type { AdminModule } from "../../../shared/enums/adminModule.enum.js";
 import type { UserRole } from "../../../shared/enums/userRole.enum.js";
 import type { UserStatus } from "../../../shared/enums/userStatus.enum.js";
 
@@ -46,6 +47,7 @@ export interface UserProfileDto {
   buyerProfile: BuyerProfileSummary | null;
   sellerProfile: SellerProfileSummary | null;
   deliveryPartnerProfile: DeliveryPartnerProfileSummary | null;
+  adminModules?: AdminModule[];
 }
 
 export interface UpdateProfileInput {

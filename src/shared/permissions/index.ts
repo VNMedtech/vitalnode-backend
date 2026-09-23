@@ -16,3 +16,8 @@ export {
   getSellerAccessDeniedMessage,
   type PermissionSubject,
 } from "./seller.permissions.js";
+export {
+  adminModulePermissions,
+  resolveAdminModulePermissions,
+  subAdminHasPermission,
+} from "./adminModules.permissions.js";

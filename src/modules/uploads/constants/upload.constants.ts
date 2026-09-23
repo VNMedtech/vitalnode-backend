@@ -17,6 +17,9 @@ export const UPLOAD_TYPES = {
   HANDOVER_PROOF: "HANDOVER_PROOF",
   DELIVERY_PROOF: "DELIVERY_PROOF",
   PROFILE_IMAGE: "PROFILE_IMAGE",
+  BLOG_IMAGE: "BLOG_IMAGE",
+  BLOG_VIDEO: "BLOG_VIDEO",
+  COMPANY_IMAGE: "COMPANY_IMAGE",
 } as const;
 
 export const IMAGE_UPLOAD_TYPES = [
@@ -24,10 +27,16 @@ export const IMAGE_UPLOAD_TYPES = [
   UPLOAD_TYPES.HANDOVER_PROOF,
   UPLOAD_TYPES.DELIVERY_PROOF,
   UPLOAD_TYPES.PROFILE_IMAGE,
+  UPLOAD_TYPES.BLOG_IMAGE,
+  UPLOAD_TYPES.COMPANY_IMAGE,
 ] as const satisfies readonly UploadTypeValue[];
 
 export const DOCUMENT_UPLOAD_TYPES = [
   UPLOAD_TYPES.PRODUCT_DOCUMENT,
+] as const satisfies readonly UploadTypeValue[];
+
+export const VIDEO_UPLOAD_TYPES = [
+  UPLOAD_TYPES.BLOG_VIDEO,
 ] as const satisfies readonly UploadTypeValue[];
 
 export const UPLOAD_TYPE_S3_PREFIX: Record<UploadTypeValue, string> = {
@@ -36,36 +45,47 @@ export const UPLOAD_TYPE_S3_PREFIX: Record<UploadTypeValue, string> = {
   [UPLOAD_TYPES.HANDOVER_PROOF]: "uploads/proofs",
   [UPLOAD_TYPES.DELIVERY_PROOF]: "uploads/proofs",
   [UPLOAD_TYPES.PROFILE_IMAGE]: "uploads/profiles",
+  [UPLOAD_TYPES.BLOG_IMAGE]: "uploads/blogs",
+  [UPLOAD_TYPES.BLOG_VIDEO]: "uploads/blogs",
+  [UPLOAD_TYPES.COMPANY_IMAGE]: "uploads/company",
 };
 
 export const UPLOAD_TYPE_CATEGORY: Record<
   UploadTypeValue,
-  "IMAGE" | "DOCUMENT"
+  "IMAGE" | "DOCUMENT" | "VIDEO"
 > = {
   [UPLOAD_TYPES.PRODUCT_IMAGE]: "IMAGE",
   [UPLOAD_TYPES.PRODUCT_DOCUMENT]: "DOCUMENT",
   [UPLOAD_TYPES.HANDOVER_PROOF]: "IMAGE",
   [UPLOAD_TYPES.DELIVERY_PROOF]: "IMAGE",
   [UPLOAD_TYPES.PROFILE_IMAGE]: "IMAGE",
+  [UPLOAD_TYPES.BLOG_IMAGE]: "IMAGE",
+  [UPLOAD_TYPES.BLOG_VIDEO]: "VIDEO",
+  [UPLOAD_TYPES.COMPANY_IMAGE]: "IMAGE",
 };
 
 export const UPLOAD_TYPE_ALLOWED_ROLES: Record<
   UploadTypeValue,
   readonly UserRole[]
 > = {
-  [UPLOAD_TYPES.PRODUCT_IMAGE]: [UserRole.SELLER, UserRole.ADMIN],
-  [UPLOAD_TYPES.PRODUCT_DOCUMENT]: [UserRole.SELLER, UserRole.ADMIN],
-  [UPLOAD_TYPES.HANDOVER_PROOF]: [UserRole.SELLER, UserRole.ADMIN],
+  [UPLOAD_TYPES.PRODUCT_IMAGE]: [UserRole.SELLER, UserRole.ADMIN, UserRole.SUB_ADMIN],
+  [UPLOAD_TYPES.PRODUCT_DOCUMENT]: [UserRole.SELLER, UserRole.ADMIN, UserRole.SUB_ADMIN],
+  [UPLOAD_TYPES.HANDOVER_PROOF]: [UserRole.SELLER, UserRole.ADMIN, UserRole.SUB_ADMIN],
   [UPLOAD_TYPES.DELIVERY_PROOF]: [
     UserRole.DELIVERY_PARTNER,
     UserRole.ADMIN,
+    UserRole.SUB_ADMIN,
   ],
   [UPLOAD_TYPES.PROFILE_IMAGE]: [
     UserRole.BUYER,
     UserRole.SELLER,
     UserRole.DELIVERY_PARTNER,
     UserRole.ADMIN,
+    UserRole.SUB_ADMIN,
   ],
+  [UPLOAD_TYPES.BLOG_IMAGE]: [UserRole.ADMIN, UserRole.SUB_ADMIN],
+  [UPLOAD_TYPES.BLOG_VIDEO]: [UserRole.ADMIN, UserRole.SUB_ADMIN],
+  [UPLOAD_TYPES.COMPANY_IMAGE]: [UserRole.ADMIN, UserRole.SUB_ADMIN],
 };
 
 export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png"] as const;
@@ -76,9 +96,13 @@ export const DOCUMENT_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
 
+export const VIDEO_MIME_TYPES = ["video/mp4", "video/webm"] as const;
+
 export const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"] as const;
 
 export const DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx"] as const;
+
+export const VIDEO_EXTENSIONS = [".mp4", ".webm"] as const;
 
 export const MIME_TO_EXTENSIONS: Record<string, readonly string[]> = {
   "image/jpeg": [".jpg", ".jpeg"],
@@ -88,6 +112,8 @@ export const MIME_TO_EXTENSIONS: Record<string, readonly string[]> = {
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
     ".docx",
   ],
+  "video/mp4": [".mp4"],
+  "video/webm": [".webm"],
 };
 
 export const BLOCKED_MIME_TYPES = [

@@ -4,7 +4,7 @@
   "description": "Medical Equipment Marketplace API",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts,json --exec \"tsx src/index.ts\"",
+    "dev": "nodemon --watch src --watch generated/prisma --ext ts,js,json --exec \"tsx src/index.ts\"",
     "prebuild": "prisma generate",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/index.js",

@@ -11,7 +11,7 @@ import {
 } from "../../../shared/errors/app.errors.js";
 import { ProductStatus } from "../../../shared/enums/productStatus.enum.js";
 import { SellerApprovalStatus } from "../../../shared/enums/sellerApprovalStatus.enum.js";
-import { UserRole } from "../../../shared/enums/userRole.enum.js";
+import { UserRole, isAdminPortalRole } from "../../../shared/enums/userRole.enum.js";
 import { withIdempotency } from "../../../shared/idempotency/withIdempotency.js";
 import { buildPaginationMeta } from "../../../shared/responses/api.response.js";
 import { runInTransaction } from "../../../shared/transactions/runInTransaction.js";
@@ -77,7 +77,7 @@ export class InventoryService {
       throw new NotFoundError("Inventory not found");
     }
 
-    if (actorRole === UserRole.ADMIN) {
+    if (isAdminPortalRole(actorRole)) {
       return inventory;
     }
 
@@ -261,7 +261,7 @@ export class InventoryService {
 
     if (actorRole === UserRole.SELLER) {
       sellerId = await this.requireApprovedSellerId(actorUserId);
-    } else if (actorRole !== UserRole.ADMIN) {
+    } else if (!isAdminPortalRole(actorRole)) {
       throw new ForbiddenError("Insufficient permissions to view inventory alerts");
     }
 

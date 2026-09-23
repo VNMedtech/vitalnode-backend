@@ -10,7 +10,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../../shared/errors/app.errors.js";
-import { UserRole } from "../../../shared/enums/userRole.enum.js";
+import { UserRole, isAdminPortalRole } from "../../../shared/enums/userRole.enum.js";
 import type { UploadTypeValue } from "../types/upload.types.js";
 import { UploadService } from "./upload.service.js";
 
@@ -72,7 +72,7 @@ export class UploadAssociationService {
       ]);
     }
 
-    if (actorRole !== UserRole.ADMIN && upload.userId !== actorUserId) {
+    if (!isAdminPortalRole(actorRole) && upload.userId !== actorUserId) {
       throw new ForbiddenError("You do not have access to this upload");
     }
 
