@@ -23,6 +23,17 @@ export const permissions = {
     update: "categories:update",
     delete: "categories:delete",
   },
+  techBlogs: {
+    create: "tech-blogs:create",
+    read: "tech-blogs:read",
+    update: "tech-blogs:update",
+    delete: "tech-blogs:delete",
+    publish: "tech-blogs:publish",
+  },
+  companyContent: {
+    read: "company-content:read",
+    manage: "company-content:manage",
+  },
   sellers: {
     approve: "sellers:approve",
     reject: "sellers:reject",

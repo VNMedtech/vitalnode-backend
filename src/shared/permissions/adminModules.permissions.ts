@@ -79,6 +79,17 @@ export const adminModulePermissions: Record<
   ],
   AUDIT: [permissions.auditLogs.read],
   REPORTS: [permissions.analytics.read, permissions.salesReports.read],
+  TECH_BLOG: [
+    permissions.techBlogs.create,
+    permissions.techBlogs.read,
+    permissions.techBlogs.update,
+    permissions.techBlogs.delete,
+    permissions.techBlogs.publish,
+  ],
+  COMPANY_CONTENT: [
+    permissions.companyContent.read,
+    permissions.companyContent.manage,
+  ],
 };
 
 export function resolveAdminModulePermissions(

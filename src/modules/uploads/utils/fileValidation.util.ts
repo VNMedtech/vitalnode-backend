@@ -12,6 +12,8 @@ import {
   IMAGE_MIME_TYPES,
   MIME_TO_EXTENSIONS,
   UPLOAD_MAX_FILE_SIZE_BYTES,
+  VIDEO_EXTENSIONS,
+  VIDEO_MIME_TYPES,
 } from "../constants/upload.constants.js";
 import type { UploadCategoryType } from "../types/upload.types.js";
 
@@ -37,6 +39,7 @@ const MAGIC_SIGNATURES: Record<string, readonly MagicSignature[]> = {
     { bytes: [0x50, 0x4b, 0x03, 0x04] },
     { bytes: [0x50, 0x4b, 0x05, 0x06] },
   ],
+  "video/webm": [{ bytes: [0x1a, 0x45, 0xdf, 0xa3] }],
 };
 
 function normalizeExtension(filename: string): string {
@@ -49,11 +52,15 @@ function normalizeExtension(filename: string): string {
 }
 
 function getAllowedMimeTypes(category: UploadCategoryType): readonly string[] {
-  return category === "IMAGE" ? IMAGE_MIME_TYPES : DOCUMENT_MIME_TYPES;
+  if (category === "IMAGE") return IMAGE_MIME_TYPES;
+  if (category === "VIDEO") return VIDEO_MIME_TYPES;
+  return DOCUMENT_MIME_TYPES;
 }
 
 function getAllowedExtensions(category: UploadCategoryType): readonly string[] {
-  return category === "IMAGE" ? IMAGE_EXTENSIONS : DOCUMENT_EXTENSIONS;
+  if (category === "IMAGE") return IMAGE_EXTENSIONS;
+  if (category === "VIDEO") return VIDEO_EXTENSIONS;
+  return DOCUMENT_EXTENSIONS;
 }
 
 function bufferMatchesSignature(

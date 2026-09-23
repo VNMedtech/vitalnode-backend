@@ -35,6 +35,8 @@ enum AdminModule {
   DP_REVIEWS
   AUDIT
   REPORTS
+  TECH_BLOG
+  COMPANY_CONTENT
 }
 
 enum UserStatus {
@@ -156,6 +158,7 @@ enum IdempotencyKeyStatus {
 enum UploadCategory {
   IMAGE
   DOCUMENT
+  VIDEO
 }
 
 enum UploadStatus {
@@ -170,6 +173,19 @@ enum UploadType {
   HANDOVER_PROOF
   DELIVERY_PROOF
   PROFILE_IMAGE
+  BLOG_IMAGE
+  BLOG_VIDEO
+  COMPANY_IMAGE
+}
+
+enum TechBlogStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum CompanyMemberType {
+  FOUNDER
+  TEAM
 }
 
 enum ReviewStatus {
@@ -215,6 +231,7 @@ model User {
   passwordResetTokens    PasswordResetToken[]
   createdSettlementBatches SettlementBatch[]    @relation("SettlementBatchCreator")
   subAdminModules          SubAdminModulePermission[]
+  techBlogs                TechBlog[]            @relation("TechBlogAuthor")
 
   @@index([role])
   @@index([status])
@@ -377,6 +394,83 @@ model Category {
 
   products  ProductCategory[]
   templates ProductTemplateCategory[]
+}
+
+// =============================================================================
+// TECH BLOG DOMAIN
+// =============================================================================
+
+model TechBlog {
+  id                    String         @id @default(uuid())
+  title                 String
+  slug                  String         @unique
+  shortDescription      String
+  category              String
+  tags                  String[]       @default([])
+  featuredImageUrl      String?
+  featuredImageUploadId String?        @unique
+  content               String         @db.Text
+  publishDate           DateTime?
+  isFeatured            Boolean        @default(false)
+  status                TechBlogStatus @default(DRAFT)
+  authorUserId          String
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  deletedAt             DateTime?
+
+  author              User        @relation("TechBlogAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  featuredImageUpload FileUpload? @relation("TechBlogFeaturedImage", fields: [featuredImageUploadId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([category])
+  @@index([isFeatured])
+  @@index([publishDate])
+  @@index([deletedAt])
+  @@index([authorUserId])
+}
+
+model WhyVitalnodeSection {
+  id          String   @id @default("why-vitalnode")
+  title       String   @default("Why Vitalnode")
+  subtitle    String?
+  isPublished Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  cards WhyVitalnodeCard[]
+}
+
+model WhyVitalnodeCard {
+  id          String @id @default(uuid())
+  sectionId   String
+  title       String
+  description String
+  iconKey     String?
+  sortOrder   Int    @default(0)
+
+  section WhyVitalnodeSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId, sortOrder])
+}
+
+model CompanyMember {
+  id            String            @id @default(uuid())
+  type          CompanyMemberType
+  name          String
+  role          String
+  bio           String?
+  imageUrl      String?
+  imageUploadId String?           @unique
+  sortOrder     Int               @default(0)
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  deletedAt     DateTime?
+
+  imageUpload FileUpload? @relation("CompanyMemberImage", fields: [imageUploadId], references: [id], onDelete: SetNull)
+
+  @@index([type, isActive, sortOrder])
+  @@index([deletedAt])
 }
 
 // =============================================================================
@@ -976,6 +1070,8 @@ model FileUpload {
   productMedia    ProductMedia?    @relation("ProductMediaUpload")
   productDocument ProductDocument? @relation("ProductDocumentUpload")
   orderProof      OrderProof?      @relation("OrderProofUpload")
+  techBlogFeaturedImage TechBlog?  @relation("TechBlogFeaturedImage")
+  companyMemberImage    CompanyMember? @relation("CompanyMemberImage")
 
   @@index([userId])
   @@index([uploadType])

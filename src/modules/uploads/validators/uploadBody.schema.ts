@@ -7,6 +7,7 @@ import {
   DOCUMENT_UPLOAD_TYPES,
   IMAGE_UPLOAD_TYPES,
   UPLOAD_TYPES,
+  VIDEO_UPLOAD_TYPES,
 } from "../constants/upload.constants.js";
 
 const uploadTypeEnum = z.enum([
@@ -15,6 +16,9 @@ const uploadTypeEnum = z.enum([
   UPLOAD_TYPES.HANDOVER_PROOF,
   UPLOAD_TYPES.DELIVERY_PROOF,
   UPLOAD_TYPES.PROFILE_IMAGE,
+  UPLOAD_TYPES.BLOG_IMAGE,
+  UPLOAD_TYPES.BLOG_VIDEO,
+  UPLOAD_TYPES.COMPANY_IMAGE,
 ]);
 
 export const uploadImageBodySchema = z
@@ -37,5 +41,16 @@ export const uploadDocumentBodySchema = z
   })
   .strict();
 
+export const uploadVideoBodySchema = z
+  .object({
+    uploadType: uploadTypeEnum.refine(
+      (value) =>
+        (VIDEO_UPLOAD_TYPES as readonly string[]).includes(value),
+      "uploadType is not valid for video uploads",
+    ),
+  })
+  .strict();
+
 export type UploadImageBodyInput = z.infer<typeof uploadImageBodySchema>;
 export type UploadDocumentBodyInput = z.infer<typeof uploadDocumentBodySchema>;
+export type UploadVideoBodyInput = z.infer<typeof uploadVideoBodySchema>;

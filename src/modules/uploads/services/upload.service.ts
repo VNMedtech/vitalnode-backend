@@ -92,6 +92,23 @@ export class UploadService {
     return toUploadDto(record, env.aws.signedUrlExpiresInSeconds);
   }
 
+  async uploadVideo(
+    actorUserId: string,
+    actorRole: UserRole,
+    uploadType: UploadTypeValue,
+    file: Express.Multer.File | undefined,
+  ): Promise<UploadDto> {
+    assertUploadTypeAllowedForRole(uploadType, actorRole);
+    const category = resolveUploadCategory(uploadType);
+    const record = await this.createUploadRecord(
+      actorUserId,
+      uploadType,
+      category,
+      file,
+    );
+    return toUploadDto(record, env.aws.signedUrlExpiresInSeconds);
+  }
+
   async storeUploadedFile(
     actorUserId: string,
     actorRole: UserRole,
