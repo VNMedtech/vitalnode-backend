@@ -27,6 +27,18 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.ref_name }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies and build in CI
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+
       - name: Configure SSH key
         shell: bash
         run: |
@@ -36,32 +48,56 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "${{ secrets.EC2_PORT || '22' }}" "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Upload release to EC2 temp directory
+      - name: Clean disk on EC2 before upload
         shell: bash
         run: |
           set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "${{ secrets.EC2_PORT || '22' }}" "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+          set -euo pipefail
+          df -h /
+          sudo -u vitalnode -H npm cache clean --force || true
+          sudo rm -rf /home/vitalnode/.npm/_cacache /tmp/vitalnode-server-release
+          if [[ -d /opt/vitalnode/server/node_modules ]]; then
+            sudo -u vitalnode -H bash -lc 'cd /opt/vitalnode/server && rm -rf node_modules'
+          fi
+          sudo apt-get clean || true
+          sudo journalctl --vacuum-size=100M || true
+          df -h /
+          EOF
+
+      - name: Upload release artifacts to EC2
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE_DIR="$(mktemp -d)"
+          mkdir -p "$STAGE_DIR"
+
+          cp package.json package-lock.json prisma.config.ts "$STAGE_DIR/"
+          cp -a dist "$STAGE_DIR/dist"
+          cp -a prisma "$STAGE_DIR/prisma"
+          mkdir -p "$STAGE_DIR/generated"
+          cp -a generated/prisma "$STAGE_DIR/generated/prisma"
+
           rsync -az --delete \
-            --exclude ".git" \
-            --exclude "node_modules" \
-            --exclude ".env" \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.EC2_PORT || '22' }}" \
-            ./ \
+            "$STAGE_DIR/" \
             "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/vitalnode-server-release/"
 
-      - name: Deploy on EC2 (install, build, migrate, restart)
+          rm -rf "$STAGE_DIR"
+
+      - name: Deploy on EC2 (prod install, migrate, restart)
         shell: bash
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/deploy_key -p "${{ secrets.EC2_PORT || '22' }}" "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
           set -euo pipefail
 
-          # Sync uploaded release into the live app directory.
+          sudo mkdir -p /opt/vitalnode/server
           sudo rsync -a --delete /tmp/vitalnode-server-release/ /opt/vitalnode/server/
           sudo chown -R vitalnode:vitalnode /opt/vitalnode/server
 
-          # Install deps, build with memory cap, and apply prod migrations.
-          sudo -u vitalnode -H bash -lc 'cd /opt/vitalnode/server && npm ci'
-          sudo -u vitalnode -H bash -lc 'set -a; source /etc/vitalnode/prod.env; set +a; export NODE_OPTIONS=--max-old-space-size=1536; cd /opt/vitalnode/server && npm run build'
+          # Production deps only — build already done in GitHub Actions.
+          sudo -u vitalnode -H bash -lc 'cd /opt/vitalnode/server && npm ci --omit=dev'
           sudo -u vitalnode -H bash -lc 'set -a; source /etc/vitalnode/prod.env; set +a; cd /opt/vitalnode/server && npm run db:migrate:deploy'
 
           sudo systemctl restart vitalnode-api
