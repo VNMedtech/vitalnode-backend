@@ -305,6 +305,8 @@ export function toOrderSummaryDto(
     orderStatus: record.orderStatus,
     totalAmount: redactPricing ? null : decimalToString(record.totalAmount),
     subtotal: redactPricing ? null : decimalToString(record.subtotal),
+    discountAmount: redactPricing ? null : decimalToString(record.discountAmount),
+    couponCode: record.couponCode ?? null,
     placedAt: record.placedAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -364,6 +366,8 @@ export function toCheckoutResultDto(input: {
   orderNumber: string;
   orderStatus: OrderDetailRecord["orderStatus"];
   subtotal: Prisma.Decimal;
+  discountAmount: Prisma.Decimal;
+  couponCode: string | null;
   totalAmount: Prisma.Decimal;
   paymentId: string;
 }): CheckoutResultDto {
@@ -372,6 +376,8 @@ export function toCheckoutResultDto(input: {
     orderNumber: input.orderNumber,
     orderStatus: input.orderStatus,
     subtotal: decimalToString(input.subtotal),
+    discountAmount: decimalToString(input.discountAmount),
+    couponCode: input.couponCode,
     totalAmount: decimalToString(input.totalAmount),
     paymentId: input.paymentId,
   };

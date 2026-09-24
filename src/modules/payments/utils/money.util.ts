@@ -1,7 +1,8 @@
 import { Prisma } from "../../../../generated/prisma/client.js";
 
 export function decimalToPaise(amount: Prisma.Decimal): number {
-  return amount.mul(100).toNumber();
+  // Always whole paise — fractional values (e.g. coupon %) must not reach Razorpay.
+  return amount.mul(100).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP).toNumber();
 }
 
 export function paiseToDecimal(amountPaise: number): Prisma.Decimal {

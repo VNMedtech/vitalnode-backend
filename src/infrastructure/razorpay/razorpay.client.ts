@@ -1,6 +1,6 @@
 import Razorpay from "razorpay";
 import { env } from "../../config/env.js";
-import { AppError, ValidationError } from "../../shared/errors/app.errors.js";
+import { AppError } from "../../shared/errors/app.errors.js";
 import { logger } from "../logger/logger.js";
 import type {
   RazorpayOrderCreateInput,
@@ -77,8 +77,20 @@ function mapRazorpayError(error: unknown, operation: string): AppError {
     `Razorpay ${operation} failed`,
   );
 
+  if (statusCode === 401) {
+    return new AppError(
+      "Payment gateway authentication failed. Check RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+      502,
+      "RAZORPAY_AUTH_FAILED",
+    );
+  }
+
   if (statusCode !== undefined && statusCode >= 400 && statusCode < 500) {
-    return new ValidationError(`Payment ${operation} rejected`);
+    return new AppError(
+      `Payment ${operation} rejected: ${message}`,
+      400,
+      "RAZORPAY_REJECTED",
+    );
   }
 
   return new AppError(`Payment ${operation} failed`, 502, "RAZORPAY_ERROR");

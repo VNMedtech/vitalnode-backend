@@ -46,6 +46,8 @@ const orderSummarySelect = {
   deliveryPartnerId: true,
   orderStatus: true,
   subtotal: true,
+  discountAmount: true,
+  couponCode: true,
   totalAmount: true,
   placedAt: true,
   createdAt: true,
@@ -174,6 +176,7 @@ const orderWithPaymentAndItemsSelect = {
   sellerId: true,
   orderStatus: true,
   totalAmount: true,
+  couponId: true,
   placedAt: true,
   payment: {
     select: {
@@ -205,6 +208,9 @@ export interface CreateCheckoutOrderInput {
   shippingAddressSnapshot: Prisma.InputJsonValue;
   subtotal: Prisma.Decimal;
   totalAmount: Prisma.Decimal;
+  discountAmount?: Prisma.Decimal;
+  couponId?: string | null;
+  couponCode?: string | null;
   items: Array<{
     productId: string;
     productSnapshot: Prisma.InputJsonValue;
@@ -277,6 +283,9 @@ export class OrderRepository {
         orderStatus: OrderStatus.PENDING_PAYMENT,
         subtotal: data.subtotal,
         totalAmount: data.totalAmount,
+        discountAmount: data.discountAmount ?? 0,
+        couponId: data.couponId ?? null,
+        couponCode: data.couponCode ?? null,
         items: {
           create: data.items,
         },
@@ -293,6 +302,8 @@ export class OrderRepository {
         orderNumber: true,
         orderStatus: true,
         subtotal: true,
+        discountAmount: true,
+        couponCode: true,
         totalAmount: true,
         payment: {
           select: {

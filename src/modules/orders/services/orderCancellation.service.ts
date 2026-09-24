@@ -27,6 +27,7 @@ import { InventoryMovementService } from "../../inventory/services/inventoryMove
 import { PaymentRepository } from "../../payments/repositories/payment.repository.js";
 import { RefundService } from "../../payments/services/refund.service.js";
 import { BuyerRepository } from "../../buyers/repositories/buyer.repository.js";
+import { CouponService } from "../../coupons/services/coupon.service.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
 import {
   CANCELLABLE_ORDER_STATUSES,
@@ -64,6 +65,7 @@ export class OrderCancellationService {
   private readonly sellerRepo = new SellerRepository(prisma);
   private readonly movementService = new InventoryMovementService();
   private readonly refundService = new RefundService();
+  private readonly couponService = new CouponService();
 
   private async resolveBuyerId(actorUserId: string): Promise<string> {
     const buyer = await this.buyerRepo.findIdByUserId(actorUserId);
@@ -223,6 +225,14 @@ export class OrderCancellationService {
           locked.payment.paymentStatus === PaymentStatus.PENDING
         ) {
           await paymentRepo.markFailed(locked.payment.id);
+        }
+
+        // Release coupon reservation only for unpaid checkouts.
+        if (locked.orderStatus === OrderStatus.PENDING_PAYMENT) {
+          await this.couponService.releaseForOrder(tx, {
+            orderId,
+            actorUserId,
+          });
         }
 
         didCancel = true;

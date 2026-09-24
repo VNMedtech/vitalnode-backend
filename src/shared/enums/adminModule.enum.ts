@@ -17,6 +17,8 @@ export const ADMIN_MODULE_VALUES = [
   "REPORTS",
   "TECH_BLOG",
   "COMPANY_CONTENT",
+  "COUPONS",
+  "MARKETPLACE_TEASERS",
 ] as const;
 
 export type AdminModule = (typeof ADMIN_MODULE_VALUES)[number];
@@ -95,5 +97,15 @@ export const ADMIN_MODULE_CATALOG: ReadonlyArray<{
     id: "COMPANY_CONTENT",
     label: "Company Content",
     description: "Manage Why Vitalnode, founder profiles, and team info",
+  },
+  {
+    id: "COUPONS",
+    label: "Coupons",
+    description: "Create and manage buyer discount coupon codes",
+  },
+  {
+    id: "MARKETPLACE_TEASERS",
+    label: "Coming Soon",
+    description: "Manage marketplace coming-soon products and platform updates",
   },
 ];

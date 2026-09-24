@@ -3,7 +3,6 @@ import { prisma } from "../../../infrastructure/prisma/client.js";
 import {
   ConflictError,
   NotFoundError,
-  ValidationError,
 } from "../../../shared/errors/app.errors.js";
 import { auditLogger } from "../../auditLogs/services/auditLogger.util.js";
 import { SellerRepository } from "../../sellers/repositories/seller.repository.js";
@@ -61,8 +60,8 @@ export async function finalizeOrderEarningsOnDelivery(
   });
 
   if (!seller?.commissionPercentage) {
-    throw new ValidationError(
-      "Seller commission percentage is not configured",
+    throw new ConflictError(
+      "Seller commission percentage is not configured. Ask admin to set commission before delivery can be completed.",
     );
   }
 

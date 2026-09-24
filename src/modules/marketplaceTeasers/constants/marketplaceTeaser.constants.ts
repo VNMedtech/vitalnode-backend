@@ -1,0 +1,19 @@
+export const MARKETPLACE_TEASER_AUDIT_ENTITY = "MARKETPLACE_TEASER" as const;
+
+export const MARKETPLACE_TEASER_ACTIONS = {
+  CREATE: "MARKETPLACE_TEASER_CREATE",
+  UPDATE: "MARKETPLACE_TEASER_UPDATE",
+  DELETE: "MARKETPLACE_TEASER_DELETE",
+} as const;
+
+export const MARKETPLACE_TEASER_TYPES = ["PRODUCT", "UPDATE"] as const;
+export type MarketplaceTeaserTypeValue =
+  (typeof MARKETPLACE_TEASER_TYPES)[number];
+
+export const TEASER_TITLE_MAX = 160;
+export const TEASER_SUMMARY_MAX = 500;
+export const TEASER_CTA_LABEL_MAX = 60;
+export const TEASER_CTA_URL_MAX = 2048;
+export const TEASER_DEFAULT_PAGE = 1;
+export const TEASER_DEFAULT_LIMIT = 20;
+export const TEASER_MAX_LIMIT = 100;

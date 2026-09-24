@@ -21,6 +21,7 @@ import { AddressRepository } from "../../addresses/repositories/address.reposito
 import { BuyerRepository } from "../../buyers/repositories/buyer.repository.js";
 import type { CartWithItemsRecord } from "../../cart/repositories/cart.repository.js";
 import { CartRepository } from "../../cart/repositories/cart.repository.js";
+import { CouponService } from "../../coupons/services/coupon.service.js";
 import {
   ORDER_ACTIONS,
   ORDER_AUDIT_ENTITY_TYPE,
@@ -105,6 +106,7 @@ export class CheckoutService {
   private readonly cartRepo = new CartRepository(prisma);
   private readonly buyerRepo = new BuyerRepository(prisma);
   private readonly addressRepo = new AddressRepository(prisma);
+  private readonly couponService = new CouponService();
 
   private async resolveBuyerId(actorUserId: string): Promise<string> {
     const buyer = await this.buyerRepo.findIdByUserId(actorUserId);
@@ -181,14 +183,30 @@ export class CheckoutService {
         (sum, item) => sum.add(item.product.pricing.mul(item.quantity)),
         new Prisma.Decimal(0),
       );
-      const totalAmount = subtotal;
       const shippingAddressSnapshot = buildAddressSnapshot(address);
 
       const created = await runInTransaction(async (tx) => {
-        const orderRepo = new OrderRepository(tx);
-        const orderNumber = await orderRepo.generateOrderNumber();
+        const orderRepoTx = new OrderRepository(tx);
+        const orderNumber = await orderRepoTx.generateOrderNumber();
 
-        const order = await orderRepo.createCheckoutOrder({
+        let discountAmount = new Prisma.Decimal(0);
+        let totalAmount = subtotal;
+        let couponId: string | null = null;
+        let couponCode: string | null = null;
+
+        if (input.couponCode) {
+          const applied = await this.couponService.reserveForCheckout(tx, {
+            code: input.couponCode,
+            buyerId,
+            subtotal,
+          });
+          discountAmount = applied.discountAmount;
+          totalAmount = applied.totalAmount;
+          couponId = applied.couponId;
+          couponCode = applied.code;
+        }
+
+        const order = await orderRepoTx.createCheckoutOrder({
           orderNumber,
           buyerId,
           sellerId,
@@ -196,6 +214,9 @@ export class CheckoutService {
             shippingAddressSnapshot as unknown as Prisma.InputJsonValue,
           subtotal,
           totalAmount,
+          discountAmount,
+          couponId,
+          couponCode,
           items: cart.items.map((item) => ({
             productId: item.productId,
             productSnapshot: buildProductSnapshot(
@@ -207,6 +228,15 @@ export class CheckoutService {
           })),
         });
 
+        if (couponId) {
+          await this.couponService.finalizeRedemption(tx, {
+            couponId,
+            buyerId,
+            orderId: order.id,
+            actorUserId,
+          });
+        }
+
         await recordCommerceAudit(tx, {
           actorUserId,
           action: ORDER_ACTIONS.CHECKOUT_INITIATED,
@@ -217,6 +247,8 @@ export class CheckoutService {
             buyerId,
             sellerId,
             subtotal: subtotal.toString(),
+            discountAmount: discountAmount.toString(),
+            couponCode,
             totalAmount: totalAmount.toString(),
             itemCount: cart.items.length,
             shippingAddressId: address.id,
@@ -235,6 +267,8 @@ export class CheckoutService {
         orderNumber: created.orderNumber,
         orderStatus: created.orderStatus,
         subtotal: created.subtotal,
+        discountAmount: created.discountAmount,
+        couponCode: created.couponCode,
         totalAmount: created.totalAmount,
         paymentId: created.payment.id,
       });

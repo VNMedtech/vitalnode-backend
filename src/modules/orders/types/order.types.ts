@@ -11,6 +11,7 @@ import type { OrderSortField } from "../constants/order.constants.js";
 
 export interface CreateOrderInput {
   shippingAddressId: string;
+  couponCode?: string;
 }
 
 export interface CancelOrderInput {
@@ -164,6 +165,9 @@ export interface OrderSummaryDto {
   totalAmount: string | null;
   /** Null when redacted for delivery partners. */
   subtotal: string | null;
+  /** Null when redacted for delivery partners. */
+  discountAmount: string | null;
+  couponCode: string | null;
   placedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -245,6 +249,8 @@ export interface CheckoutResultDto {
   orderNumber: string;
   orderStatus: OrderStatus;
   subtotal: string;
+  discountAmount: string;
+  couponCode: string | null;
   totalAmount: string;
   paymentId: string;
 }

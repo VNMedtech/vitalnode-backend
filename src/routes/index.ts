@@ -12,6 +12,8 @@ import { deliveryPartnerRouter } from "../modules/deliveryPartners/routes/delive
 import { categoryRouter } from "../modules/categories/routes/category.routes.js";
 import { techBlogRouter } from "../modules/techBlogs/routes/techBlog.routes.js";
 import { companyContentRouter } from "../modules/companyContent/routes/companyContent.routes.js";
+import { couponRouter } from "../modules/coupons/routes/coupon.routes.js";
+import { marketplaceTeaserRouter } from "../modules/marketplaceTeasers/routes/marketplaceTeaser.routes.js";
 import { productTemplateRouter } from "../modules/productTemplates/routes/productTemplate.routes.js";
 import { productRouter } from "../modules/products/routes/product.routes.js";
 import { inventoryRouter } from "../modules/inventory/routes/inventory.routes.js";
@@ -46,6 +48,8 @@ apiRouter.use("/delivery-partners", deliveryPartnerRouter);
 apiRouter.use("/categories", categoryRouter);
 apiRouter.use("/tech-blogs", techBlogRouter);
 apiRouter.use("/company-content", companyContentRouter);
+apiRouter.use("/coupons", couponRouter);
+apiRouter.use("/marketplace-teasers", marketplaceTeaserRouter);
 apiRouter.use("/product-templates", productTemplateRouter);
 apiRouter.use("/products", productRouter);
 apiRouter.use("/inventory", inventoryRouter);

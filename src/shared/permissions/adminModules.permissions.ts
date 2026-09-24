@@ -90,6 +90,15 @@ export const adminModulePermissions: Record<
     permissions.companyContent.read,
     permissions.companyContent.manage,
   ],
+  COUPONS: [
+    permissions.coupons.create,
+    permissions.coupons.read,
+    permissions.coupons.update,
+  ],
+  MARKETPLACE_TEASERS: [
+    permissions.marketplaceTeasers.read,
+    permissions.marketplaceTeasers.manage,
+  ],
 };
 
 export function resolveAdminModulePermissions(

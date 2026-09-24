@@ -21,6 +21,7 @@ import { runInTransaction } from "../../../shared/transactions/runInTransaction.
 import { recordCommerceAudit } from "../../auditLogs/services/commerceAudit.service.js";
 import { CartItemRepository } from "../../cart/repositories/cartItem.repository.js";
 import { CartRepository } from "../../cart/repositories/cart.repository.js";
+import { CouponService } from "../../coupons/services/coupon.service.js";
 import { InventoryMovementService } from "../../inventory/services/inventoryMovement.service.js";
 import { OrderRepository } from "../../orders/repositories/order.repository.js";
 import {
@@ -320,6 +321,11 @@ export class PaymentFulfillmentService {
             nextStatus: OrderStatus.PAYMENT_FAILED,
           });
 
+          await new CouponService().releaseForOrder(tx, {
+            orderId: input.orderId,
+            actorUserId: input.actorUserId,
+          });
+
           await recordCommerceAudit(tx, {
             actorUserId: input.actorUserId,
             action: PAYMENT_ACTIONS.FULFILLMENT_COMPENSATION,
@@ -396,6 +402,11 @@ export class PaymentFulfillmentService {
           orderStatus: OrderStatus.PENDING_PAYMENT,
         },
         data: { orderStatus: OrderStatus.PAYMENT_FAILED },
+      });
+
+      await new CouponService().releaseForOrder(tx, {
+        orderId: locked.orderId,
+        actorUserId: input.actorUserId,
       });
 
       await recordCommerceAudit(tx, {

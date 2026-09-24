@@ -34,6 +34,16 @@ export const permissions = {
     read: "company-content:read",
     manage: "company-content:manage",
   },
+  marketplaceTeasers: {
+    read: "marketplace-teasers:read",
+    manage: "marketplace-teasers:manage",
+  },
+  coupons: {
+    create: "coupons:create",
+    read: "coupons:read",
+    update: "coupons:update",
+    validate: "coupons:validate",
+  },
   sellers: {
     approve: "sellers:approve",
     reject: "sellers:reject",
@@ -172,6 +182,7 @@ export const rolePermissions: Record<UserRole, readonly Permission[]> = {
     permissions.orders.create,
     permissions.orders.read,
     permissions.orders.cancel,
+    permissions.coupons.validate,
     permissions.payments.create,
     permissions.payments.verify,
     permissions.payments.read,
