@@ -52,7 +52,7 @@ function sampleInvoice(overrides: Partial<InvoicePdfData> = {}): InvoicePdfData 
 function pdfText(buffer: Buffer): string {
   const raw = buffer.toString("latin1");
   return [...raw.matchAll(/<([0-9A-Fa-f]+)>/g)]
-    .map((match) => Buffer.from(match[1], "hex").toString("latin1"))
+    .map((match) => Buffer.from(match[1] ?? "", "hex").toString("latin1"))
     .join("");
 }
 
