@@ -103,6 +103,8 @@ export class CompanyContentService {
       bio: input.bio,
       imageUrl: toPermanentS3ObjectUrl(input.imageUrl) ?? input.imageUrl ?? null,
       imageUploadId: input.imageUploadId ?? null,
+      instagramUrl: input.instagramUrl ?? null,
+      linkedinUrl: input.linkedinUrl ?? null,
       sortOrder: input.sortOrder ?? 0,
       isActive: input.isActive ?? true,
     });
@@ -139,6 +141,12 @@ export class CompanyContentService {
         : {}),
       ...(input.imageUploadId !== undefined
         ? { imageUploadId: input.imageUploadId }
+        : {}),
+      ...(input.instagramUrl !== undefined
+        ? { instagramUrl: input.instagramUrl }
+        : {}),
+      ...(input.linkedinUrl !== undefined
+        ? { linkedinUrl: input.linkedinUrl }
         : {}),
       ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),

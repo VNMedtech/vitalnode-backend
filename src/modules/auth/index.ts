@@ -6,6 +6,7 @@ export * from "./controllers/auth.controller.js";
 export * from "./services/auth.service.js";
 export * from "./repositories/auth.repository.js";
 export * from "./validators/login.schema.js";
+export * from "./validators/google.schema.js";
 export * from "./validators/registerBuyer.schema.js";
 export * from "./validators/registerSeller.schema.js";
 export * from "./validators/refreshToken.schema.js";

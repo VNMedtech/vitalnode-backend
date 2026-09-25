@@ -14,6 +14,11 @@ import { refreshTokenBodySchema } from "../validators/refreshToken.schema.js";
 import { forgotPasswordBodySchema } from "../validators/forgotPassword.schema.js";
 import { resetPasswordBodySchema } from "../validators/resetPassword.schema.js";
 import { logoutBodySchema } from "../validators/logout.schema.js";
+import {
+  googleLoginBodySchema,
+  googleRegisterBuyerBodySchema,
+  googleRegisterSellerBodySchema,
+} from "../validators/google.schema.js";
 
 export const authRouter = Router();
 
@@ -127,6 +132,27 @@ authRouter.post(
   authRateLimiter,
   validate({ body: loginBodySchema }),
   authController.login,
+);
+
+authRouter.post(
+  "/google/login",
+  authRateLimiter,
+  validate({ body: googleLoginBodySchema }),
+  authController.googleLogin,
+);
+
+authRouter.post(
+  "/google/register-buyer",
+  authRateLimiter,
+  validate({ body: googleRegisterBuyerBodySchema }),
+  authController.googleRegisterBuyer,
+);
+
+authRouter.post(
+  "/google/register-seller",
+  authRateLimiter,
+  validate({ body: googleRegisterSellerBodySchema }),
+  authController.googleRegisterSeller,
 );
 
 /**

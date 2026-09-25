@@ -213,7 +213,8 @@ enum DeliveryPartnerCommentStatus {
 model User {
   id                 String     @id @default(uuid())
   email              String     @unique
-  passwordHash       String
+  passwordHash       String?
+  googleId           String?    @unique
   role               UserRole
   status             UserStatus
   mustChangePassword Boolean    @default(false)
@@ -469,6 +470,8 @@ model CompanyMember {
   bio           String?
   imageUrl      String?
   imageUploadId String?           @unique
+  instagramUrl  String?
+  linkedinUrl   String?
   sortOrder     Int               @default(0)
   isActive      Boolean           @default(true)
   createdAt     DateTime          @default(now())

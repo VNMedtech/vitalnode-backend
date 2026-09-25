@@ -85,6 +85,38 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const googleLogin: RequestHandler = async (req, res, next) => {
+  try {
+    const meta = getRequestMeta(req);
+    const result = await authService.googleLogin({ ...req.body, ...meta });
+    res.status(200).json(successResponse(result, "Login successful"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const googleRegisterBuyer: RequestHandler = async (req, res, next) => {
+  try {
+    const meta = getRequestMeta(req);
+    const result = await authService.googleRegisterBuyer({ ...req.body, ...meta });
+    res.status(201).json(successResponse(result, "Buyer registered successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const googleRegisterSeller: RequestHandler = async (req, res, next) => {
+  try {
+    const meta = getRequestMeta(req);
+    const result = await authService.googleRegisterSeller({ ...req.body, ...meta });
+    res
+      .status(201)
+      .json(successResponse(result, "Seller registered successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const logout: RequestHandler = async (req, res, next) => {
   try {
     await authService.logout(req.body);

@@ -34,6 +34,8 @@ export function toMemberDto(record: CompanyMemberRecord): CompanyMemberDto {
     bio: record.bio,
     imageUrl: record.imageUrl,
     imageUploadId: record.imageUploadId,
+    instagramUrl: record.instagramUrl,
+    linkedinUrl: record.linkedinUrl,
     sortOrder: record.sortOrder,
     isActive: record.isActive,
     createdAt: record.createdAt,

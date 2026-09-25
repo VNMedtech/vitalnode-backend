@@ -46,6 +46,7 @@ export const userRouter = Router();
  *                     lastName: { type: string }
  *                     phoneNumber: { type: string, nullable: true }
  *                     profileImage: { type: string, nullable: true }
+ *                     hasPassword: { type: boolean, description: False for Google-only accounts }
  *                     createdAt: { type: string, format: date-time }
  *                     updatedAt: { type: string, format: date-time }
  *                     buyerProfile:

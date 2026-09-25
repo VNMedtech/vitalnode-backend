@@ -30,6 +30,17 @@ export const updateWhyBodySchema = z
 
 export type UpdateWhyBody = z.infer<typeof updateWhyBodySchema>;
 
+const socialUrlSchema = z
+  .string()
+  .trim()
+  .max(500)
+  .url()
+  .refine((value) => /^https?:\/\//i.test(value), {
+    message: "Enter a full http or https link",
+  })
+  .nullable()
+  .optional();
+
 export const createMemberBodySchema = z
   .object({
     type: z.enum(COMPANY_MEMBER_TYPES),
@@ -38,6 +49,8 @@ export const createMemberBodySchema = z
     bio: z.string().trim().max(MEMBER_BIO_MAX).nullable().optional(),
     imageUrl: z.string().url().nullable().optional(),
     imageUploadId: z.string().uuid().nullable().optional(),
+    instagramUrl: socialUrlSchema,
+    linkedinUrl: socialUrlSchema,
     sortOrder: z.number().int().min(0).optional(),
     isActive: z.boolean().optional(),
   })
@@ -53,6 +66,8 @@ export const updateMemberBodySchema = z
     bio: z.string().trim().max(MEMBER_BIO_MAX).nullable().optional(),
     imageUrl: z.string().url().nullable().optional(),
     imageUploadId: z.string().uuid().nullable().optional(),
+    instagramUrl: socialUrlSchema,
+    linkedinUrl: socialUrlSchema,
     sortOrder: z.number().int().min(0).optional(),
     isActive: z.boolean().optional(),
   })

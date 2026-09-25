@@ -18,6 +18,10 @@ import { emailService } from "../../email/services/email.service.js";
 import { buildPortalUrl } from "../../email/utils/portalUrl.util.js";
 import { AUTH_ACTIONS, AUTH_AUDIT_ENTITY_TYPE } from "../constants/auth.constants.js";
 import { AuthRepository } from "../repositories/auth.repository.js";
+import {
+  verifyGoogleIdToken,
+  type GoogleIdentity,
+} from "./googleIdentity.service.js";
 import type {
   AuthenticatedUserDto,
   LoginResultDto,
@@ -247,6 +251,12 @@ export class AuthService {
 
     assertAccountCanAuthenticate(user);
 
+    if (!user.passwordHash) {
+      throw new UnauthorizedError(
+        "This account uses Google sign-in. Continue with Google.",
+      );
+    }
+
     const ok = await verifyPassword(input.password, user.passwordHash);
     if (!ok) throw new UnauthorizedError("Invalid credentials");
 
@@ -256,6 +266,223 @@ export class AuthService {
       userAgent: input.userAgent,
     });
 
+    return {
+      user: userDto,
+      ...tokens,
+    };
+  }
+
+  async googleLogin(input: {
+    idToken: string;
+    role: UserRole.BUYER | UserRole.SELLER;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<LoginResultDto> {
+    const identity = await verifyGoogleIdToken(input.idToken);
+    const user = await this.findOrLinkGoogleUser(identity);
+    if (!user) {
+      throw new NotFoundError(
+        "No account is registered for this Google email. Create an account to continue.",
+      );
+    }
+    if ((user.role as UserRole) !== input.role) {
+      throw new ForbiddenError(
+        "This account belongs to another portal. Sign in through the correct application.",
+      );
+    }
+
+    return this.finishGoogleSession(user, {
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent,
+    });
+  }
+
+  async googleRegisterBuyer(input: {
+    idToken: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber?: string;
+    buyerType: "DOCTOR" | "HOSPITAL";
+    nmcRegistrationNumber?: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<LoginResultDto> {
+    const identity = await verifyGoogleIdToken(input.idToken);
+    const existing = await this.findOrLinkGoogleUser(identity);
+    if (existing) {
+      if ((existing.role as UserRole) !== UserRole.BUYER) {
+        throw new ConflictError("Email already registered");
+      }
+      return this.finishGoogleSession(existing, {
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+      });
+    }
+
+    if (input.nmcRegistrationNumber) {
+      const nmcTaken = await this.repo.findBuyerProfileByNmc(
+        input.nmcRegistrationNumber,
+      );
+      if (nmcTaken) {
+        throw new ConflictError("NMC registration number is already registered");
+      }
+    }
+
+    let created;
+    try {
+      created = await this.repo.createBuyerUser({
+        email: identity.email,
+        passwordHash: null,
+        googleId: identity.googleId,
+        profileImage: identity.picture,
+        firstName: input.firstName.trim() || identity.firstName,
+        lastName: input.lastName.trim() || identity.lastName,
+        phoneNumber: input.phoneNumber,
+        userStatus: UserStatus.ACTIVE,
+        role: UserRole.BUYER,
+        buyerType: input.buyerType,
+        nmcRegistrationNumber: input.nmcRegistrationNumber,
+      });
+    } catch (error) {
+      if (isPrismaUniqueConstraintError(error)) {
+        const targets = uniqueConstraintTargets(error);
+        if (targets.some((t) => t.includes("nmcRegistrationNumber"))) {
+          throw new ConflictError("NMC registration number is already registered");
+        }
+        if (targets.some((t) => t.includes("email") || t.includes("googleId"))) {
+          throw new ConflictError("Email already registered");
+        }
+      }
+      throw error;
+    }
+
+    return this.finishGoogleSession(created, {
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent,
+    });
+  }
+
+  async googleRegisterSeller(input: {
+    idToken: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber?: string;
+    businessName: string;
+    contactPerson: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+    latitude?: number;
+    longitude?: number;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<LoginResultDto> {
+    const identity = await verifyGoogleIdToken(input.idToken);
+    const existing = await this.findOrLinkGoogleUser(identity);
+    if (existing) {
+      if ((existing.role as UserRole) !== UserRole.SELLER) {
+        throw new ConflictError("Email already registered");
+      }
+      return this.finishGoogleSession(existing, {
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+      });
+    }
+
+    let created;
+    try {
+      created = await this.repo.createSellerUser({
+        email: identity.email,
+        passwordHash: null,
+        googleId: identity.googleId,
+        profileImage: identity.picture,
+        firstName: input.firstName.trim() || identity.firstName,
+        lastName: input.lastName.trim() || identity.lastName,
+        phoneNumber: input.phoneNumber,
+        userStatus: UserStatus.ACTIVE,
+        role: UserRole.SELLER,
+        seller: {
+          businessName: input.businessName,
+          contactPerson: input.contactPerson,
+          addressLine1: input.addressLine1,
+          addressLine2: input.addressLine2,
+          city: input.city,
+          state: input.state,
+          country: input.country,
+          postalCode: input.postalCode,
+          latitude: input.latitude?.toString(),
+          longitude: input.longitude?.toString(),
+          approvalStatus: SellerApprovalStatus.PENDING_APPROVAL,
+        },
+      });
+    } catch (error) {
+      if (isPrismaUniqueConstraintError(error)) {
+        const targets = uniqueConstraintTargets(error);
+        if (targets.some((t) => t.includes("email") || t.includes("googleId"))) {
+          throw new ConflictError("Email already registered");
+        }
+      }
+      throw error;
+    }
+
+    return this.finishGoogleSession(created, {
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent,
+    });
+  }
+
+  private async findOrLinkGoogleUser(identity: GoogleIdentity) {
+    const byGoogleId = await this.repo.findActiveUserForGoogle({
+      googleId: identity.googleId,
+    });
+    const byEmail = await this.repo.findActiveUserForGoogle({
+      email: identity.email,
+    });
+
+    if (byGoogleId && byEmail && byGoogleId.id !== byEmail.id) {
+      throw new ConflictError(
+        "This Google account is already linked to a different email.",
+      );
+    }
+
+    const user = byGoogleId ?? byEmail;
+    if (!user) return null;
+
+    if (user.googleId && user.googleId !== identity.googleId) {
+      throw new ConflictError(
+        "This email is already linked to a different Google account.",
+      );
+    }
+
+    if (!user.googleId) {
+      try {
+        await this.repo.linkGoogleAccount(user.id, {
+          googleId: identity.googleId,
+          profileImage: user.profileImage ? undefined : identity.picture,
+        });
+      } catch (error) {
+        if (isPrismaUniqueConstraintError(error)) {
+          throw new ConflictError(
+            "This Google account is already linked to another user.",
+          );
+        }
+        throw error;
+      }
+    }
+
+    return user;
+  }
+
+  private async finishGoogleSession(
+    user: AuthUserRecord,
+    sessionMeta: { ipAddress?: string; userAgent?: string },
+  ): Promise<LoginResultDto> {
+    assertAccountCanAuthenticate(user);
+    const userDto = toAuthenticatedUserDto(user);
+    const tokens = await this.issueTokenPair(userDto, sessionMeta);
     return {
       user: userDto,
       ...tokens,

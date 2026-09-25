@@ -143,6 +143,8 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(86_400_000),
+  /** Google OAuth web client ID used to verify Sign in with Google ID tokens. */
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
 });
 
 export interface EnvConfig {
@@ -209,6 +211,7 @@ export interface EnvConfig {
   passwordResetTokenSweepIntervalMs: number;
   webhookEventTtlDays: number;
   webhookEventSweepIntervalMs: number;
+  googleClientId: string;
 }
 
 function parseEnvConfig(): EnvConfig {
@@ -334,6 +337,7 @@ function parseEnvConfig(): EnvConfig {
       env.PASSWORD_RESET_TOKEN_SWEEP_INTERVAL_MS,
     webhookEventTtlDays: env.WEBHOOK_EVENT_TTL_DAYS,
     webhookEventSweepIntervalMs: env.WEBHOOK_EVENT_SWEEP_INTERVAL_MS,
+    googleClientId: env.GOOGLE_CLIENT_ID ?? "",
   };
 }
 

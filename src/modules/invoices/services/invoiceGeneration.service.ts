@@ -49,6 +49,12 @@ type OrderForInvoice = Prisma.OrderGetPayload<{
       };
     };
     seller: true;
+    coupon: {
+      select: {
+        code: true;
+        discountPercent: true;
+      };
+    };
   };
 }>;
 
@@ -124,6 +130,12 @@ function buildPdfData(
       unitPrice: item.unitPrice.toString(),
       subtotal: item.totalPrice.toString(),
     })),
+    subtotal: order.subtotal.toString(),
+    discountAmount: order.discountAmount.toString(),
+    discountPercent: order.coupon
+      ? order.coupon.discountPercent.toString()
+      : null,
+    couponCode: order.couponCode,
     grandTotal: order.totalAmount.toString(),
     currency: INVOICE_DEFAULT_CURRENCY,
     paymentStatus: "PAID",
@@ -158,6 +170,12 @@ export class InvoiceGenerationService {
           },
         },
         seller: true,
+        coupon: {
+          select: {
+            code: true,
+            discountPercent: true,
+          },
+        },
       },
     });
 
@@ -259,6 +277,52 @@ export class InvoiceGenerationService {
       logger.error({ orderId, error }, "Invoice generation failed");
       throw error;
     }
+  }
+
+  async refreshStoredPdf(input: {
+    orderId: string;
+    invoiceNumber: string;
+    generatedAt: Date;
+  }): Promise<void> {
+    const order = await prisma.order.findUnique({
+      where: { id: input.orderId },
+      include: {
+        items: true,
+        payment: true,
+        buyer: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        seller: true,
+        coupon: {
+          select: {
+            code: true,
+            discountPercent: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundError("Order not found");
+    }
+
+    const pdfData = buildPdfData(order, input.invoiceNumber, input.generatedAt);
+    const pdfBuffer = await generateInvoicePdf(pdfData);
+    const s3Key = buildInvoiceS3Key(input.invoiceNumber);
+
+    await uploadObjectToS3({
+      key: s3Key,
+      body: pdfBuffer,
+      contentType: "application/pdf",
+      contentLength: pdfBuffer.length,
+    });
   }
 
   async ensureInvoiceForOrder(orderId: string): Promise<InvoiceDetailRecord | null> {

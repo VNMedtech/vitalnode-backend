@@ -10,6 +10,42 @@ import type {
 export class AuthRepository {
   constructor(private readonly prisma: PrismaClient | Prisma.TransactionClient) {}
 
+  private readonly googleAuthSelect = {
+    id: true,
+    email: true,
+    googleId: true,
+    profileImage: true,
+    role: true,
+    status: true,
+    mustChangePassword: true,
+    sellerProfile: {
+      select: {
+        approvalStatus: true,
+      },
+    },
+  } as const;
+
+  findActiveUserForGoogle(where: { email: string } | { googleId: string }) {
+    return this.prisma.user.findFirst({
+      where: { ...where, deletedAt: null },
+      select: this.googleAuthSelect,
+    });
+  }
+
+  linkGoogleAccount(
+    userId: string,
+    input: { googleId: string; profileImage?: string },
+  ) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        googleId: input.googleId,
+        ...(input.profileImage ? { profileImage: input.profileImage } : {}),
+      },
+      select: { id: true },
+    });
+  }
+
   findUserByEmail(email: string) {
     return this.prisma.user.findFirst({
       where: { email, deletedAt: null },
@@ -56,7 +92,9 @@ export class AuthRepository {
 
   createBuyerUser(input: {
     email: string;
-    passwordHash: string;
+    passwordHash: string | null;
+    googleId?: string;
+    profileImage?: string;
     firstName: string;
     lastName: string;
     phoneNumber?: string;
@@ -69,6 +107,8 @@ export class AuthRepository {
       data: {
         email: input.email,
         passwordHash: input.passwordHash,
+        googleId: input.googleId,
+        profileImage: input.profileImage,
         role: input.role,
         status: input.userStatus,
         firstName: input.firstName,
@@ -97,7 +137,9 @@ export class AuthRepository {
 
   createSellerUser(input: {
     email: string;
-    passwordHash: string;
+    passwordHash: string | null;
+    googleId?: string;
+    profileImage?: string;
     firstName: string;
     lastName: string;
     phoneNumber?: string;
@@ -121,6 +163,8 @@ export class AuthRepository {
       data: {
         email: input.email,
         passwordHash: input.passwordHash,
+        googleId: input.googleId,
+        profileImage: input.profileImage,
         role: input.role,
         status: input.userStatus,
         firstName: input.firstName,

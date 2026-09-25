@@ -60,6 +60,7 @@ function toUserProfileDto(record: UserProfileRecord): UserProfileDto {
     role: record.role as UserRole,
     status: record.status as UserStatus,
     mustChangePassword: record.mustChangePassword,
+    hasPassword: Boolean(record.passwordHash),
     firstName: record.firstName,
     lastName: record.lastName,
     phoneNumber: record.phoneNumber,
@@ -202,6 +203,12 @@ export class UserService {
 
     const user = await this.repo.findByIdWithPassword(userId);
     if (!user) throw new NotFoundError("User not found");
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedError(
+        "This account uses Google sign-in and does not have a password.",
+      );
+    }
 
     const passwordValid = await verifyPassword(
       input.currentPassword,

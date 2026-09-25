@@ -42,6 +42,11 @@ export class InvoiceService {
   }
 
   private async mapDetail(record: InvoiceDetailRecord): Promise<InvoiceDetailDto> {
+    await this.generationService.refreshStoredPdf({
+      orderId: record.orderId,
+      invoiceNumber: record.invoiceNumber,
+      generatedAt: record.generatedAt,
+    });
     const downloadUrl = await this.resolveDownloadUrl(record.invoiceNumber);
     return toInvoiceDetailDto(record, downloadUrl);
   }

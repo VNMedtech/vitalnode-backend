@@ -80,6 +80,7 @@ function createProductionConfig(
     passwordResetTokenSweepIntervalMs: 900_000,
     webhookEventTtlDays: 30,
     webhookEventSweepIntervalMs: 86_400_000,
+    googleClientId: "",
     ...overrides,
   };
 }

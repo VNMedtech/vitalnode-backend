@@ -39,6 +39,7 @@ export const userProfileDtoSchema = z.object({
   lastName: z.string(),
   phoneNumber: z.string().nullable(),
   profileImage: z.string().nullable(),
+  hasPassword: z.boolean(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   buyerProfile: buyerProfileSummaryDtoSchema.nullable(),

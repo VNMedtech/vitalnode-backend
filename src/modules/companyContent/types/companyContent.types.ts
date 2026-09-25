@@ -40,6 +40,8 @@ export interface CompanyMemberDto {
   bio: string | null;
   imageUrl: string | null;
   imageUploadId: string | null;
+  instagramUrl: string | null;
+  linkedinUrl: string | null;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;
@@ -53,6 +55,8 @@ export interface CreateCompanyMemberInput {
   bio?: string | null;
   imageUrl?: string | null;
   imageUploadId?: string | null;
+  instagramUrl?: string | null;
+  linkedinUrl?: string | null;
   sortOrder?: number;
   isActive?: boolean;
 }
@@ -64,6 +68,8 @@ export interface UpdateCompanyMemberInput {
   bio?: string | null;
   imageUrl?: string | null;
   imageUploadId?: string | null;
+  instagramUrl?: string | null;
+  linkedinUrl?: string | null;
   sortOrder?: number;
   isActive?: boolean;
 }

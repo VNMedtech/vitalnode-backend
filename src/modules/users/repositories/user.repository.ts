@@ -6,6 +6,7 @@ const userProfileSelect = {
   role: true,
   status: true,
   mustChangePassword: true,
+  passwordHash: true,
   firstName: true,
   lastName: true,
   phoneNumber: true,

@@ -38,6 +38,7 @@ export interface UserProfileDto {
   role: UserRole;
   status: UserStatus;
   mustChangePassword: boolean;
+  hasPassword: boolean;
   firstName: string;
   lastName: string;
   phoneNumber: string | null;

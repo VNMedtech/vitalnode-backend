@@ -62,6 +62,10 @@ export interface InvoicePdfData {
   orderNumber: string;
   paymentReference: string | null;
   items: InvoicePdfLineItem[];
+  subtotal: string;
+  discountAmount: string;
+  discountPercent: string | null;
+  couponCode: string | null;
   grandTotal: string;
   currency: string;
   paymentStatus: string;

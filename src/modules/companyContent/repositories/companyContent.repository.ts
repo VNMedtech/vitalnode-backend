@@ -28,6 +28,8 @@ const memberSelect = {
   bio: true,
   imageUrl: true,
   imageUploadId: true,
+  instagramUrl: true,
+  linkedinUrl: true,
   sortOrder: true,
   isActive: true,
   createdAt: true,
@@ -110,6 +112,8 @@ export class CompanyContentRepository {
     bio?: string | null;
     imageUrl?: string | null;
     imageUploadId?: string | null;
+    instagramUrl?: string | null;
+    linkedinUrl?: string | null;
     sortOrder: number;
     isActive: boolean;
   }) {
@@ -121,6 +125,8 @@ export class CompanyContentRepository {
         bio: data.bio ?? null,
         imageUrl: data.imageUrl ?? null,
         imageUploadId: data.imageUploadId ?? null,
+        instagramUrl: data.instagramUrl ?? null,
+        linkedinUrl: data.linkedinUrl ?? null,
         sortOrder: data.sortOrder,
         isActive: data.isActive,
       },
@@ -159,6 +165,8 @@ export class CompanyContentRepository {
       bio?: string | null;
       imageUrl?: string | null;
       imageUploadId?: string | null;
+      instagramUrl?: string | null;
+      linkedinUrl?: string | null;
       sortOrder?: number;
       isActive?: boolean;
     },
